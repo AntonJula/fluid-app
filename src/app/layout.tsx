@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
+import { BottomNav } from "@/components/BottomNav";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -20,7 +21,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${outfit.variable} font-sans antialiased min-h-[100dvh] flex flex-col selection:bg-water-300 selection:text-water-900 bg-background text-foreground`}>
-        {children}
+        <div className="flex-1 flex flex-col pb-28 relative w-full h-full">
+          {children}
+        </div>
+        <BottomNav />
       </body>
     </html>
   );

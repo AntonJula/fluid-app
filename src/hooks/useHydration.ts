@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from "react";
 
+export interface HydrationHistoryItem {
+  date: string;
+  intake: number;
+  goal: number;
+}
+
 export interface HydrationState {
   intake: number;
   goal: number;
   streak: number;
   reminderInterval: number; // 0 means off
   lastUpdated: string; // ISO date string without time to check for a new day
+  history: HydrationHistoryItem[];
 }
 
 const DEFAULT_GOAL = 2500; // 2.5L
@@ -19,9 +26,11 @@ export function useHydration() {
     streak: 0,
     reminderInterval: 0,
     lastUpdated: new Date().toISOString().split("T")[0],
+    history: [],
   });
 
   const [mounted, setMounted] = useState(false);
+  const [animatedIntake, setAnimatedIntake] = useState(0);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -29,32 +38,53 @@ export function useHydration() {
     const stored = localStorage.getItem("fluid-hydration");
     if (stored) {
       try {
-        const parsed: HydrationState = JSON.parse(stored);
+        const parsed = JSON.parse(stored) as Partial<HydrationState>;
         const today = new Date().toISOString().split("T")[0];
         
+        let initialIntake = parsed.intake ?? 0;
+
+        // Ensure standard fields exist
+        const loadedState: HydrationState = {
+          intake: initialIntake,
+          goal: parsed.goal ?? DEFAULT_GOAL,
+          streak: parsed.streak ?? 0,
+          reminderInterval: parsed.reminderInterval ?? 0,
+          lastUpdated: parsed.lastUpdated ?? today,
+          history: parsed.history ?? [],
+        };
+
         // Check if it's a new day
-        if (parsed.lastUpdated !== today) {
-          // Check if streak is preserved (was goal met yesterday?)
+        if (loadedState.lastUpdated !== today) {
           const yesterday = new Date();
           yesterday.setDate(yesterday.getDate() - 1);
           const yesterdayStr = yesterday.toISOString().split("T")[0];
           
-          let newStreak = parsed.streak;
-          if (parsed.lastUpdated === yesterdayStr && parsed.intake >= parsed.goal) {
+          let newStreak = loadedState.streak;
+          if (loadedState.lastUpdated === yesterdayStr && loadedState.intake >= loadedState.goal) {
             newStreak += 1;
-          } else if (parsed.lastUpdated !== yesterdayStr) {
+          } else if (loadedState.lastUpdated !== yesterdayStr) {
             newStreak = 0; // Missed a day
           }
 
-          // Reset intake for today
+          const updatedHistory = [...loadedState.history];
+          if (loadedState.lastUpdated && !updatedHistory.find(h => h.date === loadedState.lastUpdated)) {
+            updatedHistory.push({
+              date: loadedState.lastUpdated,
+              intake: loadedState.intake,
+              goal: loadedState.goal,
+            });
+          }
+          if (updatedHistory.length > 14) updatedHistory.shift();
+
           setState({
-            ...parsed,
+            ...loadedState,
             intake: 0,
             streak: newStreak,
             lastUpdated: today,
+            history: updatedHistory,
           });
         } else {
-          setState(parsed);
+          setState(loadedState);
         }
       } catch (err) {
         console.error("Failed to parse hydration data", err);
@@ -68,6 +98,35 @@ export function useHydration() {
       localStorage.setItem("fluid-hydration", JSON.stringify(state));
     }
   }, [state, mounted]);
+
+  // Smooth intake animation loop
+  useEffect(() => {
+    if (!mounted) return;
+    
+    let animationFrameId: number;
+    const startValue = animatedIntake;
+    const targetValue = state.intake;
+    const startTime = performance.now();
+    const duration = 1500; // ms
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progressParam = Math.min(elapsed / duration, 1);
+      
+      // cubic-bezier(0.25, 1, 0.5, 1) approximation
+      const easeOutQuart = 1 - Math.pow(1 - progressParam, 4);
+      
+      const currentVal = startValue + (targetValue - startValue) * easeOutQuart;
+      setAnimatedIntake(currentVal);
+
+      if (progressParam < 1) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    };
+    
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [state.intake, mounted]);
 
   const addDrink = (amount: number) => {
     setState((prev) => ({
@@ -83,6 +142,13 @@ export function useHydration() {
     }));
   };
 
+  const resetDaily = () => {
+    setState((prev) => ({
+      ...prev,
+      intake: 0,
+    }));
+  };
+
   const setReminderInterval = (interval: number) => {
     setState((prev: HydrationState) => ({
       ...prev,
@@ -92,9 +158,11 @@ export function useHydration() {
 
   return {
     ...state,
+    animatedIntake, // New exposed tracking property
     addDrink,
     setGoal,
     setReminderInterval,
+    resetDaily,
     mounted,
   };
 }

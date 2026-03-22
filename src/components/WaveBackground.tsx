@@ -21,14 +21,14 @@ export function WaveBackground({ progress = 0.5 }: WaveBackgroundProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[-1] overflow-hidden bg-background transition-all duration-1000 ease-in-out"
+      className="fixed inset-0 z-[-1] overflow-hidden bg-background"
       style={{
         background: `linear-gradient(to top, var(--color-water-100) ${fillHeight}%, transparent ${fillHeight}%)`
       }}
     >
       {/* Wave SVG Animation */}
       <div 
-        className="absolute left-0 right-0 w-[200%] transition-all duration-1000 ease-in-out" 
+        className="absolute left-0 right-0 w-[200%]" 
         style={{ top: topOffset, transform: "translateY(-50%)" }}
       >
         <svg
