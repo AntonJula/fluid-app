@@ -9,10 +9,12 @@ import { BellOff } from "lucide-react";
 interface ReminderSettingsProps {
   interval: number;
   setInterval: (min: number) => void;
+  quietHours: { start: string; end: string };
+  setQuietHours: (start: string, end: string) => void;
 }
 
-export function ReminderSettings({ interval, setInterval }: ReminderSettingsProps) {
-  const { permission, requestPermission } = useNotifications(interval);
+export function ReminderSettings({ interval, setInterval, quietHours, setQuietHours }: ReminderSettingsProps) {
+  const { permission, requestPermission } = useNotifications(interval, quietHours);
   const intervals = [15, 25, 45];
 
   const [isCustom, setIsCustom] = React.useState(false);
@@ -71,13 +73,34 @@ export function ReminderSettings({ interval, setInterval }: ReminderSettingsProp
         <Button
           variant={interval === 0 ? "primary" : "secondary"}
           size="sm"
-          className={`flex-[0.5] min-w-[3rem] rounded-xl transition-opacity ${interval === 0 ? 'ring-2 ring-water-300/50 ring-offset-2 ring-offset-background' : 'opacity-80 hover:opacity-100'}`}
+          className={`flex-1 min-w-[3rem] rounded-xl transition-opacity ${interval === 0 ? 'ring-2 ring-water-300/50 ring-offset-2 ring-offset-background' : 'opacity-80 hover:opacity-100'}`}
           onClick={() => { setInterval(0); setIsCustom(false); }}
           title="Turn Off Reminders"
         >
           <BellOff className={`w-4 h-4 ${interval === 0 ? "text-white" : "text-water-400"}`} />
         </Button>
       </div>
+      
+      {interval > 0 && (
+        <div className="pt-2">
+          <p className="text-xs font-bold text-water-400 uppercase tracking-widest mb-3">Do Not Disturb</p>
+          <div className="flex items-center gap-3">
+            <input 
+              type="time" 
+              value={quietHours.start}
+              onChange={(e) => setQuietHours(e.target.value, quietHours.end)}
+              className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl outline-none font-bold text-white border-water-500/30 focus:border-water-300 transition-all shadow-inner"
+            />
+            <span className="text-water-300/50 font-bold text-xs uppercase tracking-widest">To</span>
+            <input 
+              type="time" 
+              value={quietHours.end}
+              onChange={(e) => setQuietHours(quietHours.start, e.target.value)}
+              className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl outline-none font-bold text-white border-water-500/30 focus:border-water-300 transition-all shadow-inner"
+            />
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

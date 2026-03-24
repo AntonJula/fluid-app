@@ -32,13 +32,6 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
         )}
       </div>
       
-      {/* Linear Progress Bar */}
-      <div className="w-full h-4 bg-water-100 rounded-full overflow-hidden shadow-inner">
-        <div 
-          className="h-full bg-water-500 rounded-full transition-all duration-700 ease-out shadow-sm"
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
     </Card>
   );
 }

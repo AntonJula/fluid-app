@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@900&amp;display=swap');
+    </style>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="#042f2e" />
+  <text 
+    x="50%" y="54%" 
+    text-anchor="middle" 
+    dominant-baseline="middle" 
+    font-family="'Outfit', system-ui, -apple-system, sans-serif" 
+    font-size="160" 
+    font-weight="900" 
+    fill="#f0fdfa"
+    letter-spacing="-8"
+  >
+    Fluid.
+  </text>
+</svg>

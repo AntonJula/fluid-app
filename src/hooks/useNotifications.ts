@@ -9,7 +9,7 @@ const MESSAGES = [
   "Keep the streak going, drink water!"
 ];
 
-export function useNotifications(intervalMinutes: number) {
+export function useNotifications(intervalMinutes: number, quietHours: { start: string; end: string } = { start: "22:00", end: "07:00" }) {
   const [permission, setPermission] = useState<NotificationPermission>("default");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -41,6 +41,25 @@ export function useNotifications(intervalMinutes: number) {
       
       // Set new interval
       timerRef.current = setInterval(() => {
+        // Check Quiet Hours
+        const now = new Date();
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+        
+        const [startH, startM] = quietHours.start.split(":").map(Number);
+        const [endH, endM] = quietHours.end.split(":").map(Number);
+        const startMins = startH * 60 + startM;
+        const endMins = endH * 60 + endM;
+
+        let isQuietHour = false;
+        if (startMins <= endMins) {
+          isQuietHour = currentMins >= startMins && currentMins < endMins;
+        } else {
+          // Crosses midnight (e.g. 22:00 -> 07:00)
+          isQuietHour = currentMins >= startMins || currentMins < endMins;
+        }
+
+        if (isQuietHour) return; // Do not notify
+
         const msg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
         new Notification("Fluid", {
           body: msg,

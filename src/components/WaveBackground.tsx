@@ -15,7 +15,7 @@ export function WaveBackground({ progress = 0.5 }: WaveBackgroundProps) {
 
   if (!mounted) return null;
 
-  // Map progress (0-1) to vertical position (100% to 0%)
+  // Map progress (0-1) to an 100% max height so waves naturally disappear beyond the screen at 100%
   const fillHeight = Math.max(0, Math.min(100, progress * 100));
   const topOffset = `${100 - fillHeight}%`;
 
@@ -44,14 +44,14 @@ export function WaveBackground({ progress = 0.5 }: WaveBackgroundProps) {
           <path fill="currentColor" d="M0,25 C150,50 350,0 600,25 C750,50 950,0 1200,25 L1200,120 L0,120 Z" />
         </svg>
 
-        {/* Middle Wave (Medium tightness) */}
+        {/* Middle Wave (Medium tightness, wide sweeps peaking inversely) */}
         <svg
           className="absolute top-0 w-full h-full text-water-800 animate-[wave_16s_linear_infinite_reverse]"
           viewBox="0 0 1200 120"
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path fill="currentColor" d="M0,45 C75,70 175,20 300,45 C375,70 475,20 600,45 C675,70 775,20 900,45 C975,70 1075,20 1200,45 L1200,120 L0,120 Z" />
+          <path fill="currentColor" d="M0,40 C150,10 350,70 600,40 C750,10 950,70 1200,40 L1200,120 L0,120 Z" />
         </svg>
 
         {/* Front Wave (Highest base line to prevent dipping too low) */}

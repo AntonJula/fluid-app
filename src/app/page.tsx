@@ -5,12 +5,10 @@ import { useHydration } from "@/hooks/useHydration";
 import { WaveBackground } from "@/components/WaveBackground";
 import { ProgressCard } from "@/components/ProgressCard";
 import { Button } from "@/components/ui/Button";
-import { ReminderSettings } from "@/components/ReminderSettings";
-import { GoalSettings } from "@/components/GoalSettings";
 import { RefreshCw } from "lucide-react";
 
 export default function Home() {
-  const { intake, animatedIntake, goal, setGoal, reminderInterval, addDrink, setReminderInterval, resetDaily, mounted } = useHydration();
+  const { intake, animatedIntake, goal, addDrink, resetDaily, mounted } = useHydration();
 
   if (!mounted) {
     // Render an empty calm placeholder during SSR to prevent hydration issues
@@ -18,15 +16,14 @@ export default function Home() {
   }
 
   const progressAttr = Math.min(1, Math.max(0, animatedIntake / goal));
-  const fillHeight = progressAttr * 100;
 
   return (
-    <main className="flex-1 flex flex-col items-center p-6 pb-32 pt-10 w-full max-w-md mx-auto relative min-h-[100dvh]">
+    <main className="flex flex-col items-center p-6 pb-24 pt-6 w-full max-w-md mx-auto relative h-[100dvh] overflow-hidden">
       <WaveBackground progress={progressAttr} />
       
-      <div className="w-full space-y-8 z-10 flex-1 flex flex-col">
+      <div className="w-full h-full z-10 flex flex-col justify-between max-h-[85vh]">
         
-        <header className="relative w-full text-center mt-2 mb-8 z-20">
+        <header className="relative w-full text-center mt-2 z-20 shrink-0">
           <div className="absolute right-0 top-0 z-50">
             <Button 
               type="button"
@@ -39,7 +36,7 @@ export default function Home() {
               <RefreshCw className="w-5 h-5" strokeWidth={2.5} />
             </Button>
           </div>
-          <h1 className="text-4xl font-black tracking-tight text-white drop-shadow-md">
+          <h1 className="text-6xl font-black tracking-tighter text-white drop-shadow-md">
             Fluid.
           </h1>
           <p className="text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase">
@@ -47,9 +44,11 @@ export default function Home() {
           </p>
         </header>
 
-        <ProgressCard intake={intake} goal={goal} />
+        <div className="flex-1 flex flex-col justify-center items-center w-full min-h-0">
+          <ProgressCard intake={intake} goal={goal} />
+        </div>
 
-        <div className="flex flex-col gap-5 items-center w-full">
+        <div className="flex flex-col gap-5 items-center w-full shrink-0">
           <div className="flex gap-4 justify-center w-full">
             <Button variant="secondary" onClick={() => addDrink(100)} className="flex-1 rounded-2xl py-3.5 shadow-sm">
               <span className="flex flex-col items-center leading-tight gap-0.5">
@@ -79,13 +78,10 @@ export default function Home() {
           >
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
             <span className="relative z-10 flex items-center justify-center gap-2 font-bold tracking-wide">
-               + Add Drink
+               + Add 250ml
             </span>
           </Button>
         </div>
-
-        <GoalSettings goal={goal} setGoal={setGoal} />
-        <ReminderSettings interval={reminderInterval} setInterval={setReminderInterval} />
       </div>
     </main>
   );

@@ -13,6 +13,7 @@ export interface HydrationState {
   goal: number;
   streak: number;
   reminderInterval: number; // 0 means off
+  quietHours: { start: string; end: string };
   lastUpdated: string; // ISO date string without time to check for a new day
   history: HydrationHistoryItem[];
 }
@@ -25,6 +26,7 @@ export function useHydration() {
     goal: DEFAULT_GOAL,
     streak: 0,
     reminderInterval: 0,
+    quietHours: { start: "22:00", end: "07:00" },
     lastUpdated: new Date().toISOString().split("T")[0],
     history: [],
   });
@@ -49,6 +51,7 @@ export function useHydration() {
           goal: parsed.goal ?? DEFAULT_GOAL,
           streak: parsed.streak ?? 0,
           reminderInterval: parsed.reminderInterval ?? 0,
+          quietHours: parsed.quietHours ?? { start: "22:00", end: "07:00" },
           lastUpdated: parsed.lastUpdated ?? today,
           history: parsed.history ?? [],
         };
@@ -156,12 +159,20 @@ export function useHydration() {
     }));
   };
 
+  const setQuietHours = (start: string, end: string) => {
+    setState((prev: HydrationState) => ({
+      ...prev,
+      quietHours: { start, end },
+    }));
+  };
+
   return {
     ...state,
     animatedIntake, // New exposed tracking property
     addDrink,
     setGoal,
     setReminderInterval,
+    setQuietHours,
     resetDaily,
     mounted,
   };
