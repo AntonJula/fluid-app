@@ -8,26 +8,26 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-safe w-full max-w-md mx-auto">
-      <nav className="flex items-center justify-around w-full max-w-[240px] px-6 py-3 mb-6 bg-white/70 backdrop-blur-xl border border-white/50 rounded-full shadow-xl shadow-water-200/40 transition-all">
+    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-safe w-full">
+      <nav className="flex items-center justify-center gap-12 px-10 py-2.5 mb-8 bg-water-800/30 backdrop-blur-2xl border border-water-300/20 rounded-full shadow-[0_10px_40px_-10px_rgba(4,47,46,0.8)] transition-all w-max mx-auto">
         <Link 
           href="/" 
-          className={`flex flex-col items-center gap-1 p-2 transition-all duration-300 ease-in-out ${
-            pathname === "/" ? "text-water-600 scale-110" : "text-water-900/40 hover:text-water-600/70"
+          className={`flex flex-col items-center gap-1 p-1.5 transition-all duration-300 ease-out ${
+            pathname === "/" ? "text-white scale-110 drop-shadow-md" : "text-water-400/60 hover:text-water-200"
           }`}
         >
-          <Droplets className="w-5 h-5 mb-0.5" strokeWidth={pathname === "/" ? 2.5 : 2} />
-          <span className="text-[10px] font-bold tracking-wider uppercase">Home</span>
+          <Droplets className="w-5 h-5" strokeWidth={pathname === "/" ? 2.5 : 2} />
+          <span className="text-[10px] font-bold tracking-widest uppercase mt-0.5">Home</span>
         </Link>
         
         <Link 
           href="/stats" 
-          className={`flex flex-col items-center gap-1 p-2 transition-all duration-300 ease-in-out ${
-            pathname === "/stats" ? "text-water-600 scale-110" : "text-water-900/40 hover:text-water-600/70"
+          className={`flex flex-col items-center gap-1 p-1.5 transition-all duration-300 ease-out ${
+            pathname === "/stats" ? "text-white scale-110 drop-shadow-md" : "text-water-400/60 hover:text-water-200"
           }`}
         >
-          <BarChart2 className="w-5 h-5 mb-0.5" strokeWidth={pathname === "/stats" ? 2.5 : 2} />
-          <span className="text-[10px] font-bold tracking-wider uppercase">Stats</span>
+          <BarChart2 className="w-5 h-5" strokeWidth={pathname === "/stats" ? 2.5 : 2} />
+          <span className="text-[10px] font-bold tracking-widest uppercase mt-0.5">Stats</span>
         </Link>
       </nav>
     </div>

@@ -13,18 +13,18 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseStyles = "inline-flex items-center justify-center font-medium transition-all duration-200 ease-out rounded-full active:scale-95";
+  const baseStyles = "relative overflow-hidden inline-flex items-center justify-center font-semibold transition-all duration-300 ease-out rounded-2xl active:scale-[0.97]";
   
   const variants = {
-    primary: "bg-water-500 text-white hover:bg-water-600 shadow-sm shadow-water-200",
-    secondary: "bg-water-100 text-water-900 hover:bg-water-200",
-    ghost: "bg-transparent text-water-600 hover:bg-water-50",
+    primary: "bg-gradient-to-br from-water-400 to-water-600 text-white shadow-lg shadow-water-500/25 hover:shadow-water-500/40 hover:-translate-y-0.5 border border-water-300/20",
+    secondary: "bg-water-800/40 backdrop-blur-md text-water-100 hover:bg-water-700/50 hover:-translate-y-0.5 border border-water-500/30 shadow-sm",
+    ghost: "bg-transparent text-water-300 hover:bg-water-800/40 hover:text-white transition-colors",
   };
   
   const sizes = {
     sm: "px-4 py-2 text-sm",
     md: "px-6 py-3 text-base",
-    lg: "px-8 py-4 text-lg font-semibold",
+    lg: "px-8 py-4 text-lg",
   };
 
   return (
