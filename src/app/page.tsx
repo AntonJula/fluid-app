@@ -40,7 +40,7 @@ export default function Home() {
           </div>
           <h1 
             className={`text-5xl font-black tracking-tighter inline-block pb-1 transition-colors duration-700 ${
-              progressAttr > 0.82 ? "text-water-900" : "text-water-900 dark:text-white"
+              progressAttr > 0.82 ? "text-water-900" : "text-white"
             }`}
           >
             Fluid
@@ -48,7 +48,7 @@ export default function Home() {
           <br/>
           <p 
             className={`text-sm font-bold mt-1 inline-block transition-colors duration-700 ${
-              progressAttr > 0.82 ? "text-water-800" : "text-water-800 dark:text-water-100"
+              progressAttr > 0.82 ? "text-water-800" : "text-water-100"
             }`}
           >
             Daily Hydration Tracker

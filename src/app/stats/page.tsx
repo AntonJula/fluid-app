@@ -29,11 +29,11 @@ export default function StatsPage() {
   return (
     <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh]">
       <header className="w-full text-center mt-6 mb-8">
-        <h1 className="text-3xl font-bold text-water-900 dark:text-white tracking-tight">Your Stats</h1>
-        <p className="text-water-600/80 dark:text-water-200/80 text-sm font-medium mt-1 mb-4">Consistency is key</p>
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-water-100 dark:bg-water-800/50 rounded-full text-water-800 dark:text-water-100 font-semibold text-sm shadow-sm ring-1 ring-water-200/50">
+        <h1 className="text-3xl font-bold text-white tracking-tight">Your Stats</h1>
+        <p className="text-water-200/80 text-sm font-medium mt-1 mb-4">Consistency is key</p>
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-water-800/50 rounded-full text-water-100 font-semibold text-sm shadow-sm ring-1 ring-water-200/50">
           <span>Today's Goal:</span>
-          <span className="text-water-600 dark:text-water-300 font-bold">{goal} ml</span>
+          <span className="text-water-300 font-bold">{goal} ml</span>
         </div>
       </header>
 
