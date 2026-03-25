@@ -4,7 +4,7 @@ import React from "react";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { useNotifications } from "@/hooks/useNotifications";
-import { BellOff } from "lucide-react";
+import { BellOff, BellRing } from "lucide-react";
 
 interface ReminderSettingsProps {
   interval: number;
@@ -15,7 +15,7 @@ interface ReminderSettingsProps {
 
 export function ReminderSettings({ interval, setInterval, quietHours, setQuietHours }: ReminderSettingsProps) {
   const { permission, requestPermission } = useNotifications(interval, quietHours);
-  const intervals = [15, 25, 45];
+  const intervals = [20, 40, 60];
 
   const [isCustom, setIsCustom] = React.useState(false);
   const [customVal, setCustomVal] = React.useState(interval);
@@ -23,8 +23,14 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
 
   return (
     <Card className="w-full max-w-sm mx-auto mt-4 space-y-5 shadow-lg p-5">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-white tracking-tight text-lg">Reminders</h3>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h3 className="font-semibold text-white tracking-tight text-lg">Reminders</h3>
+          <p className="mt-1 text-sm text-water-300/80">
+            Gentle nudges work better than constant interruptions.
+          </p>
+        </div>
+
         {permission !== "granted" && (
           <Button variant="ghost" size="sm" onClick={requestPermission} className="text-xs underline p-0 h-auto">
             Enable Notifications
@@ -32,14 +38,33 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
         )}
       </div>
 
-      <div className="flex gap-2.5 flex-wrap items-center pt-2">
+      <div className="rounded-2xl border border-water-400/10 bg-water-900/30 px-4 py-3">
+        <div className="flex items-center gap-2 text-water-200">
+          <BellRing className="w-4 h-4" strokeWidth={2.5} />
+          <span className="text-sm font-bold">
+            {interval > 0 ? `Every ${interval} minutes` : "Reminders are off"}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-water-400/80">
+          {interval > 0
+            ? "Choose an interval that supports the habit without becoming background noise."
+            : "Turn them on if you want help building consistency."}
+        </p>
+      </div>
+
+      <div className="flex gap-2.5 flex-wrap items-center pt-1">
         {intervals.map((min) => (
           <Button
             key={min}
             variant={interval === min && !isCustom ? "primary" : "secondary"}
             size="sm"
-            onClick={() => { setInterval(min); setIsCustom(false); }}
-            className={`flex-1 min-w-[3.5rem] rounded-xl ${interval === min && !isCustom ? 'ring-2 ring-water-300/50 ring-offset-2 ring-offset-background' : ''}`}
+            onClick={() => {
+              setInterval(min);
+              setIsCustom(false);
+            }}
+            className={`flex-1 min-w-[3.8rem] rounded-xl ${
+              interval === min && !isCustom ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
+            }`}
           >
             {min}m
           </Button>
@@ -47,15 +72,24 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
 
         {isCustom ? (
           <div className="flex items-center gap-2 flex-[2] min-w-[9rem]">
-            <input 
-              type="number" 
+            <input
+              type="number"
+              min={5}
               value={customVal || ""}
-              onChange={e => setCustomVal(Number(e.target.value))}
+              onChange={(e) => setCustomVal(Number(e.target.value))}
               placeholder="Min"
               className="w-full bg-water-800/40 p-2.5 text-sm text-center border rounded-xl outline-none font-bold text-white border-water-500/30 focus:border-water-300 transition-all shadow-inner placeholder-water-300/50"
               autoFocus
             />
-            <Button size="sm" variant="primary" onClick={() => { setInterval(customVal); setIsCustom(false); }} className="px-4 rounded-xl">
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                setInterval(Math.max(5, customVal));
+                setIsCustom(false);
+              }}
+              className="px-4 rounded-xl"
+            >
               Set
             </Button>
           </div>
@@ -64,7 +98,9 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
             variant={!isPredefined && interval > 0 ? "primary" : "secondary"}
             size="sm"
             onClick={() => setIsCustom(true)}
-            className={`flex-1 min-w-[4.5rem] rounded-xl ${!isPredefined && interval > 0 ? 'ring-2 ring-water-300/50 ring-offset-2 ring-offset-background' : ''}`}
+            className={`flex-1 min-w-[4.8rem] rounded-xl ${
+              !isPredefined && interval > 0 ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
+            }`}
           >
             {!isPredefined && interval > 0 ? `${interval}m` : "Custom"}
           </Button>
@@ -73,27 +109,35 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
         <Button
           variant={interval === 0 ? "primary" : "secondary"}
           size="sm"
-          className={`flex-1 min-w-[3rem] rounded-xl transition-opacity ${interval === 0 ? 'ring-2 ring-water-300/50 ring-offset-2 ring-offset-background' : 'opacity-80 hover:opacity-100'}`}
-          onClick={() => { setInterval(0); setIsCustom(false); }}
+          className={`flex-1 min-w-[3rem] rounded-xl transition-opacity ${
+            interval === 0
+              ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background"
+              : "opacity-80 hover:opacity-100"
+          }`}
+          onClick={() => {
+            setInterval(0);
+            setIsCustom(false);
+          }}
           title="Turn Off Reminders"
         >
           <BellOff className={`w-4 h-4 ${interval === 0 ? "text-white" : "text-water-400"}`} />
         </Button>
       </div>
-      
+
       {interval > 0 && (
         <div className="pt-2">
-          <p className="text-xs font-bold text-water-400 uppercase tracking-widest mb-3">Do Not Disturb</p>
+          <p className="text-xs font-bold text-water-400 uppercase tracking-widest mb-1">Do Not Disturb</p>
+          <p className="text-xs text-water-400/75 mb-3">Keep reminders out of sleep or focus hours.</p>
           <div className="flex items-center gap-3">
-            <input 
-              type="time" 
+            <input
+              type="time"
               value={quietHours.start}
               onChange={(e) => setQuietHours(e.target.value, quietHours.end)}
               className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl outline-none font-bold text-white border-water-500/30 focus:border-water-300 transition-all shadow-inner"
             />
             <span className="text-water-300/50 font-bold text-xs uppercase tracking-widest">To</span>
-            <input 
-              type="time" 
+            <input
+              type="time"
               value={quietHours.end}
               onChange={(e) => setQuietHours(quietHours.start, e.target.value)}
               className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl outline-none font-bold text-white border-water-500/30 focus:border-water-300 transition-all shadow-inner"

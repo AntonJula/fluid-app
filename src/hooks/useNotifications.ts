@@ -1,32 +1,44 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const MESSAGES = [
-  "Time for a sip 💧",
-  "Hydration check!",
-  "Quick water break",
-  "Keep the streak going, drink water!"
+  "A quick sip now will make the next hour feel better.",
+  "Hydration check. Give yourself a small refill break.",
+  "A glass of water is an easy win right now.",
+  "Keep the streak moving. A few sips count.",
 ];
 
-export function useNotifications(intervalMinutes: number, quietHours: { start: string; end: string } = { start: "22:00", end: "07:00" }) {
-  const [permission, setPermission] = useState<NotificationPermission>("default");
+function getInitialPermission(): NotificationPermission {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    return "default";
+  }
+
+  return Notification.permission;
+}
+
+export function useNotifications(
+  intervalMinutes: number,
+  quietHours: { start: string; end: string } = { start: "22:00", end: "07:00" }
+) {
+  const [permission, setPermission] = useState<NotificationPermission>(getInitialPermission);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const quietHoursRef = useRef(quietHours);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      setPermission(Notification.permission);
-    }
-  }, []);
+    quietHoursRef.current = quietHours;
+  }, [quietHours]);
 
   const requestPermission = async () => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
+
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
+
       if (result === "granted") {
-        new Notification("Fluid", { 
-          body: "Notifications enabled! We'll remind you to drink water.",
+        new Notification("Fluid", {
+          body: "Notifications are on. We will keep the reminders calm and useful.",
         });
       }
     } catch (e) {
@@ -36,17 +48,14 @@ export function useNotifications(intervalMinutes: number, quietHours: { start: s
 
   useEffect(() => {
     if (permission === "granted" && intervalMinutes > 0) {
-      // Clear existing interval
       if (timerRef.current) clearInterval(timerRef.current);
-      
-      // Set new interval
+
       timerRef.current = setInterval(() => {
-        // Check Quiet Hours
         const now = new Date();
         const currentMins = now.getHours() * 60 + now.getMinutes();
-        
-        const [startH, startM] = quietHours.start.split(":").map(Number);
-        const [endH, endM] = quietHours.end.split(":").map(Number);
+
+        const [startH, startM] = quietHoursRef.current.start.split(":").map(Number);
+        const [endH, endM] = quietHoursRef.current.end.split(":").map(Number);
         const startMins = startH * 60 + startM;
         const endMins = endH * 60 + endM;
 
@@ -54,11 +63,10 @@ export function useNotifications(intervalMinutes: number, quietHours: { start: s
         if (startMins <= endMins) {
           isQuietHour = currentMins >= startMins && currentMins < endMins;
         } else {
-          // Crosses midnight (e.g. 22:00 -> 07:00)
           isQuietHour = currentMins >= startMins || currentMins < endMins;
         }
 
-        if (isQuietHour) return; // Do not notify
+        if (isQuietHour) return;
 
         const msg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
         new Notification("Fluid", {

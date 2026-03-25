@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { execSync } = require('child_process');
 try {
   const result = execSync('npm run build', { encoding: 'utf8' });

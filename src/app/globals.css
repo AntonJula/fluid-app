@@ -3,7 +3,6 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
   --color-water-50: #f0fdfa;
   --color-water-100: #ccfbf1;
   --color-water-200: #99f6e4;
@@ -20,8 +19,10 @@
 }
 
 :root {
-  --background: #042f2e; /* dark teal background */
-  --foreground: #f0fdfa; /* light teal foreground */
+  --background: #042f2e;
+  /* dark teal background */
+  --foreground: #f0fdfa;
+  /* light teal foreground */
 }
 
 body {
