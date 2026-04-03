@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-water-50: #f0fdfa;
-  --color-water-100: #ccfbf1;
-  --color-water-200: #99f6e4;
-  --color-water-300: #5eead4;
-  --color-water-400: #2dd4bf;
-  --color-water-500: #14b8a6;
-  --color-water-600: #0d9488;
-  --color-water-700: #0f766e;
-  --color-water-800: #115e59;
-  --color-water-900: #134e4a;
-  --color-water-950: #042f2e;
+
+  --color-water-50: #f0f9ff;
+  --color-water-100: #e0f2fe;
+  --color-water-200: #bae6fd;
+  --color-water-300: #7dd3fc;
+  --color-water-400: #38bdf8;
+  --color-water-500: #0ea5e9;
+  --color-water-600: #0284c7;
+  --color-water-700: #0369a1;
+  --color-water-800: #075985;
+  --color-water-900: #0c4a6e;
+  --color-water-950: #082f49;
 
   --font-sans: var(--font-outfit);
+  --font-poppins: var(--font-poppins);
 }
 
 :root {
-  --background: #042f2e;
-  /* dark teal background */
-  --foreground: #f0fdfa;
-  /* light teal foreground */
+  --background: #082f49; /* deep ocean blue background */
+  --foreground: #f0f9ff; /* light sea foreground */
 }
 
 body {

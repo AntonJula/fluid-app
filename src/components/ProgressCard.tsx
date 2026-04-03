@@ -41,32 +41,36 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
         </div>
       </div>
 
-      <div className="mt-5 grid w-full grid-cols-2 gap-3 text-left">
-        <div className="rounded-2xl border border-water-400/10 bg-water-900/35 p-4">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-water-400/80">Left Today</p>
-          <p className="mt-2 text-2xl font-black text-white">{remaining} ml</p>
+      {!isGoalMet && (
+        <div className="mt-5 grid w-full grid-cols-2 gap-3 text-left animate-in fade-in zoom-in duration-500">
+          <div className="rounded-2xl border border-water-400/10 bg-water-900/35 p-4 flex flex-col justify-center">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-water-400/80">Left Today</p>
+            <p className="mt-2 text-2xl font-black text-white">{remaining} ml</p>
+          </div>
+          <div className="rounded-2xl border border-water-400/10 bg-water-900/35 p-4 flex flex-col justify-center">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-water-400/80">Quick Goal</p>
+            <p className="mt-2 text-2xl font-black text-white">
+              {remainingGlasses} {remainingGlasses === 1 ? "glass" : "glasses"}
+            </p>
+          </div>
         </div>
-        <div className="rounded-2xl border border-water-400/10 bg-water-900/35 p-4">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-water-400/80">Quick Goal</p>
-          <p className="mt-2 text-2xl font-black text-white">
-            {isGoalMet ? "Done" : `${remainingGlasses} glasses`}
+      )}
+
+      {isGoalMet && (
+        <div className="mt-5 w-full rounded-3xl bg-gradient-to-br from-water-400/20 to-water-600/20 px-5 py-6 shadow-[0_0_30px_rgba(56,189,248,0.15)] border border-water-300/30 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
+          <div className="rounded-full bg-water-300/20 p-3 mb-3">
+            <svg className="w-8 h-8 text-water-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+          </div>
+          <p className="text-[14px] font-bold text-water-200 uppercase tracking-[0.25em] mb-1">
+            Goal Achieved
+          </p>
+          <p className="text-2xl font-black text-white tracking-tight text-center">
+            You're fully hydrated today!
           </p>
         </div>
-      </div>
-
-      <div className="mt-5 w-full rounded-3xl bg-water-800/30 px-5 py-4 shadow-inner border border-water-400/10">
-        <p className="text-[11px] font-bold text-water-300/80 uppercase tracking-[0.2em]">
-          {isGoalMet ? "Reward unlocked" : "Next push"}
-        </p>
-        <p className="mt-1 text-2xl font-black text-white tracking-tight">
-          {isGoalMet ? "Daily goal reached!" : `${remaining} ml to go`}
-        </p>
-        <p className="mt-1 text-xs font-semibold text-water-400/80">
-          {isGoalMet
-            ? "You showed up today. The fun finale can land here later."
-            : "A couple of taps and the water level will feel noticeably better."}
-        </p>
-      </div>
+      )}
     </Card>
   );
 }

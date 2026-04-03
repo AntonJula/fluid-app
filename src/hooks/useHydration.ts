@@ -21,8 +21,12 @@ export interface HydrationState {
 const DEFAULT_GOAL = 2500;
 const STORAGE_KEY = "fluid-hydration";
 
+function formatDateLocal(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function getTodayDate() {
-  return new Date().toISOString().split("T")[0];
+  return formatDateLocal(new Date());
 }
 
 function getDefaultState(): HydrationState {
@@ -66,7 +70,7 @@ function getInitialHydrationState(): HydrationState {
 
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    const yesterdayStr = formatDateLocal(yesterday);
 
     let newStreak = loadedState.streak;
     if (loadedState.lastUpdated === yesterdayStr && loadedState.intake >= loadedState.goal) {
@@ -84,7 +88,21 @@ function getInitialHydrationState(): HydrationState {
       });
     }
 
-    if (updatedHistory.length > 14) updatedHistory.shift();
+    const parts = loadedState.lastUpdated.split('-').map(Number);
+    if (parts.length === 3) {
+      const gapDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      gapDate.setDate(gapDate.getDate() + 1); 
+      
+      let safeGuard = 0;
+      while (formatDateLocal(gapDate) !== today && safeGuard < 365) {
+        const gapStr = formatDateLocal(gapDate);
+        if (!updatedHistory.find(item => item.date === gapStr)) {
+          updatedHistory.push({ date: gapStr, intake: 0, goal: loadedState.goal });
+        }
+        gapDate.setDate(gapDate.getDate() + 1);
+        safeGuard++;
+      }
+    }
 
     return {
       ...loadedState,
@@ -107,41 +125,12 @@ export function useHydration() {
   );
 
   const [state, setState] = useState<HydrationState>(getInitialHydrationState);
-  const [animatedIntake, setAnimatedIntake] = useState(0);
-  const animatedIntakeRef = useRef(0);
 
   useEffect(() => {
     if (mounted) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
   }, [state, mounted]);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    let animationFrameId: number;
-    const startValue = animatedIntakeRef.current;
-    const targetValue = state.intake;
-    const startTime = performance.now();
-    const duration = 1500;
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progressParam = Math.min(elapsed / duration, 1);
-      const easeOutQuart = 1 - Math.pow(1 - progressParam, 4);
-
-      const currentVal = startValue + (targetValue - startValue) * easeOutQuart;
-      animatedIntakeRef.current = currentVal;
-      setAnimatedIntake(currentVal);
-
-      if (progressParam < 1) {
-        animationFrameId = requestAnimationFrame(animate);
-      }
-    };
-
-    animationFrameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [state.intake, mounted]);
 
   const addDrink = (amount: number) => {
     setState((prev) => ({
@@ -180,7 +169,6 @@ export function useHydration() {
 
   return {
     ...state,
-    animatedIntake,
     addDrink,
     setGoal,
     setReminderInterval,

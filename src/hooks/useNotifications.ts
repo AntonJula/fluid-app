@@ -48,9 +48,7 @@ export function useNotifications(
 
   useEffect(() => {
     if (permission === "granted" && intervalMinutes > 0) {
-      if (timerRef.current) clearInterval(timerRef.current);
-
-      timerRef.current = setInterval(() => {
+      const checkAndNotify = (isCatchUp = false) => {
         const now = new Date();
         const currentMins = now.getHours() * 60 + now.getMinutes();
 
@@ -68,11 +66,41 @@ export function useNotifications(
 
         if (isQuietHour) return;
 
-        const msg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
-        new Notification("Fluid", {
-          body: msg,
-        });
+        const baseMsg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+        const msg = isCatchUp ? `Welcome back! ${baseMsg}` : baseMsg;
+        
+        new Notification("Fluid", { body: msg });
+        localStorage.setItem("fluid-last-notified", Date.now().toString());
+      };
+
+      if (timerRef.current) clearInterval(timerRef.current);
+
+      timerRef.current = setInterval(() => {
+        checkAndNotify(false);
       }, intervalMinutes * 60 * 1000);
+
+      const handleVisibility = () => {
+        if (document.visibilityState === "visible") {
+          const last = Number(localStorage.getItem("fluid-last-notified") || 0);
+          // If we missed a notification by at least 1 interval cycle
+          if (last > 0 && Date.now() - last >= intervalMinutes * 60 * 1000) {
+            checkAndNotify(true);
+            // Reset interval so it doesn't fire immediately afterwards
+            if (timerRef.current) clearInterval(timerRef.current);
+            timerRef.current = setInterval(() => checkAndNotify(false), intervalMinutes * 60 * 1000);
+          }
+        }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibility);
+      // Also register for focus window as an alternative
+      window.addEventListener("focus", handleVisibility);
+
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        document.removeEventListener("visibilitychange", handleVisibility);
+        window.removeEventListener("focus", handleVisibility);
+      };
     }
 
     return () => {
