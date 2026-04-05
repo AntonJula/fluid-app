@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "./Button";
 import { Delete } from "lucide-react";
 
@@ -33,7 +34,12 @@ export function NumberPickerDialog({
     }
   }, [isOpen, value]);
 
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   const handleKeyPress = (key: string) => {
     setCurrentVal((prev) => {
@@ -60,8 +66,8 @@ export function NumberPickerDialog({
     [7, 8, 9],
   ];
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-water-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-water-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-water-900 border border-water-400/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300">
         
         <div className="p-6 bg-water-800/40 border-b border-water-400/10 flex flex-col items-center">
@@ -124,6 +130,7 @@ export function NumberPickerDialog({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

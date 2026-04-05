@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "./Button";
 
 interface TimePickerDialogProps {
@@ -28,7 +29,12 @@ export function TimePickerDialog({ isOpen, value, onChange, onClose, title = "Se
     }
   }, [isOpen, value]);
 
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   const handleSave = () => {
     let h24 = hour;
@@ -44,7 +50,7 @@ export function TimePickerDialog({ isOpen, value, onChange, onClose, title = "Se
   const hours = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-water-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-water-900 border border-water-400/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300">
         
@@ -116,6 +122,7 @@ export function TimePickerDialog({ isOpen, value, onChange, onClose, title = "Se
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
