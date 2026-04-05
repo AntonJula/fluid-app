@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
-const PAGES = ["/", "/stats", "/settings"];
+const PAGES = ["/stats", "/", "/settings"];
 
 export function SwipeNavigation() {
   const router = useRouter();

@@ -11,16 +11,6 @@ export function BottomNav() {
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-safe w-full">
       <nav className="flex items-center justify-between w-[92%] max-w-[340px] px-8 py-2.5 mb-8 bg-water-800/30 backdrop-blur-2xl border border-water-300/20 rounded-full shadow-[0_10px_40px_-10px_rgba(4,47,46,0.8)] transition-all mx-auto">
         <Link 
-          href="/" 
-          className={`flex flex-col items-center gap-1 p-1.5 transition-all duration-300 ease-out ${
-            pathname === "/" ? "text-white scale-110 drop-shadow-md" : "text-water-400/60 hover:text-water-200"
-          }`}
-        >
-          <Droplets className="w-5 h-5" strokeWidth={pathname === "/" ? 2.5 : 2} />
-          <span className="text-[10px] font-bold tracking-widest uppercase mt-0.5">Home</span>
-        </Link>
-        
-        <Link 
           href="/stats" 
           className={`flex flex-col items-center gap-1 p-1.5 transition-all duration-300 ease-out ${
             pathname === "/stats" ? "text-white scale-110 drop-shadow-md" : "text-water-400/60 hover:text-water-200"
@@ -31,13 +21,23 @@ export function BottomNav() {
         </Link>
 
         <Link 
+          href="/" 
+          className={`flex flex-col items-center gap-1 p-1.5 transition-all duration-300 ease-out ${
+            pathname === "/" ? "text-white scale-110 drop-shadow-md" : "text-water-400/60 hover:text-water-200"
+          }`}
+        >
+          <Droplets className="w-5 h-5" strokeWidth={pathname === "/" ? 2.5 : 2} />
+          <span className="text-[10px] font-bold tracking-widest uppercase mt-0.5">Home</span>
+        </Link>
+
+        <Link 
           href="/settings" 
           className={`flex flex-col items-center gap-1 p-1.5 transition-all duration-300 ease-out ${
             pathname === "/settings" ? "text-white scale-110 drop-shadow-md" : "text-water-400/60 hover:text-water-200"
           }`}
         >
           <Settings className="w-5 h-5" strokeWidth={pathname === "/settings" ? 2.5 : 2} />
-          <span className="text-[10px] font-bold tracking-widest uppercase mt-0.5">Menu</span>
+          <span className="text-[10px] font-bold tracking-widest uppercase mt-0.5">Sett</span>
         </Link>
       </nav>
     </div>
