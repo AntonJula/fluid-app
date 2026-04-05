@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
-const PAGES = ["/stats", "/", "/settings"];
+const PAGES = ["/", "/stats", "/settings"];
 
 export function SwipeNavigation() {
   const router = useRouter();
@@ -34,11 +34,11 @@ export function SwipeNavigation() {
         let currentIndex = PAGES.indexOf(pathname);
         if (currentIndex === -1) currentIndex = 0;
 
-        if (isLeftSwipe && currentIndex < PAGES.length - 1) {
-          router.push(PAGES[currentIndex + 1]);
+        if (isLeftSwipe) {
+          router.push(PAGES[(currentIndex + 1) % PAGES.length]);
         }
-        if (isRightSwipe && currentIndex > 0) {
-          router.push(PAGES[currentIndex - 1]);
+        if (isRightSwipe) {
+          router.push(PAGES[(currentIndex - 1 + PAGES.length) % PAGES.length]);
         }
       }
       

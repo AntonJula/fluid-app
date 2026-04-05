@@ -2,6 +2,8 @@
 
 import React from "react";
 import { Card } from "./ui/Card";
+import { TimePickerDialog } from "./ui/TimePickerDialog";
+import { NumberPickerDialog } from "./ui/NumberPickerDialog";
 import { Button } from "./ui/Button";
 import { useNotifications } from "@/hooks/useNotifications";
 import { BellOff, BellRing } from "lucide-react";
@@ -20,6 +22,17 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   const [isCustom, setIsCustom] = React.useState(false);
   const [customVal, setCustomVal] = React.useState(interval);
   const isPredefined = intervals.includes(interval);
+
+  const [activePicker, setActivePicker] = React.useState<"start" | "end" | null>(null);
+
+  const formatDisplayTime = (time24: string) => {
+    if (!time24) return "";
+    const [h, m] = time24.split(":");
+    const hNum = Number(h);
+    const ampm = hNum >= 12 ? "PM" : "AM";
+    const h12 = hNum % 12 || 12;
+    return `${h12.toString().padStart(2, "0")}:${m} ${ampm}`;
+  };
 
   return (
     <Card className="w-full max-w-sm mx-auto mt-4 space-y-5 shadow-lg p-5">
@@ -53,58 +66,57 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       </div>
 
       <div className="flex gap-2.5 flex-wrap items-center pt-1">
-        {intervals.map((min) => (
-          <Button
-            key={min}
-            variant={interval === min && !isCustom ? "primary" : "secondary"}
-            size="sm"
-            onClick={() => {
-              setInterval(min);
-              setIsCustom(false);
-            }}
-            className={`flex-1 min-w-[3.8rem] rounded-xl ${
-              interval === min && !isCustom ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
-            }`}
-          >
-            {min}m
-          </Button>
-        ))}
-
-        {isCustom ? (
-          <div className="flex items-center gap-2 flex-[2] min-w-[9rem]">
-            <input
-              type="number"
-              min={5}
-              value={customVal || ""}
-              onChange={(e) => setCustomVal(Number(e.target.value))}
-              placeholder="Min"
-              className="w-full bg-water-800/40 p-2.5 text-sm text-center border rounded-xl outline-none font-bold text-white border-water-500/30 focus:border-water-300 transition-all shadow-inner placeholder-water-300/50"
-              autoFocus
-            />
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => {
-                setInterval(Math.max(5, customVal));
-                setIsCustom(false);
-              }}
-              className="px-4 rounded-xl"
-            >
-              Set
-            </Button>
-          </div>
-        ) : (
-          <Button
-            variant={!isPredefined && interval > 0 ? "primary" : "secondary"}
-            size="sm"
-            onClick={() => setIsCustom(true)}
-            className={`flex-1 min-w-[4.8rem] rounded-xl ${
-              !isPredefined && interval > 0 ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
-            }`}
-          >
-            {!isPredefined && interval > 0 ? `${interval}m` : "Custom"}
-          </Button>
-        )}
+        {[
+          ...intervals.map((min) => ({ isCustomBtn: false, val: min })),
+          { isCustomBtn: true, val: !isPredefined && interval > 0 ? interval : Infinity }
+        ].sort((a, b) => a.val - b.val).map((item) => {
+          if (item.isCustomBtn) {
+            return (
+              <React.Fragment key="custom-btn-frag">
+                <Button
+                  key="custom-btn"
+                  variant={!isPredefined && interval > 0 ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => setIsCustom(true)}
+                  className={`flex-1 min-w-[4.8rem] rounded-xl ${
+                    !isPredefined && interval > 0 ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
+                  }`}
+                >
+                  {!isPredefined && interval > 0 ? `${interval}m` : "Custom"}
+                </Button>
+                <NumberPickerDialog
+                  isOpen={isCustom}
+                  value={!isPredefined && interval > 0 ? interval : customVal}
+                  min={5}
+                  title="Custom Interval"
+                  suffix="m"
+                  onChange={(val) => {
+                    setCustomVal(val);
+                    setInterval(val);
+                  }}
+                  onClose={() => setIsCustom(false)}
+                />
+              </React.Fragment>
+            );
+          } else {
+            return (
+              <Button
+                key={item.val}
+                variant={interval === item.val && !isCustom ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => {
+                  setInterval(item.val);
+                  setIsCustom(false);
+                }}
+                className={`flex-1 min-w-[3.8rem] rounded-xl ${
+                  interval === item.val && !isCustom ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
+                }`}
+              >
+                {item.val}m
+              </Button>
+            );
+          }
+        })}
 
         <Button
           variant={interval === 0 ? "primary" : "secondary"}
@@ -129,20 +141,30 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
           <p className="text-xs font-bold text-water-400 uppercase tracking-widest mb-1">Do Not Disturb</p>
           <p className="text-xs text-water-400/75 mb-3">Keep reminders out of sleep or focus hours.</p>
           <div className="flex items-center gap-3">
-            <input
-              type="time"
-              value={quietHours.start}
-              onChange={(e) => setQuietHours(e.target.value, quietHours.end)}
-              className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl outline-none font-bold text-white border-water-500/30 focus:border-water-300 transition-all shadow-inner"
-            />
+            <button
+              onClick={() => setActivePicker("start")}
+              className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-500/30 hover:border-water-300 hover:bg-water-700/50 transition-all shadow-inner"
+            >
+              {formatDisplayTime(quietHours.start)}
+            </button>
             <span className="text-water-300/50 font-bold text-xs uppercase tracking-widest">To</span>
-            <input
-              type="time"
-              value={quietHours.end}
-              onChange={(e) => setQuietHours(quietHours.start, e.target.value)}
-              className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl outline-none font-bold text-white border-water-500/30 focus:border-water-300 transition-all shadow-inner"
-            />
+            <button
+              onClick={() => setActivePicker("end")}
+              className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-500/30 hover:border-water-300 hover:bg-water-700/50 transition-all shadow-inner"
+            >
+              {formatDisplayTime(quietHours.end)}
+            </button>
           </div>
+          <TimePickerDialog
+            isOpen={activePicker !== null}
+            value={activePicker === "start" ? quietHours.start : quietHours.end}
+            title={activePicker === "start" ? "Start Time" : "End Time"}
+            onChange={(val) => {
+              if (activePicker === "start") setQuietHours(val, quietHours.end);
+              if (activePicker === "end") setQuietHours(quietHours.start, val);
+            }}
+            onClose={() => setActivePicker(null)}
+          />
         </div>
       )}
     </Card>
