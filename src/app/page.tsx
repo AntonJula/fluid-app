@@ -69,7 +69,7 @@ export default function Home() {
                 key={item.amount}
                 variant="secondary"
                 onClick={() => addDrink(item.amount)}
-                className="group relative overflow-hidden rounded-[1.5rem] py-4 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)] border border-water-300/30 bg-gradient-to-b from-water-700/60 to-water-900/60 hover:from-water-600/70 hover:to-water-800/70 hover:-translate-y-1 hover:shadow-[0_12px_24px_-6px_rgba(56,189,248,0.3)] hover:border-water-300/60 backdrop-blur-xl transition-all duration-300 active:scale-[0.97]"
+                className="group relative overflow-hidden rounded-[1.5rem] py-4 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)] border border-water-300/30 bg-gradient-to-b from-water-500/30 to-water-700/30 hover:from-water-400/40 hover:to-water-600/40 hover:-translate-y-1 hover:shadow-[0_12px_24px_-6px_rgba(56,189,248,0.3)] hover:border-water-300/60 backdrop-blur-xl transition-all duration-300 active:scale-[0.97]"
               >
                 <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="flex flex-col items-center justify-center gap-1 w-full relative z-10">

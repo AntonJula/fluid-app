@@ -1,14 +1,46 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Droplets, BarChart2, Settings } from "lucide-react";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const showTemporarily = () => {
+      setIsVisible(true);
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setIsVisible(false);
+      }, 3000); 
+    };
+
+    showTemporarily();
+
+    const handleScroll = () => {
+      setIsVisible(false);
+      clearTimeout(timeoutId);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [pathname]);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-safe w-full pointer-events-none">
+    <div 
+      className={`fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-safe w-full pointer-events-none transition-all duration-700 ease-out ${
+        isVisible ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0"
+      }`}
+    >
       <nav className="flex items-center justify-between w-[92%] max-w-[340px] px-8 py-2.5 mb-8 bg-water-900/15 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] transition-all mx-auto pointer-events-auto">
         <Link 
           href="/" 
