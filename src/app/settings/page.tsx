@@ -4,11 +4,12 @@ import React from "react";
 import { useHydration } from "@/hooks/useHydration";
 import { GoalSettings } from "@/components/GoalSettings";
 import { ReminderSettings } from "@/components/ReminderSettings";
+import { NavSettings } from "@/components/NavSettings";
 import { Card } from "@/components/ui/Card";
 import { SharkBackground } from "@/components/SharkBackground";
 
 export default function SettingsPage() {
-  const { goal, setGoal, reminderInterval, setReminderInterval, quietHours, setQuietHours, mounted } = useHydration();
+  const { goal, setGoal, reminderInterval, setReminderInterval, quietHours, setQuietHours, hideNav, setHideNav, mounted } = useHydration();
 
   if (!mounted) {
     return <main className="min-h-screen bg-background" />;
@@ -39,6 +40,7 @@ export default function SettingsPage() {
           quietHours={quietHours}
           setQuietHours={setQuietHours}
         />
+        <NavSettings hideNav={hideNav} setHideNav={setHideNav} />
       </div>
     </main>
   );

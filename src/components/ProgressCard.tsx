@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { Card } from "./ui/Card";
 
 interface ProgressCardProps {
@@ -57,18 +58,39 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
       )}
 
       {isGoalMet && (
-        <div className="mt-5 w-full rounded-3xl bg-gradient-to-br from-water-400/20 to-water-600/20 px-5 py-6 shadow-[0_0_30px_rgba(56,189,248,0.15)] border border-water-300/30 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500">
-          <div className="rounded-full bg-water-300/20 p-3 mb-3">
-            <svg className="w-8 h-8 text-water-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-            </svg>
+        <div className="mt-5 w-full rounded-3xl bg-gradient-to-br from-water-400/20 to-water-600/20 px-5 py-6 shadow-[0_0_30px_rgba(56,189,248,0.15)] border border-water-300/30 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.3)_0%,transparent_60%)] pointer-events-none" />
+          
+          <div className="relative w-[220px] h-[220px] -mt-8 -mb-12 drop-shadow-[0_0_25px_rgba(56,189,248,0.8)] shark-pulse pointer-events-none">
+            <Image 
+              src="/Fierce shark head in glowing frame.png" 
+              alt="Goal Met Shark" 
+              fill
+              className="object-contain scale-110"
+              unoptimized
+            />
           </div>
-          <p className="text-[14px] font-bold text-water-200 uppercase tracking-[0.25em] mb-1">
+          
+          <p className="text-[14px] font-bold text-water-200 uppercase tracking-[0.25em] mb-1 relative z-10">
             Goal Achieved
           </p>
-          <p className="text-2xl font-black text-white tracking-tight text-center">
-            You're fully hydrated today!
+          <p className="text-2xl font-black text-white tracking-tight text-center relative z-10">
+            You&apos;re fully hydrated today!
           </p>
+
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+                @keyframes shark-pulse-soft {
+                  0%, 100% { opacity: 1; transform: scale(1); }
+                  50% { opacity: 0.85; transform: scale(0.96); }
+                }
+                .shark-pulse {
+                  animation: shark-pulse-soft 3.5s ease-in-out infinite;
+                }
+              `
+            }}
+          />
         </div>
       )}
     </Card>

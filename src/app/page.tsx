@@ -65,21 +65,21 @@ export default function Home() {
 
           <div className="grid grid-cols-2 gap-3">
             {QUICK_AMOUNTS.map((item) => (
-              <Button
+              <button
                 key={item.amount}
-                variant="secondary"
                 onClick={() => addDrink(item.amount)}
-                className="group relative overflow-hidden rounded-[1.5rem] py-4 shadow-[0_8px_16px_-6px_rgba(0,0,0,0.5)] border border-water-300/30 bg-gradient-to-b from-water-500/30 to-water-700/30 hover:from-water-400/40 hover:to-water-600/40 hover:-translate-y-1 hover:shadow-[0_12px_24px_-6px_rgba(56,189,248,0.3)] hover:border-water-300/60 backdrop-blur-xl transition-all duration-300 active:scale-[0.97]"
+                className="group relative overflow-hidden flex flex-col items-center justify-center gap-2 rounded-[1.5rem] py-5 px-3 border border-white/10 bg-white/5 shadow-[0_8px_16px_rgba(0,0,0,0.15),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-lg hover:bg-white/10 hover:border-white/20 hover:shadow-[0_12px_24px_rgba(56,189,248,0.2),inset_0_1px_2px_rgba(255,255,255,0.2)] hover:-translate-y-1 transition-all duration-300 active:scale-[0.97] outline-none"
               >
-                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="flex flex-col items-center justify-center gap-1 w-full relative z-10">
-                  <div className="flex items-center gap-1.5 text-water-200 group-hover:text-white transition-colors">
-                    <item.Icon className="w-6 h-6 drop-shadow-md" />
-                    <span className="text-[11px] uppercase font-bold tracking-[0.2em]">{item.label}</span>
-                  </div>
-                  <span className="text-2xl font-black text-white drop-shadow-lg group-hover:scale-105 transition-transform duration-300">{item.amount}<span className="text-[13px] text-water-300 font-bold tracking-normal ml-0.5">ml</span></span>
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                <div className="flex items-center gap-2 text-water-200 group-hover:text-white transition-colors duration-300 relative z-10">
+                  <item.Icon className="w-6 h-6 drop-shadow-md" />
+                  <span className="text-[12px] uppercase font-extrabold tracking-[0.25em]">{item.label}</span>
                 </div>
-              </Button>
+                <span className="text-3xl font-black text-white drop-shadow-lg group-hover:scale-105 transition-transform duration-300 relative z-10 mt-1">
+                  {item.amount}
+                  <span className="text-[14px] text-water-300 font-extrabold tracking-normal ml-1">ml</span>
+                </span>
+              </button>
             ))}
           </div>
         </section>
