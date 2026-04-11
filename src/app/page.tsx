@@ -27,7 +27,7 @@ export default function Home() {
   const completedToday = intake >= goal;
 
   return (
-    <main className="flex flex-col items-center p-6 pb-24 pt-6 w-full max-w-md mx-auto relative min-h-[100dvh] overflow-hidden">
+    <main className="flex flex-col items-center p-6 pb-24 pt-6 w-full max-w-md mx-auto relative min-h-[100dvh] overflow-hidden bg-background">
       <WaveBackground progress={progressAttr} />
 
       <div className="w-full z-10 flex flex-col gap-5 h-full flex-1">

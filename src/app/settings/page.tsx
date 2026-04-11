@@ -16,7 +16,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh]">
+    <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh] bg-background">
       <SharkBackground />
       
       <header className="w-full text-center mt-4 mb-8">

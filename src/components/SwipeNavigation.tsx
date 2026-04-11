@@ -8,9 +8,8 @@ import StatsPage from "@/app/stats/page";
 import SettingsPage from "@/app/settings/page";
 
 const PAGES = ["/", "/stats", "/settings"] as const;
-const MAX_PREVIEW_OFFSET = 156;
-const NAV_TRIGGER = 30;
-const SHELL_DRAG_RATIO = 0.92;
+const NAV_TRIGGER = 120;
+const SHELL_DRAG_RATIO = 1;
 
 type SwipeDirection = "left" | "right" | null;
 
@@ -47,7 +46,7 @@ export function SwipeNavigation() {
 
   const applyVisualState = useCallback((offset: number, isDragging: boolean) => {
     const root = document.documentElement;
-    const progress = Math.min(1, Math.abs(offset) / MAX_PREVIEW_OFFSET);
+    const progress = Math.min(1, Math.abs(offset) / (typeof window !== "undefined" ? window.innerWidth : 400));
 
     root.style.setProperty("--swipe-shell-offset", `${offset}px`);
     root.style.setProperty("--swipe-shell-scale", "1");
@@ -148,7 +147,8 @@ export function SwipeNavigation() {
 
       const nextDirection: Exclude<SwipeDirection, null> = deltaX < 0 ? "left" : "right";
       const nextTargetPath = getTargetPath(pathname, nextDirection);
-      const nextOffset = clamp(deltaX * SHELL_DRAG_RATIO, -MAX_PREVIEW_OFFSET, MAX_PREVIEW_OFFSET);
+      const maxOffset = typeof window !== "undefined" ? window.innerWidth : 400;
+      const nextOffset = clamp(deltaX * SHELL_DRAG_RATIO, -maxOffset, maxOffset);
 
       if (directionRef.current !== nextDirection || targetPathRef.current !== nextTargetPath) {
         syncPreviewState(nextDirection, nextTargetPath);
