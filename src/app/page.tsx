@@ -30,7 +30,7 @@ export default function Home() {
     <main className="flex flex-col items-center p-6 pb-24 pt-6 w-full max-w-md mx-auto relative min-h-[100dvh] overflow-hidden">
       <WaveBackground progress={progressAttr} />
 
-      <div className="w-full z-10 flex flex-col gap-8 h-full flex-1">
+      <div className="w-full z-10 flex flex-col gap-5 h-full flex-1">
         <header className="relative w-full text-center mt-2 z-20">
           <div className="absolute right-0 top-0 z-50">
             <Button
@@ -51,12 +51,12 @@ export default function Home() {
           </p>
         </header>
 
-        <div className="flex-1 flex flex-col justify-center items-center w-full min-h-0 mt-8 mb-4">
+        <div className="flex flex-col items-center w-full min-h-0 mt-4">
           <ProgressCard intake={intake} goal={goal} />
         </div>
 
-        <section className="w-full mt-auto">
-          <div className="flex items-center justify-between mb-4 px-2">
+        <section className="w-full mt-1">
+          <div className="flex items-center justify-between mb-3 px-2">
             <p className="font-ui text-[12px] uppercase tracking-[0.2em] font-bold text-water-200/90">Quick add</p>
             <p className="font-body text-xs font-semibold text-water-300/80">Tap to log</p>
           </div>
@@ -75,7 +75,13 @@ export default function Home() {
                 />
                 <div className="flex items-center gap-2 text-water-200 group-hover:text-white transition-colors duration-300 relative z-10">
                   <item.Icon className="w-6 h-6 drop-shadow-md" />
-                  <span className="font-ui text-[12px] uppercase font-extrabold tracking-[0.25em]">{item.label}</span>
+                  <span
+                    className={`font-ui text-[12px] uppercase font-extrabold ${
+                      item.label === "Sip" ? "text-[13px] tracking-[0.12em]" : "tracking-[0.18em]"
+                    }`}
+                  >
+                    {item.label}
+                  </span>
                 </div>
                 <span className="font-numeric text-3xl font-black text-white drop-shadow-lg group-hover:scale-105 transition-transform duration-300 relative z-10 mt-1">
                   {item.amount}

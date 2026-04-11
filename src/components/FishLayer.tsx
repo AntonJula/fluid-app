@@ -61,7 +61,7 @@ export function FishLayer({ progress }: FishLayerProps) {
       {visibleFish.map((fish) => {
         const swimAnimation = fish.direction === "ltr" ? "fish-swim-right" : "fish-swim-left";
         const facingTransform = fish.direction === "ltr" ? "scaleX(-1)" : "scaleX(1)";
-        const shouldPrioritize = fish.id === visibleFish[0]?.id;
+        const isLikelyLcpFish = fish.id === visibleFish[0]?.id || fish.yPercent <= 42;
 
         return (
           <div
@@ -98,13 +98,14 @@ export function FishLayer({ progress }: FishLayerProps) {
                       inset: 0,
                       clipPath: 'inset(0 30% 0 0)', // Shows only left 70%
                     }}
-                  >
-                    <Image 
-                      src="/Glowing fish in deep blue waters.png" 
-                      alt="Glowing Fish Head" 
-                      fill 
-                      loading={shouldPrioritize ? "eager" : "lazy"}
-                      priority={shouldPrioritize}
+                    >
+                      <Image 
+                        src="/Glowing fish in deep blue waters.png" 
+                        alt="Glowing Fish Head" 
+                        fill 
+                      loading={isLikelyLcpFish ? "eager" : "lazy"}
+                      priority={isLikelyLcpFish}
+                      fetchPriority={isLikelyLcpFish ? "high" : "auto"}
                       unoptimized
                       className="object-contain mix-blend-color-dodge opacity-90"
                       style={{ filter: "brightness(1.5) contrast(1.5) grayscale(0.2)" }}
@@ -121,13 +122,14 @@ export function FishLayer({ progress }: FishLayerProps) {
                       transformOrigin: '70% 50%', // Anchor exactly at the cut
                       transformStyle: 'preserve-3d',
                     }}
-                  >
-                    <Image 
-                      src="/Glowing fish in deep blue waters.png" 
-                      alt="Glowing Fish Tail" 
-                      fill 
-                      loading={shouldPrioritize ? "eager" : "lazy"}
-                      priority={shouldPrioritize}
+                    >
+                      <Image 
+                        src="/Glowing fish in deep blue waters.png" 
+                        alt="Glowing Fish Tail" 
+                        fill 
+                      loading={isLikelyLcpFish ? "eager" : "lazy"}
+                      priority={isLikelyLcpFish}
+                      fetchPriority={isLikelyLcpFish ? "high" : "auto"}
                       unoptimized
                       className="object-contain mix-blend-color-dodge opacity-90"
                       style={{ filter: "brightness(1.5) contrast(1.5) grayscale(0.2)" }}

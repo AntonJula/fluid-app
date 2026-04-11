@@ -31,13 +31,11 @@ export function BottomNav() {
         willChange: "transform, filter",
       }}
     >
-      <div className="pointer-events-none absolute inset-x-0 bottom-full h-14 bg-gradient-to-t from-water-950/68 via-water-950/20 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-20 bottom-full h-7 rounded-full bg-water-400/10 blur-2xl" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-full h-10 bg-gradient-to-t from-water-950/88 via-water-950/36 to-transparent" />
 
-      <nav className="pointer-events-auto relative w-full overflow-hidden border-t border-white/10 bg-[linear-gradient(180deg,rgba(12,74,110,0.94),rgba(8,47,73,0.98))] shadow-[0_-12px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-        <div className="absolute inset-x-0 top-0 h-5 bg-gradient-to-b from-white/[0.04] to-transparent" />
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-water-200/30 to-transparent" />
-        <div className="mx-auto flex w-full max-w-md items-end justify-around px-4 pb-[max(0.7rem,env(safe-area-inset-bottom))] pt-1.5">
+      <nav className="pointer-events-auto relative w-full overflow-hidden border-t border-white/8 bg-water-950 shadow-[0_-10px_28px_rgba(0,0,0,0.34)]">
+        <div className="absolute inset-x-0 top-0 h-px bg-water-300/12" />
+        <div className="mx-auto flex w-full max-w-md items-end justify-around px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))] pt-1">
           {NAV_ITEMS.map(({ href, label, Icon }) => {
             const isActive = pathname === href;
 
@@ -46,20 +44,20 @@ export function BottomNav() {
                 key={href}
                 href={href}
                 aria-current={isActive ? "page" : undefined}
-                className="relative flex min-w-[4.3rem] flex-col items-center justify-end"
+                className="relative flex min-w-[4rem] flex-col items-center justify-end"
               >
                 <div
-                  className={`flex h-9.5 w-9.5 items-center justify-center rounded-[0.9rem] transition-all duration-300 ${
+                  className={`flex h-8.5 w-8.5 items-center justify-center rounded-[0.85rem] transition-all duration-300 sm:h-9 sm:w-9 ${
                     isActive
-                      ? "bg-water-400/18 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_8px_20px_rgba(14,165,233,0.18)]"
-                      : "text-water-200/65"
+                      ? "bg-water-400/16 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_18px_rgba(14,165,233,0.14)]"
+                      : "text-water-200/62"
                   }`}
                 >
-                  <Icon className="h-4.5 w-4.5" strokeWidth={2.4} />
+                  <Icon className="h-4.25 w-4.25 sm:h-4.5 sm:w-4.5" strokeWidth={2.4} />
                 </div>
 
                 <span
-                  className={`font-ui mt-0.5 text-[0.64rem] font-semibold tracking-wide transition-colors duration-300 ${
+                  className={`font-ui mt-0.5 text-[0.6rem] font-semibold tracking-wide transition-colors duration-300 sm:text-[0.63rem] ${
                     isActive ? "text-white" : "text-water-200/70"
                   }`}
                 >
