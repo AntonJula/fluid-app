@@ -1,48 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { getScrollPosition, saveScrollPosition } from "@/hooks/useScrollPreservation";
+import { resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
+import HomePage from "@/app/page";
+import StatsPage from "@/app/stats/page";
+import SettingsPage from "@/app/settings/page";
 
 const PAGES = ["/", "/stats", "/settings"] as const;
 const NAV_TRIGGER = 120;
-const NAV_ANIMATION_MS = 320;
+const NAV_ANIMATION_MS = 280;
 const SHELL_DRAG_RATIO = 1;
 
 type SwipeDirection = "left" | "right" | null;
-
-function PreviewFallback({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <main className="flex min-h-[100dvh] w-full max-w-md mx-auto items-center justify-center p-6 pb-24 pt-6">
-      <div className="w-full rounded-[2rem] border border-white/10 bg-water-900/35 p-6 text-center shadow-[0_18px_40px_rgba(0,0,0,0.18)] backdrop-blur-md">
-        <p className="font-display text-4xl font-black text-white">{title}</p>
-        <p className="font-body mt-2 text-sm text-water-300/80">{subtitle}</p>
-      </div>
-    </main>
-  );
-}
-
-const HomePreview = dynamic(() => import("@/app/page"), {
-  ssr: false,
-  loading: () => <PreviewFallback title="Fluid." subtitle="Loading home preview..." />,
-});
-
-const StatsPreview = dynamic(() => import("@/app/stats/page"), {
-  ssr: false,
-  loading: () => <PreviewFallback title="Your Stats." subtitle="Loading stats preview..." />,
-});
-
-const SettingsPreview = dynamic(() => import("@/app/settings/page"), {
-  ssr: false,
-  loading: () => <PreviewFallback title="Settings." subtitle="Loading settings preview..." />,
-});
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -75,13 +46,15 @@ export function SwipeNavigation() {
   const [direction, setDirection] = useState<SwipeDirection>(null);
   const [targetPath, setTargetPath] = useState<string | null>(null);
 
-  const setTransitioning = useCallback((isTransitioning: boolean) => {
+  const syncTransitioningState = useCallback((isTransitioning: boolean) => {
     const root = document.documentElement;
 
     if (isTransitioning) {
       root.dataset.swipeTransitioning = "true";
+      setSwipeUiState({ isTransitioning });
     } else {
       delete root.dataset.swipeTransitioning;
+      setSwipeUiState({ isTransitioning, frozenPathname: null });
     }
   }, []);
 
@@ -100,6 +73,8 @@ export function SwipeNavigation() {
     } else {
       delete root.dataset.swipeDragging;
     }
+
+    setSwipeUiState({ isDragging });
   }, []);
 
   const queueVisualState = useCallback((offset: number, isDragging: boolean) => {
@@ -156,6 +131,7 @@ export function SwipeNavigation() {
       root.style.setProperty("--swipe-preview-progress", "0");
       delete root.dataset.swipeDragging;
       delete root.dataset.swipeTransitioning;
+      resetSwipeUiState();
     };
   }, [applyVisualState]);
 
@@ -166,12 +142,12 @@ export function SwipeNavigation() {
     }
 
     isNavigatingRef.current = false;
-    setTransitioning(false);
+    syncTransitioningState(false);
     queueVisualState(0, false);
     clearPreview(0);
     offsetRef.current = 0;
     touchStartRef.current = null;
-  }, [clearPreview, pathname, queueVisualState, setTransitioning]);
+  }, [clearPreview, pathname, queueVisualState, syncTransitioningState]);
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
@@ -181,6 +157,8 @@ export function SwipeNavigation() {
         window.clearTimeout(clearPreviewTimerRef.current);
         clearPreviewTimerRef.current = null;
       }
+
+      setSwipeUiState({ frozenPathname: pathname });
 
       touchStartRef.current = {
         x: e.targetTouches[0].clientX,
@@ -207,7 +185,6 @@ export function SwipeNavigation() {
 
       if (directionRef.current !== nextDirection || targetPathRef.current !== nextTargetPath) {
         syncPreviewState(nextDirection, nextTargetPath);
-        void router.prefetch(nextTargetPath);
       }
 
       offsetRef.current = nextOffset;
@@ -231,7 +208,7 @@ export function SwipeNavigation() {
           (nextDirection === "left" ? -1 : 1);
 
         isNavigatingRef.current = true;
-        setTransitioning(true);
+        syncTransitioningState(true);
         saveScrollPosition(pathname);
         offsetRef.current = exitOffset;
         queueVisualState(exitOffset, false);
@@ -258,7 +235,7 @@ export function SwipeNavigation() {
       window.removeEventListener("touchend", handleTouchEnd);
       window.removeEventListener("touchcancel", handleTouchEnd);
     };
-  }, [clearPreview, pathname, queueVisualState, router, setTransitioning, syncPreviewState]);
+  }, [clearPreview, pathname, queueVisualState, router, syncPreviewState, syncTransitioningState]);
 
   if (!direction || !targetPath) return null;
 
@@ -267,11 +244,11 @@ export function SwipeNavigation() {
   
   const previewContent =
     targetPath === "/" ? (
-      <HomePreview />
+      <HomePage />
     ) : targetPath === "/stats" ? (
-      <StatsPreview />
+      <StatsPage />
     ) : (
-      <SettingsPreview />
+      <SettingsPage />
     );
 
   return (
@@ -281,12 +258,12 @@ export function SwipeNavigation() {
         style={{
           transform: `translateX(calc(${isLeft ? "100%" : "-100%"} + var(--swipe-shell-offset, 0px)))`,
           opacity: 1,
-          transition: "var(--swipe-shell-transition, transform 320ms cubic-bezier(0.22, 0.9, 0.32, 1))",
+          transition: "var(--swipe-shell-transition)",
         }}
-      >
+        >
         <div className="relative h-full w-full overflow-hidden">
-          <div 
-            className="flex-1 flex flex-col pb-28 relative w-full h-full"
+          <div
+            className="absolute inset-x-0 top-0 min-h-[100dvh] w-full will-change-transform"
             style={{ transform: `translateY(-${previewScrollTop}px)` }}
           >
             {previewContent}

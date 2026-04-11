@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart2, Droplets, Settings } from "lucide-react";
 import { useHydration } from "@/hooks/useHydration";
+import { useSwipeUiState } from "@/hooks/useSwipeUiState";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", Icon: Droplets },
@@ -15,32 +15,12 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const pathname = usePathname();
   const { hideNav, mounted } = useHydration();
-  const [stablePathname, setStablePathname] = useState(pathname);
-
-  useEffect(() => {
-    const root = document.documentElement;
-
-    const syncStablePathname = () => {
-      const isSwipeActive =
-        root.dataset.swipeDragging === "true" || root.dataset.swipeTransitioning === "true";
-
-      if (!isSwipeActive) {
-        setStablePathname(pathname);
-      }
-    };
-
-    syncStablePathname();
-
-    const observer = new MutationObserver(syncStablePathname);
-    observer.observe(root, {
-      attributes: true,
-      attributeFilter: ["data-swipe-dragging", "data-swipe-transitioning"],
-    });
-
-    return () => observer.disconnect();
-  }, [pathname]);
+  const { isDragging, isTransitioning, frozenPathname } = useSwipeUiState();
 
   if (!mounted) return null;
+
+  const activePathname =
+    isDragging || isTransitioning ? frozenPathname ?? pathname : pathname;
 
   return (
     <div
@@ -62,7 +42,7 @@ export function BottomNav() {
         <div className="absolute inset-x-0 top-0 h-px bg-water-300/12" />
         <div className="mx-auto flex w-full max-w-md items-end justify-around px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))] pt-1">
           {NAV_ITEMS.map(({ href, label, Icon }) => {
-            const isActive = stablePathname === href;
+            const isActive = activePathname === href;
 
             return (
               <Link
