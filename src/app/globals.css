@@ -137,3 +137,8 @@ html[data-swipe-dragging="true"] {
 html[data-swipe-dragging="true"] body {
   touch-action: none;
 }
+
+html[data-swipe-transitioning="true"] [data-bottom-nav="true"],
+html[data-swipe-transitioning="true"] [data-bottom-nav="true"] * {
+  transition: none !important;
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart2, Droplets, Settings } from "lucide-react";
@@ -14,6 +15,30 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const pathname = usePathname();
   const { hideNav, mounted } = useHydration();
+  const [stablePathname, setStablePathname] = useState(pathname);
+
+  useEffect(() => {
+    const root = document.documentElement;
+
+    const syncStablePathname = () => {
+      const isSwipeActive =
+        root.dataset.swipeDragging === "true" || root.dataset.swipeTransitioning === "true";
+
+      if (!isSwipeActive) {
+        setStablePathname(pathname);
+      }
+    };
+
+    syncStablePathname();
+
+    const observer = new MutationObserver(syncStablePathname);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-swipe-dragging", "data-swipe-transitioning"],
+    });
+
+    return () => observer.disconnect();
+  }, [pathname]);
 
   if (!mounted) return null;
 
@@ -30,11 +55,14 @@ export function BottomNav() {
     >
       <div className="pointer-events-none absolute inset-x-0 bottom-full h-5 bg-gradient-to-t from-water-950/50 via-water-950/10 to-transparent" />
 
-      <nav className="pointer-events-auto relative w-full overflow-hidden border-t border-white/8 bg-water-950 shadow-[0_-4px_16px_rgba(0,0,0,0.15)]">
+      <nav
+        data-bottom-nav="true"
+        className="pointer-events-auto relative w-full overflow-hidden border-t border-white/8 bg-water-950 shadow-[0_-4px_16px_rgba(0,0,0,0.15)]"
+      >
         <div className="absolute inset-x-0 top-0 h-px bg-water-300/12" />
         <div className="mx-auto flex w-full max-w-md items-end justify-around px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))] pt-1">
           {NAV_ITEMS.map(({ href, label, Icon }) => {
-            const isActive = pathname === href;
+            const isActive = stablePathname === href;
 
             return (
               <Link

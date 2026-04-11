@@ -7,6 +7,7 @@ import { getScrollPosition, saveScrollPosition } from "@/hooks/useScrollPreserva
 
 const PAGES = ["/", "/stats", "/settings"] as const;
 const NAV_TRIGGER = 120;
+const NAV_ANIMATION_MS = 320;
 const SHELL_DRAG_RATIO = 1;
 
 type SwipeDirection = "left" | "right" | null;
@@ -64,13 +65,25 @@ export function SwipeNavigation() {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const frameRef = useRef<number | null>(null);
   const clearPreviewTimerRef = useRef<number | null>(null);
+  const navigationTimerRef = useRef<number | null>(null);
   const queuedOffsetRef = useRef(0);
   const draggingRef = useRef(false);
+  const isNavigatingRef = useRef(false);
   const offsetRef = useRef(0);
   const directionRef = useRef<SwipeDirection>(null);
   const targetPathRef = useRef<string | null>(null);
   const [direction, setDirection] = useState<SwipeDirection>(null);
   const [targetPath, setTargetPath] = useState<string | null>(null);
+
+  const setTransitioning = useCallback((isTransitioning: boolean) => {
+    const root = document.documentElement;
+
+    if (isTransitioning) {
+      root.dataset.swipeTransitioning = "true";
+    } else {
+      delete root.dataset.swipeTransitioning;
+    }
+  }, []);
 
   const applyVisualState = useCallback((offset: number, isDragging: boolean) => {
     const root = document.documentElement;
@@ -131,6 +144,10 @@ export function SwipeNavigation() {
         window.clearTimeout(clearPreviewTimerRef.current);
       }
 
+      if (navigationTimerRef.current !== null) {
+        window.clearTimeout(navigationTimerRef.current);
+      }
+
       const root = document.documentElement;
       root.style.setProperty("--swipe-shell-offset", "0px");
       root.style.setProperty("--swipe-shell-scale", "1");
@@ -138,18 +155,28 @@ export function SwipeNavigation() {
       root.style.setProperty("--swipe-shell-shadow", "0");
       root.style.setProperty("--swipe-preview-progress", "0");
       delete root.dataset.swipeDragging;
+      delete root.dataset.swipeTransitioning;
     };
   }, [applyVisualState]);
 
   useEffect(() => {
+    if (navigationTimerRef.current !== null) {
+      window.clearTimeout(navigationTimerRef.current);
+      navigationTimerRef.current = null;
+    }
+
+    isNavigatingRef.current = false;
+    setTransitioning(false);
     queueVisualState(0, false);
     clearPreview(0);
     offsetRef.current = 0;
     touchStartRef.current = null;
-  }, [clearPreview, pathname, queueVisualState]);
+  }, [clearPreview, pathname, queueVisualState, setTransitioning]);
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
+      if (isNavigatingRef.current) return;
+
       if (clearPreviewTimerRef.current !== null) {
         window.clearTimeout(clearPreviewTimerRef.current);
         clearPreviewTimerRef.current = null;
@@ -162,7 +189,7 @@ export function SwipeNavigation() {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!touchStartRef.current) return;
+      if (!touchStartRef.current || isNavigatingRef.current) return;
 
       const touch = e.targetTouches[0];
       const deltaX = touch.clientX - touchStartRef.current.x;
@@ -180,6 +207,7 @@ export function SwipeNavigation() {
 
       if (directionRef.current !== nextDirection || targetPathRef.current !== nextTargetPath) {
         syncPreviewState(nextDirection, nextTargetPath);
+        void router.prefetch(nextTargetPath);
       }
 
       offsetRef.current = nextOffset;
@@ -187,24 +215,35 @@ export function SwipeNavigation() {
     };
 
     const handleTouchEnd = () => {
-      if (!touchStartRef.current) return;
+      if (!touchStartRef.current || isNavigatingRef.current) return;
 
       const shouldNavigate =
         Boolean(targetPathRef.current) && Math.abs(offsetRef.current) >= NAV_TRIGGER;
 
       const nextPath = targetPathRef.current;
+      const nextDirection = directionRef.current;
 
       touchStartRef.current = null;
-      offsetRef.current = 0;
-      queueVisualState(0, false);
 
-      if (shouldNavigate && nextPath) {
-        syncPreviewState(null, null);
+      if (shouldNavigate && nextPath && nextDirection) {
+        const exitOffset =
+          (typeof window !== "undefined" ? window.innerWidth : 400) *
+          (nextDirection === "left" ? -1 : 1);
+
+        isNavigatingRef.current = true;
+        setTransitioning(true);
         saveScrollPosition(pathname);
-        router.push(nextPath, { scroll: false });
+        offsetRef.current = exitOffset;
+        queueVisualState(exitOffset, false);
+        navigationTimerRef.current = window.setTimeout(() => {
+          navigationTimerRef.current = null;
+          router.push(nextPath, { scroll: false });
+        }, NAV_ANIMATION_MS);
         return;
       }
 
+      offsetRef.current = 0;
+      queueVisualState(0, false);
       clearPreview(260);
     };
 
@@ -219,7 +258,7 @@ export function SwipeNavigation() {
       window.removeEventListener("touchend", handleTouchEnd);
       window.removeEventListener("touchcancel", handleTouchEnd);
     };
-  }, [clearPreview, pathname, queueVisualState, router, syncPreviewState]);
+  }, [clearPreview, pathname, queueVisualState, router, setTransitioning, syncPreviewState]);
 
   if (!direction || !targetPath) return null;
 
@@ -242,7 +281,7 @@ export function SwipeNavigation() {
         style={{
           transform: `translateX(calc(${isLeft ? "100%" : "-100%"} + var(--swipe-shell-offset, 0px)))`,
           opacity: 1,
-          transition: "none",
+          transition: "var(--swipe-shell-transition, transform 320ms cubic-bezier(0.22, 0.9, 0.32, 1))",
         }}
       >
         <div className="relative h-full w-full overflow-hidden">
