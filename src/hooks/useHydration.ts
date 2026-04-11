@@ -1,46 +1,28 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-
-export interface HydrationHistoryItem {
-  date: string;
-  intake: number;
-  goal: number;
-}
-
-export interface HydrationState {
-  intake: number;
-  goal: number;
-  streak: number;
-  reminderInterval: number;
-  quietHours: { start: string; end: string };
-  hideNav: boolean;
-  lastUpdated: string;
-  history: HydrationHistoryItem[];
-}
-
-const DEFAULT_GOAL = 2500;
+import {
+  DEFAULT_GOAL,
+  getDefaultHydrationState,
+  normalizeHydrationState,
+  rolloverHydrationState,
+  type HydrationState,
+  type HydrationHistoryItem,
+} from "@/lib/hydrationState";
 const STORAGE_KEY = "fluid-hydration";
-
-function formatDateLocal(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function getTodayDate() {
-  return formatDateLocal(new Date());
-}
+const SERVER_SNAPSHOT: HydrationState = {
+  intake: 0,
+  goal: DEFAULT_GOAL,
+  streak: 0,
+  reminderInterval: 0,
+  quietHours: { start: "22:00", end: "07:00" },
+  hideNav: false,
+  lastUpdated: "",
+  history: [],
+};
 
 function getDefaultState(): HydrationState {
-  return {
-    intake: 0,
-    goal: DEFAULT_GOAL,
-    streak: 0,
-    reminderInterval: 0,
-    quietHours: { start: "22:00", end: "07:00" },
-    hideNav: false,
-    lastUpdated: getTodayDate(),
-    history: [],
-  };
+  return getDefaultHydrationState();
 }
 
 let memoryState: HydrationState | null = null;
@@ -51,7 +33,7 @@ function emitChange() {
 }
 
 function getSnapshot() {
-  if (typeof window === "undefined") return getDefaultState();
+  if (typeof window === "undefined") return SERVER_SNAPSHOT;
   
   if (memoryState) return memoryState;
 
@@ -63,66 +45,8 @@ function getSnapshot() {
 
   try {
     const parsed = JSON.parse(stored) as Partial<HydrationState>;
-    const today = getTodayDate();
-    const loadedState: HydrationState = {
-      intake: parsed.intake ?? 0,
-      goal: parsed.goal ?? DEFAULT_GOAL,
-      streak: parsed.streak ?? 0,
-      reminderInterval: parsed.reminderInterval ?? 0,
-      quietHours: parsed.quietHours ?? { start: "22:00", end: "07:00" },
-      hideNav: parsed.hideNav ?? false,
-      lastUpdated: parsed.lastUpdated ?? today,
-      history: parsed.history ?? [],
-    };
-
-    if (loadedState.lastUpdated === today) {
-      memoryState = loadedState;
-      return memoryState;
-    }
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = formatDateLocal(yesterday);
-
-    let newStreak = loadedState.streak;
-    if (loadedState.lastUpdated === yesterdayStr && loadedState.intake >= loadedState.goal) {
-      newStreak += 1;
-    } else if (loadedState.lastUpdated !== yesterdayStr) {
-      newStreak = 0;
-    }
-
-    const updatedHistory = [...loadedState.history];
-    if (loadedState.lastUpdated && !updatedHistory.find((item) => item.date === loadedState.lastUpdated)) {
-      updatedHistory.push({
-        date: loadedState.lastUpdated,
-        intake: loadedState.intake,
-        goal: loadedState.goal,
-      });
-    }
-
-    const parts = loadedState.lastUpdated.split('-').map(Number);
-    if (parts.length === 3) {
-      const gapDate = new Date(parts[0], parts[1] - 1, parts[2]);
-      gapDate.setDate(gapDate.getDate() + 1); 
-      
-      let safeGuard = 0;
-      while (formatDateLocal(gapDate) !== today && safeGuard < 365) {
-        const gapStr = formatDateLocal(gapDate);
-        if (!updatedHistory.find(item => item.date === gapStr)) {
-          updatedHistory.push({ date: gapStr, intake: 0, goal: loadedState.goal });
-        }
-        gapDate.setDate(gapDate.getDate() + 1);
-        safeGuard++;
-      }
-    }
-
-    memoryState = {
-      ...loadedState,
-      intake: 0,
-      streak: newStreak,
-      lastUpdated: today,
-      history: updatedHistory,
-    };
+    const loadedState = normalizeHydrationState(parsed);
+    memoryState = rolloverHydrationState(loadedState);
     
     // Save the daily reset back
     localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryState));
@@ -135,9 +59,14 @@ function getSnapshot() {
   }
 }
 
-function updateState(newState: HydrationState) {
-  memoryState = newState;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+function getCurrentState() {
+  return memoryState ?? getSnapshot();
+}
+
+function updateState(nextState: HydrationState | ((state: HydrationState) => HydrationState)) {
+  const resolvedState = typeof nextState === "function" ? nextState(getCurrentState()) : nextState;
+  memoryState = resolvedState;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(resolvedState));
   emitChange();
 }
 
@@ -165,34 +94,54 @@ export function useHydration() {
     () => false
   );
 
-  const state = useSyncExternalStore(subscribe, getSnapshot, getDefaultState);
+  const state = useSyncExternalStore(subscribe, getSnapshot, () => SERVER_SNAPSHOT);
+  const streak = state.streak + (state.intake >= state.goal ? 1 : 0);
 
   const addDrink = (amount: number) => {
-    updateState({ ...state, intake: state.intake + amount });
+    updateState((currentState) => ({
+      ...currentState,
+      intake: currentState.intake + amount,
+    }));
   };
 
   const setGoal = (newGoal: number) => {
-    updateState({ ...state, goal: newGoal });
+    updateState((currentState) => ({
+      ...currentState,
+      goal: newGoal,
+    }));
   };
 
   const resetDaily = () => {
-    updateState({ ...state, intake: 0 });
+    updateState((currentState) => ({
+      ...currentState,
+      intake: 0,
+    }));
   };
 
   const setReminderInterval = (interval: number) => {
-    updateState({ ...state, reminderInterval: interval });
+    updateState((currentState) => ({
+      ...currentState,
+      reminderInterval: interval,
+    }));
   };
 
   const setQuietHours = (start: string, end: string) => {
-    updateState({ ...state, quietHours: { start, end } });
+    updateState((currentState) => ({
+      ...currentState,
+      quietHours: { start, end },
+    }));
   };
 
   const setHideNav = (hide: boolean) => {
-    updateState({ ...state, hideNav: hide });
+    updateState((currentState) => ({
+      ...currentState,
+      hideNav: hide,
+    }));
   };
 
   return {
     ...state,
+    streak,
     addDrink,
     setGoal,
     setReminderInterval,
@@ -202,3 +151,5 @@ export function useHydration() {
     mounted,
   };
 }
+
+export type { HydrationHistoryItem, HydrationState };

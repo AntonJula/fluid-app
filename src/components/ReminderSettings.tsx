@@ -16,7 +16,7 @@ interface ReminderSettingsProps {
 }
 
 export function ReminderSettings({ interval, setInterval, quietHours, setQuietHours }: ReminderSettingsProps) {
-  const { permission, requestPermission } = useNotifications(interval, quietHours);
+  const { permission, requestPermission } = useNotifications(interval, quietHours, false);
   const intervals = [20, 40, 60];
 
   const [isCustom, setIsCustom] = React.useState(false);

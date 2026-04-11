@@ -3,7 +3,8 @@
 import React from "react";
 import { useHydration } from "@/hooks/useHydration";
 import { Card } from "@/components/ui/Card";
-import { Flame, Calendar, Trophy, Droplets, ChartColumn } from "lucide-react";
+import { Flame, Calendar, Trophy, Waves, ChartColumn, Sparkles } from "lucide-react";
+import { formatDateLocal } from "@/lib/date";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -24,10 +25,10 @@ export default function StatsPage() {
   const currentWeek = Array.from({ length: 7 }).map((_, index) => {
     const date = new Date(monday);
     date.setDate(monday.getDate() + index);
-    return date.toISOString().split("T")[0];
+    return formatDateLocal(date);
   });
 
-  const today = todayDate.toISOString().split("T")[0];
+  const today = formatDateLocal(todayDate);
   const chartData = currentWeek.map((dateStr) => {
     if (dateStr === today) {
       return { date: dateStr, intake, goal };
@@ -83,7 +84,7 @@ export default function StatsPage() {
       <div className="w-full grid grid-cols-2 gap-4 mb-8">
         <Card className="p-4">
           <div className="flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
-            <Droplets className="w-4 h-4" strokeWidth={2.4} />
+            <Waves className="w-4 h-4" strokeWidth={2.4} />
             Weekly Average
           </div>
           <p className="mt-3 text-3xl font-black text-white">{weeklyAverage} ml</p>
@@ -103,8 +104,11 @@ export default function StatsPage() {
       <Card className="w-full p-6 mb-6">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] font-bold text-water-300/80">Best day this week</p>
-            <p className="mt-2 text-2xl font-black text-white">{bestDayLabel}</p>
+            <div className="flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
+              <Sparkles className="w-4 h-4" strokeWidth={2.4} />
+              Best Day This Week
+            </div>
+            <p className="mt-3 text-3xl font-black tracking-tight text-white">{bestDayLabel}</p>
             <p className="mt-1 text-sm text-water-300/80">{bestDay.intake} ml was your strongest day.</p>
           </div>
           <div className="rounded-3xl border border-water-400/15 bg-water-800/40 px-4 py-3 text-center">
@@ -135,10 +139,21 @@ export default function StatsPage() {
 
             return (
               <div key={day.date} className="flex flex-col items-center gap-3 flex-1 h-full group">
-                <span className={`text-[10px] font-bold ${isToday ? "text-water-100" : "text-water-400/70"}`}>
-                  {day.intake}ml
-                </span>
-                <div className="relative w-full h-full flex-1 flex items-end justify-center bg-water-800/40 border border-water-500/20 rounded-[1.2rem] overflow-hidden shadow-inner">
+                <div
+                  className={`flex min-h-[2rem] flex-col items-center justify-end px-1 py-1 transition-colors ${
+                    isToday ? "text-water-50" : "text-water-300/72"
+                  }`}
+                >
+                  <span className="text-[0.78rem] font-black leading-none tracking-tight">{day.intake}</span>
+                  <span className="mt-0.5 text-[0.56rem] font-semibold uppercase tracking-[0.22em] text-inherit/70">ml</span>
+                </div>
+                <div
+                  className={`relative w-full h-full flex-1 flex items-end justify-center rounded-[1.2rem] overflow-hidden shadow-inner transition-all duration-300 ${
+                    isToday
+                      ? "bg-water-800/55 border border-water-300/45 shadow-[0_0_0_1px_rgba(125,211,252,0.18),0_0_22px_rgba(56,189,248,0.16)]"
+                      : "bg-water-800/40 border border-water-500/20"
+                  }`}
+                >
                   <div
                     className={`w-full rounded-[1.2rem] transition-all duration-1000 ease-out group-hover:brightness-110 ${
                       isGoalMet

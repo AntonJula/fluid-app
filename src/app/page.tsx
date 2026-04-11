@@ -5,8 +5,7 @@ import { useHydration } from "@/hooks/useHydration";
 import { WaveBackground } from "@/components/WaveBackground";
 import { ProgressCard } from "@/components/ProgressCard";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { RefreshCw, Sparkles, Droplets, CircleDashed, Flame } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { SipIcon, GlassIcon, MugIcon, BottleIcon } from "@/components/DrinkIcons";
 
 const QUICK_AMOUNTS = [
@@ -15,8 +14,6 @@ const QUICK_AMOUNTS = [
   { label: "Mug", amount: 330, Icon: MugIcon },
   { label: "Bottle", amount: 500, Icon: BottleIcon },
 ];
-
-const MILESTONE_STEPS = [0.2, 0.4, 0.6, 0.8, 1];
 
 export default function Home() {
   const { intake, goal, addDrink, resetDaily, mounted } = useHydration();

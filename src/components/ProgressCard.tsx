@@ -16,9 +16,17 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
 
   return (
     <Card className="flex flex-col items-center justify-center text-center w-full max-w-sm mx-auto shadow-2xl p-7">
-      <div className="flex items-center justify-between w-full text-[11px] font-bold uppercase tracking-[0.22em] text-water-300/80">
-        <span>Today&apos;s Intake</span>
-        <span>{percentage}% done</span>
+      <div className="flex w-full items-start justify-between gap-4">
+        <div className="text-left">
+          <p className="text-water-300 text-sm font-bold tracking-wide">Today&apos;s Intake</p>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.22em] text-water-400/75">
+            Daily progress
+          </p>
+        </div>
+        <div className="rounded-2xl border border-water-300/10 bg-water-900/18 px-3 py-2 text-right shadow-inner">
+          <p className="text-[1.7rem] font-black leading-none tracking-tight text-white">{percentage}%</p>
+          <p className="mt-1 text-[0.62rem] font-bold uppercase tracking-[0.24em] text-water-300/75">done</p>
+        </div>
       </div>
 
       <div className="mt-4 text-6xl font-black text-white drop-shadow-xl font-sans tracking-tight">
@@ -44,13 +52,16 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
 
       {!isGoalMet && (
         <div className="mt-5 grid w-full grid-cols-2 gap-3 text-left animate-in fade-in zoom-in duration-500">
-          <div className="rounded-2xl border border-water-400/10 bg-water-900/35 p-4 flex flex-col justify-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-water-400/80">Left Today</p>
-            <p className="mt-2 text-2xl font-black text-white">{remaining} ml</p>
+          <div className="rounded-2xl border border-water-400/10 bg-water-900/35 px-4 py-3 flex flex-col justify-center">
+            <p className="text-water-300 text-sm font-bold tracking-wide">Left today</p>
+            <p className="mt-1.5 text-[1.65rem] font-black tracking-tight text-white">
+              {remaining}
+              <span className="ml-1 text-base font-bold text-water-300/80">ml</span>
+            </p>
           </div>
-          <div className="rounded-2xl border border-water-400/10 bg-water-900/35 p-4 flex flex-col justify-center">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-water-400/80">Quick Goal</p>
-            <p className="mt-2 text-2xl font-black text-white">
+          <div className="rounded-2xl border border-water-400/10 bg-water-900/35 px-4 py-3 flex flex-col justify-center">
+            <p className="text-water-300 text-sm font-bold tracking-wide">Quick target</p>
+            <p className="mt-1.5 text-[1.65rem] font-black tracking-tight text-white">
               {remainingGlasses} {remainingGlasses === 1 ? "glass" : "glasses"}
             </p>
           </div>

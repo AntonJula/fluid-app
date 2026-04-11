@@ -8,6 +8,7 @@ const MESSAGES = [
   "A glass of water is an easy win right now.",
   "Keep the streak moving. A few sips count.",
 ];
+const PERMISSION_EVENT = "fluid-notification-permission-changed";
 
 function getInitialPermission(): NotificationPermission {
   if (typeof window === "undefined" || !("Notification" in window)) {
@@ -19,15 +20,31 @@ function getInitialPermission(): NotificationPermission {
 
 export function useNotifications(
   intervalMinutes: number,
-  quietHours: { start: string; end: string } = { start: "22:00", end: "07:00" }
+  quietHours: { start: string; end: string } = { start: "22:00", end: "07:00" },
+  active = true
 ) {
   const [permission, setPermission] = useState<NotificationPermission>(getInitialPermission);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<number | null>(null);
   const quietHoursRef = useRef(quietHours);
 
   useEffect(() => {
     quietHoursRef.current = quietHours;
   }, [quietHours]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+
+    const syncPermission = () => {
+      setPermission(Notification.permission);
+    };
+
+    window.addEventListener("focus", syncPermission);
+    window.addEventListener(PERMISSION_EVENT, syncPermission);
+    return () => {
+      window.removeEventListener("focus", syncPermission);
+      window.removeEventListener(PERMISSION_EVENT, syncPermission);
+    };
+  }, []);
 
   const requestPermission = async () => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -35,6 +52,7 @@ export function useNotifications(
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
+      window.dispatchEvent(new Event(PERMISSION_EVENT));
 
       if (result === "granted") {
         new Notification("Fluid", {
@@ -47,7 +65,7 @@ export function useNotifications(
   };
 
   useEffect(() => {
-    if (permission === "granted" && intervalMinutes > 0) {
+    if (permission === "granted" && intervalMinutes > 0 && active) {
       const checkAndNotify = (isCatchUp = false) => {
         const now = new Date();
         const currentMins = now.getHours() * 60 + now.getMinutes();
@@ -73,9 +91,9 @@ export function useNotifications(
         localStorage.setItem("fluid-last-notified", Date.now().toString());
       };
 
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current !== null) window.clearInterval(timerRef.current);
 
-      timerRef.current = setInterval(() => {
+      timerRef.current = window.setInterval(() => {
         checkAndNotify(false);
       }, intervalMinutes * 60 * 1000);
 
@@ -86,8 +104,8 @@ export function useNotifications(
           if (last > 0 && Date.now() - last >= intervalMinutes * 60 * 1000) {
             checkAndNotify(true);
             // Reset interval so it doesn't fire immediately afterwards
-            if (timerRef.current) clearInterval(timerRef.current);
-            timerRef.current = setInterval(() => checkAndNotify(false), intervalMinutes * 60 * 1000);
+            if (timerRef.current !== null) window.clearInterval(timerRef.current);
+            timerRef.current = window.setInterval(() => checkAndNotify(false), intervalMinutes * 60 * 1000);
           }
         }
       };
@@ -97,16 +115,16 @@ export function useNotifications(
       window.addEventListener("focus", handleVisibility);
 
       return () => {
-        if (timerRef.current) clearInterval(timerRef.current);
+        if (timerRef.current !== null) window.clearInterval(timerRef.current);
         document.removeEventListener("visibilitychange", handleVisibility);
         window.removeEventListener("focus", handleVisibility);
       };
     }
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current !== null) window.clearInterval(timerRef.current);
     };
-  }, [intervalMinutes, permission]);
+  }, [active, intervalMinutes, permission]);
 
   return { permission, requestPermission };
 }

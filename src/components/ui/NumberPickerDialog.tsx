@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "./Button";
 import { Delete } from "lucide-react";
+import { Button } from "./Button";
 
 interface NumberPickerDialogProps {
   isOpen: boolean;
@@ -16,30 +16,45 @@ interface NumberPickerDialogProps {
   suffix?: string;
 }
 
-export function NumberPickerDialog({ 
-  isOpen, 
-  value, 
-  onChange, 
-  onClose, 
+function getInitialValue(value: number) {
+  return value > 0 ? value.toString() : "";
+}
+
+export function NumberPickerDialog({
+  isOpen,
+  value,
+  onChange,
+  onClose,
   min = 1,
   max = 999,
   title = "Set Duration",
-  suffix = "m"
+  suffix = "m",
 }: NumberPickerDialogProps) {
-  const [currentVal, setCurrentVal] = useState<string>("");
+  if (!isOpen || typeof document === "undefined") return null;
 
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentVal(value > 0 ? value.toString() : "");
-    }
-  }, [isOpen, value]);
+  return (
+    <NumberPickerDialogContent
+      value={value}
+      min={min}
+      max={max}
+      onChange={onChange}
+      onClose={onClose}
+      title={title}
+      suffix={suffix}
+    />
+  );
+}
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!isOpen || !mounted) return null;
+function NumberPickerDialogContent({
+  value,
+  min = 1,
+  max = 999,
+  onChange,
+  onClose,
+  title = "Set Duration",
+  suffix = "m",
+}: Omit<NumberPickerDialogProps, "isOpen">) {
+  const [currentVal, setCurrentVal] = useState<string>(() => getInitialValue(value));
 
   const handleKeyPress = (key: string) => {
     setCurrentVal((prev) => {
@@ -69,7 +84,6 @@ export function NumberPickerDialog({
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-water-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-water-900 border border-water-400/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300">
-        
         <div className="p-6 bg-water-800/40 border-b border-water-400/10 flex flex-col items-center">
           <p className="text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
           <div className="flex items-end justify-center min-h-[4rem]">
@@ -95,16 +109,16 @@ export function NumberPickerDialog({
                 ))}
               </React.Fragment>
             ))}
-            
-            <div className="flex items-center justify-center"></div>
-            
+
+            <div className="flex items-center justify-center" />
+
             <button
               onClick={() => handleKeyPress("0")}
               className="h-14 w-full rounded-2xl flex items-center justify-center text-2xl font-bold bg-water-800/40 text-water-200 hover:bg-water-700/80 hover:text-white transition-all active:scale-95 active:bg-water-500 active:text-white"
             >
               0
             </button>
-            
+
             <button
               onClick={handleBackspace}
               disabled={!currentVal}
@@ -119,10 +133,10 @@ export function NumberPickerDialog({
           <Button variant="secondary" size="sm" onClick={onClose} className="rounded-xl px-5 text-water-300 bg-transparent border-transparent shadow-none hover:bg-water-800/50">
             Cancel
           </Button>
-          <Button 
-            variant="primary" 
-            size="sm" 
-            onClick={handleSave} 
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={handleSave}
             disabled={!currentVal || Number(currentVal) < min}
             className="rounded-xl px-8 shadow-lg shadow-water-500/20 active:scale-95 disabled:opacity-50"
           >
