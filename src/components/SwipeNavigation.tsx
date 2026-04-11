@@ -211,7 +211,7 @@ export function SwipeNavigation() {
       <div
         className="absolute inset-0"
         style={{
-          transform: "translateX(0)",
+          transform: `translateX(calc(${isLeft ? "100%" : "-100%"} + var(--swipe-shell-offset, 0px)))`,
           opacity: 1,
           transition: "none",
         }}

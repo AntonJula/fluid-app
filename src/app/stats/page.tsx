@@ -3,7 +3,7 @@
 import React from "react";
 import { useHydration } from "@/hooks/useHydration";
 import { Card } from "@/components/ui/Card";
-import { Flame, Calendar, Trophy, Waves, ChartColumn, Sparkles } from "lucide-react";
+import { Flame, Calendar, Trophy, Waves, ChartColumn, Crown } from "lucide-react";
 import { formatDateLocal } from "@/lib/date";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -105,7 +105,7 @@ export default function StatsPage() {
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
-              <Sparkles className="w-4 h-4" strokeWidth={2.4} />
+              <Crown className="w-4 h-4" strokeWidth={2.4} />
               Best Day This Week
             </div>
             <p className="font-ui mt-3 text-3xl font-black tracking-tight text-white">{bestDayLabel}</p>
