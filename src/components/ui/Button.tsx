@@ -13,7 +13,7 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseStyles = "relative overflow-hidden inline-flex items-center justify-center font-semibold transition-all duration-300 ease-out rounded-2xl active:scale-[0.97]";
+  const baseStyles = "font-ui relative overflow-hidden inline-flex items-center justify-center font-semibold tracking-[0.01em] transition-all duration-300 ease-out rounded-2xl active:scale-[0.97]";
   
   const variants = {
     primary: "bg-gradient-to-br from-water-400 to-water-600 text-white shadow-lg shadow-water-500/25 hover:shadow-water-500/40 hover:-translate-y-0.5 border border-water-300/20",

@@ -33,13 +33,13 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
       <Card className="w-full max-w-sm mx-auto shadow-lg p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h3 className="font-semibold text-white tracking-tight text-lg">Daily Goal</h3>
-            <p className="mt-1 text-sm text-water-300/80">Pick a target that feels consistent and sustainable.</p>
+            <h3 className="font-ui font-semibold text-white tracking-tight text-lg">Daily Goal</h3>
+            <p className="font-body mt-1 text-sm text-water-300/80">Pick a target that feels consistent and sustainable.</p>
           </div>
 
           <button
             onClick={() => setIsCustomOpen(true)}
-            className="bg-water-800/50 border border-water-500/30 text-white text-sm rounded-xl hover:bg-water-700/50 hover:border-water-300 px-4 py-2 outline-none font-bold transition-all shadow-inner backdrop-blur-md flex items-center gap-2"
+            className="font-numeric bg-water-800/50 border border-water-500/30 text-white text-sm rounded-xl hover:bg-water-700/50 hover:border-water-300 px-4 py-2 outline-none font-bold transition-all shadow-inner backdrop-blur-md flex items-center gap-2"
           >
             {formatGoal(goal)}
             <Pen className="w-3.5 h-3.5 text-water-300" strokeWidth={3} />
@@ -55,7 +55,7 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
                 <button
                   key={preset}
                   onClick={() => handlePresetSelect(preset)}
-                  className={`rounded-2xl px-3.5 py-2 text-sm font-bold transition-all ${
+                  className={`font-numeric rounded-2xl px-3.5 py-2 text-sm font-bold transition-all ${
                     isActive
                       ? "bg-gradient-to-br from-water-400 to-water-600 text-white border border-water-200/25 shadow-lg shadow-water-500/20"
                       : "bg-water-800/40 border border-water-500/20 text-water-100 hover:bg-water-700/55 hover:border-water-300/35"

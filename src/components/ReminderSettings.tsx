@@ -38,8 +38,8 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
     <Card className="w-full max-w-sm mx-auto mt-4 space-y-5 shadow-lg p-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h3 className="font-semibold text-white tracking-tight text-lg">Reminders</h3>
-          <p className="mt-1 text-sm text-water-300/80">
+          <h3 className="font-ui font-semibold text-white tracking-tight text-lg">Reminders</h3>
+          <p className="font-body mt-1 text-sm text-water-300/80">
             Gentle nudges work better than constant interruptions.
           </p>
         </div>
@@ -52,13 +52,13 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       </div>
 
       <div className="rounded-2xl border border-water-400/10 bg-water-900/30 px-4 py-3">
-        <div className="flex items-center gap-2 text-water-200">
+        <div className="font-ui flex items-center gap-2 text-water-200">
           <BellRing className="w-4 h-4" strokeWidth={2.5} />
           <span className="text-sm font-bold">
             {interval > 0 ? `Every ${interval} minutes` : "Reminders are off"}
           </span>
         </div>
-        <p className="mt-1 text-xs text-water-400/80">
+        <p className="font-body mt-1 text-xs text-water-400/80">
           {interval > 0
             ? "Choose an interval that supports the habit without becoming background noise."
             : "Turn them on if you want help building consistency."}
@@ -82,7 +82,9 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
                     !isPredefined && interval > 0 ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
                   }`}
                 >
-                  {!isPredefined && interval > 0 ? `${interval}m` : "Custom"}
+                  <span className={!isPredefined && interval > 0 ? "font-numeric" : "font-ui"}>
+                    {!isPredefined && interval > 0 ? `${interval}m` : "Custom"}
+                  </span>
                 </Button>
                 <NumberPickerDialog
                   isOpen={isCustom}
@@ -112,7 +114,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
                   interval === item.val && !isCustom ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
                 }`}
               >
-                {item.val}m
+                <span className="font-numeric">{item.val}m</span>
               </Button>
             );
           }
@@ -138,19 +140,19 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
 
       {interval > 0 && (
         <div className="pt-2">
-          <p className="text-xs font-bold text-water-400 uppercase tracking-widest mb-1">Do Not Disturb</p>
-          <p className="text-xs text-water-400/75 mb-3">Keep reminders out of sleep or focus hours.</p>
+          <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-1">Do Not Disturb</p>
+          <p className="font-body text-xs text-water-400/75 mb-3">Keep reminders out of sleep or focus hours.</p>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setActivePicker("start")}
-              className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-500/30 hover:border-water-300 hover:bg-water-700/50 transition-all shadow-inner"
+              className="font-numeric flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-500/30 hover:border-water-300 hover:bg-water-700/50 transition-all shadow-inner"
             >
               {formatDisplayTime(quietHours.start)}
             </button>
-            <span className="text-water-300/50 font-bold text-xs uppercase tracking-widest">To</span>
+            <span className="font-ui text-water-300/50 font-bold text-xs uppercase tracking-widest">To</span>
             <button
               onClick={() => setActivePicker("end")}
-              className="flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-500/30 hover:border-water-300 hover:bg-water-700/50 transition-all shadow-inner"
+              className="font-numeric flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-500/30 hover:border-water-300 hover:bg-water-700/50 transition-all shadow-inner"
             >
               {formatDisplayTime(quietHours.end)}
             </button>

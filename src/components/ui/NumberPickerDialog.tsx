@@ -85,12 +85,12 @@ function NumberPickerDialogContent({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-water-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="bg-water-900 border border-water-400/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300">
         <div className="p-6 bg-water-800/40 border-b border-water-400/10 flex flex-col items-center">
-          <p className="text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
+          <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
           <div className="flex items-end justify-center min-h-[4rem]">
-            <span className={`text-6xl font-black transition-all ${currentVal ? "text-white" : "text-water-400/30"}`}>
+            <span className={`font-numeric text-6xl font-black transition-all ${currentVal ? "text-white" : "text-water-400/30"}`}>
               {currentVal || "0"}
             </span>
-            <span className="text-2xl font-bold text-water-400/70 mb-1.5 ml-1">{suffix}</span>
+            <span className="font-ui text-2xl font-bold text-water-400/70 mb-1.5 ml-1">{suffix}</span>
           </div>
         </div>
 
@@ -102,7 +102,7 @@ function NumberPickerDialogContent({
                   <button
                     key={num}
                     onClick={() => handleKeyPress(num.toString())}
-                    className="h-14 w-full rounded-2xl flex items-center justify-center text-2xl font-bold bg-water-800/40 text-water-200 hover:bg-water-700/80 hover:text-white transition-all active:scale-95 active:bg-water-500 active:text-white"
+                    className="font-numeric h-14 w-full rounded-2xl flex items-center justify-center text-2xl font-bold bg-water-800/40 text-water-200 hover:bg-water-700/80 hover:text-white transition-all active:scale-95 active:bg-water-500 active:text-white"
                   >
                     {num}
                   </button>
@@ -114,7 +114,7 @@ function NumberPickerDialogContent({
 
             <button
               onClick={() => handleKeyPress("0")}
-              className="h-14 w-full rounded-2xl flex items-center justify-center text-2xl font-bold bg-water-800/40 text-water-200 hover:bg-water-700/80 hover:text-white transition-all active:scale-95 active:bg-water-500 active:text-white"
+              className="font-numeric h-14 w-full rounded-2xl flex items-center justify-center text-2xl font-bold bg-water-800/40 text-water-200 hover:bg-water-700/80 hover:text-white transition-all active:scale-95 active:bg-water-500 active:text-white"
             >
               0
             </button>

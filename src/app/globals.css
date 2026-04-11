@@ -48,6 +48,22 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Outfit";
+  src: url("/fonts/Outfit-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Manrope";
+  src: url("/fonts/Manrope-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -64,20 +80,55 @@
   --color-water-900: #0c4a6e;
   --color-water-950: #082f49;
 
-  --font-sans: var(--font-outfit);
+  --font-sans: var(--font-body);
   --font-poppins: var(--font-poppins);
 }
 
 :root {
   --background: #082f49; /* deep ocean blue background */
   --foreground: #f0f9ff; /* light sea foreground */
-  --font-outfit: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-outfit: "Outfit", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-manrope: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-poppins: "Poppins", "Trebuchet MS", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-poppins);
+  --font-ui: var(--font-outfit);
+  --font-body: var(--font-manrope);
+  --font-numeric: var(--font-outfit);
+  --swipe-shell-offset: 0px;
+  --swipe-shell-scale: 1;
+  --swipe-shell-dim: 0;
+  --swipe-shell-shadow: 0;
+  --swipe-shell-transition: transform 420ms cubic-bezier(0.22, 1.08, 0.28, 1),
+    filter 420ms cubic-bezier(0.22, 1.08, 0.28, 1);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-outfit), sans-serif;
+  font-family: var(--font-body), sans-serif;
   overflow-x: hidden;
+}
+
+.font-display {
+  font-family: var(--font-display), sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.font-ui {
+  font-family: var(--font-ui), sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.font-body {
+  font-family: var(--font-body), sans-serif;
+}
+
+.font-numeric {
+  font-family: var(--font-numeric), sans-serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.04em;
+}
+
+html[data-swipe-dragging="true"] {
+  --swipe-shell-transition: none;
 }

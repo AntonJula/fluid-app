@@ -20,14 +20,14 @@ export default function SettingsPage() {
       <SharkBackground />
       
       <header className="w-full text-center mt-4 mb-8">
-        <h1 className="text-4xl font-black tracking-tight text-white drop-shadow-md">Settings.</h1>
-        <p className="text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">Customize Fluid</p>
+        <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Settings.</h1>
+        <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">Customize Fluid</p>
       </header>
 
       <Card className="w-full mb-6 p-5">
-        <p className="text-[11px] uppercase tracking-[0.22em] font-bold text-water-300/80">Habit setup</p>
-        <p className="mt-2 text-xl font-black text-white">Keep it easy to win every day.</p>
-        <p className="mt-2 text-sm text-water-300/80">
+        <p className="font-ui text-[11px] uppercase tracking-[0.22em] font-bold text-water-300/80">Habit setup</p>
+        <p className="font-ui mt-2 text-xl font-black text-white">Keep it easy to win every day.</p>
+        <p className="font-body mt-2 text-sm text-water-300/80">
           A realistic goal and gentle reminders will do more for retention than aggressive settings ever will.
         </p>
       </Card>

@@ -14,8 +14,8 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
     <Card className="w-full max-w-sm mx-auto mt-4 space-y-5 shadow-lg p-5">
       <div className="flex items-center gap-4">
         <div>
-          <h3 className="font-semibold text-white tracking-tight text-lg">Navigation</h3>
-          <p className="mt-1 text-sm text-water-300/80">
+          <h3 className="font-ui font-semibold text-white tracking-tight text-lg">Navigation</h3>
+          <p className="font-body mt-1 text-sm text-water-300/80">
             Keep the screen completely clean.
           </p>
         </div>
@@ -23,11 +23,11 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
 
       <div className="rounded-2xl border border-water-400/10 bg-water-900/30 px-4 py-3 flex items-center justify-between">
         <div className="mr-4">
-          <div className="flex items-center gap-2 text-water-200">
+          <div className="font-ui flex items-center gap-2 text-water-200">
             <Navigation className="w-4 h-4" strokeWidth={2.5} />
             <span className="text-sm font-bold">Hide Nav Bar</span>
           </div>
-          <p className="mt-1 text-xs text-water-400/80">
+          <p className="font-body mt-1 text-xs text-water-400/80">
             If hidden, you can still navigate by swiping left or right anywhere on the screen.
           </p>
         </div>

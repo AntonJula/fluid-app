@@ -61,6 +61,7 @@ export function FishLayer({ progress }: FishLayerProps) {
       {visibleFish.map((fish) => {
         const swimAnimation = fish.direction === "ltr" ? "fish-swim-right" : "fish-swim-left";
         const facingTransform = fish.direction === "ltr" ? "scaleX(-1)" : "scaleX(1)";
+        const shouldPrioritize = fish.id === visibleFish[0]?.id;
 
         return (
           <div
@@ -102,6 +103,8 @@ export function FishLayer({ progress }: FishLayerProps) {
                       src="/Glowing fish in deep blue waters.png" 
                       alt="Glowing Fish Head" 
                       fill 
+                      loading={shouldPrioritize ? "eager" : "lazy"}
+                      priority={shouldPrioritize}
                       unoptimized
                       className="object-contain mix-blend-color-dodge opacity-90"
                       style={{ filter: "brightness(1.5) contrast(1.5) grayscale(0.2)" }}
@@ -123,6 +126,8 @@ export function FishLayer({ progress }: FishLayerProps) {
                       src="/Glowing fish in deep blue waters.png" 
                       alt="Glowing Fish Tail" 
                       fill 
+                      loading={shouldPrioritize ? "eager" : "lazy"}
+                      priority={shouldPrioritize}
                       unoptimized
                       className="object-contain mix-blend-color-dodge opacity-90"
                       style={{ filter: "brightness(1.5) contrast(1.5) grayscale(0.2)" }}
