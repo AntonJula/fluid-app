@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { BottomNav } from "@/components/BottomNav";
 import { NotificationManager } from "@/components/NotificationManager";
 import { SwipeNavigation } from "@/components/SwipeNavigation";
+import { ScrollPreserver } from "@/hooks/useScrollPreservation";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased min-h-[100dvh] flex flex-col selection:bg-water-300 selection:text-water-900 bg-background text-foreground">
+        <ScrollPreserver />
         <SwipeNavigation />
         <NotificationManager />
         <div

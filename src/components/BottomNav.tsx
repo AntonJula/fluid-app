@@ -23,14 +23,14 @@ export function BottomNav() {
         hideNav ? "translate-y-32 opacity-0" : "translate-y-0 opacity-100"
       }`}
       style={{
-        transform: `translateX(var(--swipe-shell-offset, 0px)) ${hideNav ? "translateY(8rem)" : "translateY(0px)"}`,
-        transition: `var(--swipe-shell-transition, transform 220ms ease-out), opacity 700ms ease-out`,
+        transform: hideNav ? "translateY(8rem)" : "translateY(0px)",
+        transition: `opacity 700ms ease-out, transform 700ms ease-out`,
         willChange: "transform",
       }}
     >
-      <div className="pointer-events-none absolute inset-x-0 bottom-full h-10 bg-gradient-to-t from-water-950/88 via-water-950/36 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-full h-5 bg-gradient-to-t from-water-950/50 via-water-950/10 to-transparent" />
 
-      <nav className="pointer-events-auto relative w-full overflow-hidden border-t border-white/8 bg-water-950 shadow-[0_-10px_28px_rgba(0,0,0,0.34)]">
+      <nav className="pointer-events-auto relative w-full overflow-hidden border-t border-white/8 bg-water-950 shadow-[0_-4px_16px_rgba(0,0,0,0.15)]">
         <div className="absolute inset-x-0 top-0 h-px bg-water-300/12" />
         <div className="mx-auto flex w-full max-w-md items-end justify-around px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))] pt-1">
           {NAV_ITEMS.map(({ href, label, Icon }) => {
