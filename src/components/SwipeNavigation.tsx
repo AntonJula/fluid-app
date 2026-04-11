@@ -13,9 +13,9 @@ import { Card } from "@/components/ui/Card";
 import { useHydration } from "@/hooks/useHydration";
 
 const PAGES = ["/", "/stats", "/settings"] as const;
-const MAX_PREVIEW_OFFSET = 116;
-const NAV_TRIGGER = 34;
-const SHELL_DRAG_RATIO = 0.78;
+const MAX_PREVIEW_OFFSET = 156;
+const NAV_TRIGGER = 30;
+const SHELL_DRAG_RATIO = 0.92;
 
 type SwipeDirection = "left" | "right" | null;
 
@@ -281,14 +281,11 @@ export function SwipeNavigation() {
   const applyVisualState = useCallback((offset: number, isDragging: boolean) => {
     const root = document.documentElement;
     const progress = Math.min(1, Math.abs(offset) / MAX_PREVIEW_OFFSET);
-    const shellScale = 1 - progress * 0.0105;
-    const shellDim = progress * 0.03;
-    const shellShadow = progress * 0.12;
 
     root.style.setProperty("--swipe-shell-offset", `${offset}px`);
-    root.style.setProperty("--swipe-shell-scale", shellScale.toFixed(4));
-    root.style.setProperty("--swipe-shell-dim", shellDim.toFixed(4));
-    root.style.setProperty("--swipe-shell-shadow", shellShadow.toFixed(4));
+    root.style.setProperty("--swipe-shell-scale", "1");
+    root.style.setProperty("--swipe-shell-dim", "0");
+    root.style.setProperty("--swipe-shell-shadow", progress > 0 ? "0.18" : "0");
     root.style.setProperty("--swipe-preview-progress", progress.toFixed(4));
 
     if (isDragging) {
@@ -449,19 +446,16 @@ export function SwipeNavigation() {
       <div
         className="absolute inset-0"
         style={{
-          transform: isLeft
-            ? "translateX(calc((1 - var(--swipe-preview-progress, 0)) * 11%))"
-            : "translateX(calc((var(--swipe-preview-progress, 0) - 1) * 11%))",
-          opacity: "calc(0.22 + var(--swipe-preview-progress, 0) * 0.78)",
-          transition:
-            "transform 260ms cubic-bezier(0.22, 0.9, 0.32, 1), opacity 220ms ease-out",
+          transform: "translateX(0)",
+          opacity: 1,
+          transition: "none",
         }}
       >
         <div className="relative h-full w-full overflow-hidden">
           {previewContent}
           <div
-            className={`absolute inset-y-0 ${isLeft ? "right-0" : "left-0"} w-10 bg-gradient-to-r from-white/[0.04] via-white/[0.015] to-transparent`}
-            style={{ opacity: "calc(0.08 + var(--swipe-preview-progress, 0) * 0.12)" }}
+            className={`absolute inset-y-0 ${isLeft ? "right-0" : "left-0"} w-6 bg-gradient-to-r from-black/10 to-transparent`}
+            style={{ opacity: "calc(var(--swipe-preview-progress, 0) * 0.12)" }}
           />
         </div>
       </div>

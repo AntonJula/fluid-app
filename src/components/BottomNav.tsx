@@ -23,12 +23,9 @@ export function BottomNav() {
         hideNav ? "translate-y-32 opacity-0" : "translate-y-0 opacity-100"
       }`}
       style={{
-        transform: `translateX(var(--swipe-shell-offset, 0px)) scale(var(--swipe-shell-scale, 1)) ${hideNav ? "translateY(8rem)" : "translateY(0px)"}`,
+        transform: `translateX(var(--swipe-shell-offset, 0px)) ${hideNav ? "translateY(8rem)" : "translateY(0px)"}`,
         transition: `var(--swipe-shell-transition, transform 220ms ease-out), opacity 700ms ease-out`,
-        filter:
-          "brightness(calc(1 - var(--swipe-shell-dim, 0))) drop-shadow(0 18px 34px rgba(0, 0, 0, var(--swipe-shell-shadow, 0)))",
-        transformOrigin: "center bottom",
-        willChange: "transform, filter",
+        willChange: "transform",
       }}
     >
       <div className="pointer-events-none absolute inset-x-0 bottom-full h-10 bg-gradient-to-t from-water-950/88 via-water-950/36 to-transparent" />
