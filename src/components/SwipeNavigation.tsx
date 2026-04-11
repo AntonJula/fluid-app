@@ -216,9 +216,9 @@ export function SwipeNavigation() {
           transition: "none",
         }}
       >
-        <div className="relative h-[100dvh] w-full overflow-hidden">
+        <div className="relative h-full w-full overflow-hidden">
           <div 
-            className="w-full h-full pb-28 relative"
+            className="flex-1 flex flex-col pb-28 relative w-full h-full"
             style={{ transform: `translateY(-${previewScrollTop}px)` }}
           >
             {previewContent}

@@ -12,7 +12,7 @@ export default function StatsPage() {
   const { streak, history, intake, goal, mounted } = useHydration();
 
   if (!mounted) {
-    return <main className="min-h-screen bg-background" />;
+    return <main className="min-h-screen bg-water-50" />;
   }
 
   const todayDate = new Date();
@@ -46,7 +46,7 @@ export default function StatsPage() {
   const bestDayLabel = DAY_NAMES[chartData.findIndex((day) => day.date === bestDay.date)] ?? "Today";
 
   return (
-    <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh] bg-background">
+    <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh]">
       <header className="w-full text-center mt-4 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Your Stats.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">

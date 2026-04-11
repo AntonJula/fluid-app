@@ -132,10 +132,8 @@ body {
 
 html[data-swipe-dragging="true"] {
   --swipe-shell-transition: none;
-  overflow: hidden;
 }
 
 html[data-swipe-dragging="true"] body {
-  overflow: hidden;
   touch-action: none;
 }
