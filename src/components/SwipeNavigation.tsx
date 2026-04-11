@@ -1,11 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
-import { getScrollPosition } from "@/hooks/useScrollPreservation";
-import HomePage from "@/app/page";
-import StatsPage from "@/app/stats/page";
-import SettingsPage from "@/app/settings/page";
+import { getScrollPosition, saveScrollPosition } from "@/hooks/useScrollPreservation";
 
 const PAGES = ["/", "/stats", "/settings"] as const;
 const NAV_TRIGGER = 120;
@@ -13,7 +11,37 @@ const SHELL_DRAG_RATIO = 1;
 
 type SwipeDirection = "left" | "right" | null;
 
-// Mock previews removed
+function PreviewFallback({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <main className="flex min-h-[100dvh] w-full max-w-md mx-auto items-center justify-center p-6 pb-24 pt-6">
+      <div className="w-full rounded-[2rem] border border-white/10 bg-water-900/35 p-6 text-center shadow-[0_18px_40px_rgba(0,0,0,0.18)] backdrop-blur-md">
+        <p className="font-display text-4xl font-black text-white">{title}</p>
+        <p className="font-body mt-2 text-sm text-water-300/80">{subtitle}</p>
+      </div>
+    </main>
+  );
+}
+
+const HomePreview = dynamic(() => import("@/app/page"), {
+  ssr: false,
+  loading: () => <PreviewFallback title="Fluid." subtitle="Loading home preview..." />,
+});
+
+const StatsPreview = dynamic(() => import("@/app/stats/page"), {
+  ssr: false,
+  loading: () => <PreviewFallback title="Your Stats." subtitle="Loading stats preview..." />,
+});
+
+const SettingsPreview = dynamic(() => import("@/app/settings/page"), {
+  ssr: false,
+  loading: () => <PreviewFallback title="Settings." subtitle="Loading settings preview..." />,
+});
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -172,7 +200,8 @@ export function SwipeNavigation() {
 
       if (shouldNavigate && nextPath) {
         syncPreviewState(null, null);
-        router.push(nextPath);
+        saveScrollPosition(pathname);
+        router.push(nextPath, { scroll: false });
         return;
       }
 
@@ -199,11 +228,11 @@ export function SwipeNavigation() {
   
   const previewContent =
     targetPath === "/" ? (
-      <HomePage />
+      <HomePreview />
     ) : targetPath === "/stats" ? (
-      <StatsPage />
+      <StatsPreview />
     ) : (
-      <SettingsPage />
+      <SettingsPreview />
     );
 
   return (
