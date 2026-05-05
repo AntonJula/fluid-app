@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getScrollPosition, saveScrollPosition } from "@/hooks/useScrollPreservation";
 import { resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
@@ -11,6 +11,7 @@ import SettingsPage from "@/app/settings/page";
 const PAGES = ["/", "/stats", "/settings"] as const;
 const NAV_TRIGGER = 96;
 const NAV_ANIMATION_MS = 320;
+const ROUTE_SETTLE_MS = 420;
 const SHELL_DRAG_RATIO = 1;
 
 type SwipeDirection = "left" | "right" | null;
@@ -37,14 +38,17 @@ export function SwipeNavigation() {
   const frameRef = useRef<number | null>(null);
   const clearPreviewTimerRef = useRef<number | null>(null);
   const navigationTimerRef = useRef<number | null>(null);
+  const settlePreviewTimerRef = useRef<number | null>(null);
   const queuedOffsetRef = useRef(0);
   const draggingRef = useRef(false);
   const isNavigatingRef = useRef(false);
+  const isCompletingSwipeRef = useRef(false);
   const offsetRef = useRef(0);
   const directionRef = useRef<SwipeDirection>(null);
   const targetPathRef = useRef<string | null>(null);
   const [direction, setDirection] = useState<SwipeDirection>(null);
   const [targetPath, setTargetPath] = useState<string | null>(null);
+  const [isCompletingSwipe, setIsCompletingSwipe] = useState(false);
 
   const syncTransitioningState = useCallback((isTransitioning: boolean) => {
     const root = document.documentElement;
@@ -103,6 +107,8 @@ export function SwipeNavigation() {
 
     clearPreviewTimerRef.current = window.setTimeout(() => {
       syncPreviewState(null, null);
+      isCompletingSwipeRef.current = false;
+      setIsCompletingSwipe(false);
       clearPreviewTimerRef.current = null;
     }, delay);
   }, [syncPreviewState]);
@@ -123,6 +129,10 @@ export function SwipeNavigation() {
         window.clearTimeout(navigationTimerRef.current);
       }
 
+      if (settlePreviewTimerRef.current !== null) {
+        window.clearTimeout(settlePreviewTimerRef.current);
+      }
+
       const root = document.documentElement;
       root.style.setProperty("--swipe-shell-offset", "0px");
       root.style.setProperty("--swipe-shell-scale", "1");
@@ -135,19 +145,65 @@ export function SwipeNavigation() {
     };
   }, [applyVisualState]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (navigationTimerRef.current !== null) {
       window.clearTimeout(navigationTimerRef.current);
       navigationTimerRef.current = null;
     }
 
+    if (settlePreviewTimerRef.current !== null) {
+      window.clearTimeout(settlePreviewTimerRef.current);
+      settlePreviewTimerRef.current = null;
+    }
+
+    const arrivedFromSwipe =
+      isCompletingSwipeRef.current &&
+      isNavigatingRef.current &&
+      targetPathRef.current === pathname &&
+      directionRef.current !== null;
+
+    const root = document.documentElement;
+    root.dataset.swipeDragging = "true";
+    root.style.setProperty("--swipe-shell-offset", "0px");
+    root.style.setProperty("--swipe-shell-scale", "1");
+    root.style.setProperty("--swipe-shell-dim", "0");
+    root.style.setProperty("--swipe-shell-shadow", "0");
+    root.style.setProperty("--swipe-preview-progress", arrivedFromSwipe ? "1" : "0");
+    delete root.dataset.swipeTransitioning;
+
     isNavigatingRef.current = false;
-    syncTransitioningState(false);
-    queueVisualState(0, false);
-    clearPreview(0);
     offsetRef.current = 0;
+    queuedOffsetRef.current = 0;
+    draggingRef.current = false;
     touchStartRef.current = null;
-  }, [clearPreview, pathname, queueVisualState, syncTransitioningState]);
+    setSwipeUiState({ isDragging: false, isTransitioning: false, frozenPathname: null });
+
+    const releaseTransitionFrame = window.requestAnimationFrame(() => {
+      delete root.dataset.swipeDragging;
+    });
+
+    if (arrivedFromSwipe) {
+      settlePreviewTimerRef.current = window.setTimeout(() => {
+        syncPreviewState(null, null);
+        isCompletingSwipeRef.current = false;
+        setIsCompletingSwipe(false);
+        settlePreviewTimerRef.current = null;
+        root.style.setProperty("--swipe-preview-progress", "0");
+      }, ROUTE_SETTLE_MS);
+    } else {
+      clearPreviewTimerRef.current = window.setTimeout(() => {
+        syncPreviewState(null, null);
+        isCompletingSwipeRef.current = false;
+        setIsCompletingSwipe(false);
+        clearPreviewTimerRef.current = null;
+        root.style.setProperty("--swipe-preview-progress", "0");
+      }, 0);
+    }
+
+    return () => {
+      window.cancelAnimationFrame(releaseTransitionFrame);
+    };
+  }, [pathname, syncPreviewState]);
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
@@ -158,6 +214,8 @@ export function SwipeNavigation() {
         clearPreviewTimerRef.current = null;
       }
 
+      isCompletingSwipeRef.current = false;
+      setIsCompletingSwipe(false);
       setSwipeUiState({ frozenPathname: pathname });
       saveScrollPosition(pathname);
 
@@ -186,6 +244,7 @@ export function SwipeNavigation() {
 
       if (directionRef.current !== nextDirection || targetPathRef.current !== nextTargetPath) {
         syncPreviewState(nextDirection, nextTargetPath);
+        router.prefetch(nextTargetPath);
       }
 
       offsetRef.current = nextOffset;
@@ -209,6 +268,8 @@ export function SwipeNavigation() {
           (nextDirection === "left" ? -1 : 1);
 
         isNavigatingRef.current = true;
+        isCompletingSwipeRef.current = true;
+        setIsCompletingSwipe(true);
         syncTransitioningState(true);
         saveScrollPosition(pathname);
         offsetRef.current = exitOffset;
@@ -241,6 +302,7 @@ export function SwipeNavigation() {
   if (!direction || !targetPath) return null;
 
   const isLeft = direction === "left";
+  const isPreviewSettling = isCompletingSwipe && targetPath === pathname;
   const previewScrollTop = targetPath ? getScrollPosition(targetPath) : 0;
   
   const previewContent =
@@ -253,13 +315,15 @@ export function SwipeNavigation() {
     );
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-[4] overflow-hidden">
+    <div className={`pointer-events-none fixed inset-0 overflow-hidden ${isPreviewSettling ? "z-[90]" : "z-[4]"}`}>
       <div
         className="absolute inset-0"
         style={{
-          transform: `translateX(calc(${isLeft ? "100%" : "-100%"} + var(--swipe-shell-offset, 0px)))`,
+          transform: isPreviewSettling
+            ? "translateX(0px)"
+            : `translateX(calc(${isLeft ? "100%" : "-100%"} + var(--swipe-shell-offset, 0px)))`,
           opacity: 1,
-          transition: "var(--swipe-shell-transition)",
+          transition: isPreviewSettling ? "none" : "var(--swipe-shell-transition)",
         }}
         >
         <div className="relative h-full w-full overflow-hidden">
