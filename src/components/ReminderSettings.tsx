@@ -6,7 +6,8 @@ import { TimePickerDialog } from "./ui/TimePickerDialog";
 import { NumberPickerDialog } from "./ui/NumberPickerDialog";
 import { Button } from "./ui/Button";
 import { useNotifications } from "@/hooks/useNotifications";
-import { BellOff, BellRing } from "lucide-react";
+import { HYDRATION_NOTIFICATION_TYPES } from "@/lib/notificationMessages";
+import { BellOff, BellRing, Sparkles } from "lucide-react";
 
 interface ReminderSettingsProps {
   interval: number;
@@ -18,6 +19,7 @@ interface ReminderSettingsProps {
 export function ReminderSettings({ interval, setInterval, quietHours, setQuietHours }: ReminderSettingsProps) {
   const { permission, requestPermission } = useNotifications(interval, quietHours, false);
   const intervals = [20, 40, 60];
+  const featuredNotificationTypes = HYDRATION_NOTIFICATION_TYPES.slice(0, 4);
 
   const [isCustom, setIsCustom] = React.useState(false);
   const [customVal, setCustomVal] = React.useState(interval);
@@ -62,6 +64,31 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
           {interval > 0
             ? "Fluid nudges you while the app is open and catches up when you return."
             : "Turn them on if you want help building consistency."}
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-cyan-100/15 bg-gradient-to-br from-water-900/38 via-water-800/22 to-emerald-400/10 px-4 py-3.5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-ui flex min-w-0 items-center gap-2 text-water-100">
+            <Sparkles className="h-4 w-4 shrink-0 text-cyan-200" strokeWidth={2.5} />
+            <span className="truncate text-sm font-bold">Smart reminder mix</span>
+          </div>
+          <span className="font-numeric shrink-0 rounded-full border border-cyan-100/15 bg-cyan-100/10 px-2.5 py-1 text-xs font-black text-cyan-100">
+            {HYDRATION_NOTIFICATION_TYPES.length} types
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {featuredNotificationTypes.map((type) => (
+            <div
+              key={type.kind}
+              className="font-ui rounded-xl border border-white/10 bg-water-950/22 px-3 py-2 text-xs font-bold leading-tight text-water-100/90"
+            >
+              {type.label}
+            </div>
+          ))}
+        </div>
+        <p className="font-body mt-3 text-xs leading-relaxed text-water-300/78">
+          Plus: morning, midday, evening, close-goal, streak, and small-sip nudges.
         </p>
       </div>
 

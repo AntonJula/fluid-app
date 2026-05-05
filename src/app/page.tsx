@@ -25,6 +25,20 @@ function formatLogTime(timestamp: number) {
 export default function Home() {
   const { intake, goal, drinkLog, addDrink, subtractDrink, undoLastDrink, resetDaily, mounted } = useHydration();
   const [isResetConfirming, setIsResetConfirming] = React.useState(false);
+  const handledQuickAddRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!mounted || handledQuickAddRef.current || typeof window === "undefined") return;
+
+    handledQuickAddRef.current = true;
+
+    const quickAdd = Number(new URLSearchParams(window.location.search).get("quickAdd"));
+
+    if (!Number.isFinite(quickAdd) || quickAdd <= 0) return;
+
+    addDrink(Math.min(5000, Math.round(quickAdd)));
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
+  }, [addDrink, mounted]);
 
   if (!mounted) {
     return <main className="min-h-screen bg-water-50" />;

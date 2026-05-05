@@ -5,6 +5,10 @@ import {
   normalizeHydrationState,
   rolloverHydrationState,
 } from "../src/lib/hydrationState.ts";
+import {
+  HYDRATION_NOTIFICATION_TYPES,
+  pickHydrationNotification,
+} from "../src/lib/notificationMessages.ts";
 
 const tests = [
   {
@@ -79,6 +83,30 @@ const tests = [
       assert.deepEqual(rolled.history[1], { date: "2026-04-08", intake: 0, goal: 2500 });
       assert.deepEqual(rolled.history[2], { date: "2026-04-09", intake: 0, goal: 2500 });
       assert.deepEqual(rolled.history[3], { date: "2026-04-10", intake: 0, goal: 2500 });
+    },
+  },
+  {
+    name: "notification library exposes exactly ten reminder types",
+    run: () => {
+      assert.equal(HYDRATION_NOTIFICATION_TYPES.length, 10);
+      assert.equal(new Set(HYDRATION_NOTIFICATION_TYPES.map((type) => type.kind)).size, 10);
+    },
+  },
+  {
+    name: "pickHydrationNotification chooses a relevant hydration nudge",
+    run: () => {
+      const message = pickHydrationNotification({
+        intake: 0,
+        goal: 2500,
+        reminderInterval: 40,
+        lastDrinkAt: null,
+        now: new Date(2026, 4, 5, 9, 30),
+        isCatchUp: false,
+      });
+
+      assert.equal(message.kind, "first-log");
+      assert.match(message.body, /No water logged today/);
+      assert.match(message.body, /250 ml/);
     },
   },
 ];

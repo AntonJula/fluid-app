@@ -1,16 +1,32 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { pickHydrationNotification } from "@/lib/notificationMessages";
 
-const MESSAGES = [
-  "A quick sip now will make the next hour feel better.",
-  "Hydration check. Give yourself a small refill break.",
-  "A glass of water is an easy win right now.",
-  "Keep the streak moving. A few sips count.",
-];
 const PERMISSION_EVENT = "fluid-notification-permission-changed";
 const LAST_NOTIFIED_KEY = "fluid-last-notified";
 const NEXT_NOTIFICATION_KEY = "fluid-next-notification-due";
+const LAST_NOTIFICATION_TYPE_KEY = "fluid-last-notification-type";
+const SERVICE_WORKER_PATH = "/fluid-notifications-sw.js";
+
+interface NotificationHydrationStatus {
+  intake: number;
+  goal: number;
+  lastDrinkAt: number | null;
+}
+
+type FluidNotificationOptions = NotificationOptions & {
+  actions?: Array<{ action: string; title: string; icon?: string }>;
+  renotify?: boolean;
+};
+
+function getSafeHydrationStatus(status?: NotificationHydrationStatus): NotificationHydrationStatus {
+  return {
+    intake: Math.max(0, Math.round(status?.intake ?? 0)),
+    goal: Math.max(1, Math.round(status?.goal ?? 2500)),
+    lastDrinkAt: status?.lastDrinkAt ?? null,
+  };
+}
 
 function getInitialPermission(): NotificationPermission {
   if (typeof window === "undefined" || !("Notification" in window)) {
@@ -20,18 +36,132 @@ function getInitialPermission(): NotificationPermission {
   return Notification.permission;
 }
 
+function parseClockToMinutes(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+  return hours * 60 + minutes;
+}
+
+function getQuietWindowEnd(now: Date, quietHours: { start: string; end: string }) {
+  const startMins = parseClockToMinutes(quietHours.start);
+  const endMins = parseClockToMinutes(quietHours.end);
+
+  if (startMins === null || endMins === null) return null;
+
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+  const endDate = new Date(now);
+  endDate.setHours(Math.floor(endMins / 60), endMins % 60, 0, 0);
+
+  if (startMins <= endMins) {
+    return currentMins >= startMins && currentMins < endMins ? endDate.getTime() : null;
+  }
+
+  if (currentMins >= startMins) {
+    endDate.setDate(endDate.getDate() + 1);
+    return endDate.getTime();
+  }
+
+  return currentMins < endMins ? endDate.getTime() : null;
+}
+
+async function getServiceWorkerRegistration() {
+  if (
+    typeof window === "undefined" ||
+    typeof navigator === "undefined" ||
+    !window.isSecureContext ||
+    !("serviceWorker" in navigator)
+  ) {
+    return null;
+  }
+
+  try {
+    await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
+    return await navigator.serviceWorker.ready;
+  } catch (error) {
+    console.error("Failed to register notification service worker", error);
+    return null;
+  }
+}
+
+async function showSystemNotification({
+  title,
+  body,
+  tag,
+  actionAmount,
+}: {
+  title: string;
+  body: string;
+  tag: string;
+  actionAmount?: number;
+}) {
+  const options: FluidNotificationOptions = {
+    body,
+    badge: "/favicon.ico",
+    data: { url: actionAmount ? `/?quickAdd=${actionAmount}` : "/" },
+    icon: "/icon.svg",
+    tag,
+    renotify: true,
+  };
+
+  if (actionAmount) {
+    options.actions = [
+      { action: `add-${actionAmount}`, title: `+${actionAmount} ml` },
+      { action: "open", title: "Open" },
+    ];
+  }
+
+  const registration = await getServiceWorkerRegistration();
+
+  if (registration) {
+    await registration.showNotification(title, options);
+    return;
+  }
+
+  const notification = new Notification(title, options);
+  notification.onclick = () => {
+    window.focus();
+    notification.close();
+  };
+}
+
 export function useNotifications(
   intervalMinutes: number,
   quietHours: { start: string; end: string } = { start: "22:00", end: "07:00" },
-  active = true
+  active = true,
+  hydrationStatus?: NotificationHydrationStatus
 ) {
   const [permission, setPermission] = useState<NotificationPermission>(getInitialPermission);
   const timerRef = useRef<number | null>(null);
   const quietHoursRef = useRef(quietHours);
+  const intervalRef = useRef(intervalMinutes);
+  const activeRef = useRef(active);
+  const hydrationStatusRef = useRef(getSafeHydrationStatus(hydrationStatus));
+  const hydrationIntake = hydrationStatus?.intake;
+  const hydrationGoal = hydrationStatus?.goal;
+  const hydrationLastDrinkAt = hydrationStatus?.lastDrinkAt;
 
   useEffect(() => {
     quietHoursRef.current = quietHours;
   }, [quietHours]);
+
+  useEffect(() => {
+    intervalRef.current = intervalMinutes;
+  }, [intervalMinutes]);
+
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
+  useEffect(() => {
+    hydrationStatusRef.current = getSafeHydrationStatus({
+      intake: hydrationIntake ?? 0,
+      goal: hydrationGoal ?? 2500,
+      lastDrinkAt: hydrationLastDrinkAt ?? null,
+    });
+  }, [hydrationGoal, hydrationIntake, hydrationLastDrinkAt]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -57,8 +187,10 @@ export function useNotifications(
       window.dispatchEvent(new Event(PERMISSION_EVENT));
 
       if (result === "granted") {
-        new Notification("Fluid", {
-          body: "Notifications are on. We will keep the reminders calm and useful.",
+        await showSystemNotification({
+          title: "Fluid",
+          body: "Notifications are on. Fluid will gently remind you when it is time to log water.",
+          tag: "fluid-permission",
         });
       }
     } catch (e) {
@@ -69,74 +201,125 @@ export function useNotifications(
   useEffect(() => {
     if (permission === "granted" && intervalMinutes > 0 && active) {
       const intervalMs = intervalMinutes * 60 * 1000;
+      let isDisposed = false;
 
-      const checkAndNotify = (isCatchUp = false) => {
-        const now = new Date();
-        const currentMins = now.getHours() * 60 + now.getMinutes();
-
-        const [startH, startM] = quietHoursRef.current.start.split(":").map(Number);
-        const [endH, endM] = quietHoursRef.current.end.split(":").map(Number);
-        const startMins = startH * 60 + startM;
-        const endMins = endH * 60 + endM;
-
-        let isQuietHour = false;
-        if (startMins <= endMins) {
-          isQuietHour = currentMins >= startMins && currentMins < endMins;
-        } else {
-          isQuietHour = currentMins >= startMins || currentMins < endMins;
+      const clearTimer = () => {
+        if (timerRef.current !== null) {
+          window.clearTimeout(timerRef.current);
+          timerRef.current = null;
         }
-
-        if (isQuietHour) return;
-
-        const baseMsg = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
-        const msg = isCatchUp ? `Welcome back! ${baseMsg}` : baseMsg;
-        
-        new Notification("Fluid", { body: msg });
-        localStorage.setItem(LAST_NOTIFIED_KEY, Date.now().toString());
-        localStorage.setItem(NEXT_NOTIFICATION_KEY, (Date.now() + intervalMs).toString());
       };
 
-      if (timerRef.current !== null) window.clearInterval(timerRef.current);
+      const scheduleFor = (timestamp: number) => {
+        if (isDisposed) return;
 
-      if (!localStorage.getItem(NEXT_NOTIFICATION_KEY)) {
-        localStorage.setItem(NEXT_NOTIFICATION_KEY, (Date.now() + intervalMs).toString());
+        clearTimer();
+        timerRef.current = window.setTimeout(() => {
+          void checkAndNotify(false);
+        }, Math.max(1000, timestamp - Date.now()));
+      };
+
+      const updateNextDue = (timestamp: number) => {
+        localStorage.setItem(NEXT_NOTIFICATION_KEY, timestamp.toString());
+        scheduleFor(timestamp);
+      };
+
+      const checkAndNotify = async (isCatchUp = false) => {
+        if (isDisposed || !activeRef.current || intervalRef.current <= 0 || Notification.permission !== "granted") {
+          return;
+        }
+
+        const now = new Date();
+        const quietEndsAt = getQuietWindowEnd(now, quietHoursRef.current);
+
+        if (quietEndsAt) {
+          updateNextDue(quietEndsAt + 60 * 1000);
+          return;
+        }
+
+        const message = pickHydrationNotification(
+          {
+            ...hydrationStatusRef.current,
+            reminderInterval: intervalRef.current,
+            now,
+            isCatchUp,
+          },
+          localStorage.getItem(LAST_NOTIFICATION_TYPE_KEY)
+        );
+
+        await showSystemNotification({
+          title: message.title,
+          body: message.body,
+          tag: `fluid-${message.kind}`,
+          actionAmount: message.actionAmount,
+        });
+
+        if (isDisposed) return;
+
+        localStorage.setItem(LAST_NOTIFICATION_TYPE_KEY, message.kind);
+        localStorage.setItem(LAST_NOTIFIED_KEY, Date.now().toString());
+        updateNextDue(Date.now() + intervalRef.current * 60 * 1000);
+      };
+
+      const storedNextDue = Number(localStorage.getItem(NEXT_NOTIFICATION_KEY) || 0);
+      const lastNotifiedAt = Number(localStorage.getItem(LAST_NOTIFIED_KEY) || 0);
+      const lastDrinkAt = hydrationStatusRef.current.lastDrinkAt ?? 0;
+      let nextDue = storedNextDue > 0 ? storedNextDue : Date.now() + intervalMs;
+
+      if (lastDrinkAt > lastNotifiedAt) {
+        const drinkDue = lastDrinkAt + intervalMs;
+        nextDue = drinkDue > Date.now() ? drinkDue : nextDue;
       }
 
-      timerRef.current = window.setInterval(() => {
-        checkAndNotify(false);
-      }, intervalMs);
+      const quietEndsAt = getQuietWindowEnd(new Date(), quietHoursRef.current);
+      if (quietEndsAt && nextDue <= Date.now()) {
+        nextDue = quietEndsAt + 60 * 1000;
+      }
+
+      localStorage.setItem(NEXT_NOTIFICATION_KEY, nextDue.toString());
+      scheduleFor(nextDue);
 
       const handleVisibility = () => {
-        if (document.visibilityState === "visible") {
-          const nextDue = Number(localStorage.getItem(NEXT_NOTIFICATION_KEY) || 0);
+        if (document.visibilityState !== "visible") return;
 
-          if (nextDue > 0 && Date.now() >= nextDue) {
-            checkAndNotify(true);
+        const storedDue = Number(localStorage.getItem(NEXT_NOTIFICATION_KEY) || 0);
 
-            if (timerRef.current !== null) window.clearInterval(timerRef.current);
-            timerRef.current = window.setInterval(() => checkAndNotify(false), intervalMs);
-          }
+        if (storedDue > 0 && Date.now() >= storedDue) {
+          void checkAndNotify(true);
         }
       };
 
       document.addEventListener("visibilitychange", handleVisibility);
-      // Also register for focus window as an alternative
       window.addEventListener("focus", handleVisibility);
 
       return () => {
-        if (timerRef.current !== null) window.clearInterval(timerRef.current);
+        isDisposed = true;
+        clearTimer();
         document.removeEventListener("visibilitychange", handleVisibility);
         window.removeEventListener("focus", handleVisibility);
       };
     }
 
     return () => {
-      if (timerRef.current !== null) window.clearInterval(timerRef.current);
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+
       if (!active || intervalMinutes <= 0) {
         localStorage.removeItem(NEXT_NOTIFICATION_KEY);
       }
     };
-  }, [active, intervalMinutes, permission]);
+  }, [
+    active,
+    hydrationGoal,
+    hydrationIntake,
+    hydrationLastDrinkAt,
+    intervalMinutes,
+    permission,
+    quietHours.end,
+    quietHours.start,
+  ]);
 
   return { permission, requestPermission };
 }
