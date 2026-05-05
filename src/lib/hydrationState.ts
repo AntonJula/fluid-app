@@ -6,6 +6,12 @@ export interface HydrationHistoryItem {
   goal: number;
 }
 
+export interface DrinkLogItem {
+  id: string;
+  amount: number;
+  timestamp: number;
+}
+
 export interface HydrationState {
   intake: number;
   goal: number;
@@ -15,6 +21,7 @@ export interface HydrationState {
   hideNav: boolean;
   lastUpdated: string;
   history: HydrationHistoryItem[];
+  drinkLog: DrinkLogItem[];
 }
 
 export const DEFAULT_GOAL = 2500;
@@ -29,19 +36,23 @@ export function getDefaultHydrationState(): HydrationState {
     hideNav: false,
     lastUpdated: getTodayDateLocal(),
     history: [],
+    drinkLog: [],
   };
 }
 
 export function normalizeHydrationState(parsed: Partial<HydrationState>, today = getTodayDateLocal()): HydrationState {
+  const goal = clampHydrationAmount(parsed.goal ?? DEFAULT_GOAL, 500, 10000);
+
   return {
-    intake: parsed.intake ?? 0,
-    goal: parsed.goal ?? DEFAULT_GOAL,
+    intake: clampHydrationAmount(parsed.intake ?? 0, 0, 50000),
+    goal,
     streak: parsed.streak ?? 0,
     reminderInterval: parsed.reminderInterval ?? 0,
     quietHours: parsed.quietHours ?? { start: "22:00", end: "07:00" },
     hideNav: parsed.hideNav ?? false,
     lastUpdated: parsed.lastUpdated ?? today,
     history: parsed.history ?? [],
+    drinkLog: parsed.drinkLog ?? [],
   };
 }
 
@@ -93,5 +104,11 @@ export function rolloverHydrationState(state: HydrationState, today = getTodayDa
     streak: newStreak,
     lastUpdated: today,
     history: updatedHistory,
+    drinkLog: [],
   };
+}
+
+export function clampHydrationAmount(amount: number, min = 0, max = 50000) {
+  if (!Number.isFinite(amount)) return min;
+  return Math.min(max, Math.max(min, Math.round(amount)));
 }

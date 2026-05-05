@@ -9,6 +9,8 @@ const MESSAGES = [
   "Keep the streak moving. A few sips count.",
 ];
 const PERMISSION_EVENT = "fluid-notification-permission-changed";
+const LAST_NOTIFIED_KEY = "fluid-last-notified";
+const NEXT_NOTIFICATION_KEY = "fluid-next-notification-due";
 
 function getInitialPermission(): NotificationPermission {
   if (typeof window === "undefined" || !("Notification" in window)) {
@@ -66,6 +68,8 @@ export function useNotifications(
 
   useEffect(() => {
     if (permission === "granted" && intervalMinutes > 0 && active) {
+      const intervalMs = intervalMinutes * 60 * 1000;
+
       const checkAndNotify = (isCatchUp = false) => {
         const now = new Date();
         const currentMins = now.getHours() * 60 + now.getMinutes();
@@ -88,24 +92,29 @@ export function useNotifications(
         const msg = isCatchUp ? `Welcome back! ${baseMsg}` : baseMsg;
         
         new Notification("Fluid", { body: msg });
-        localStorage.setItem("fluid-last-notified", Date.now().toString());
+        localStorage.setItem(LAST_NOTIFIED_KEY, Date.now().toString());
+        localStorage.setItem(NEXT_NOTIFICATION_KEY, (Date.now() + intervalMs).toString());
       };
 
       if (timerRef.current !== null) window.clearInterval(timerRef.current);
 
+      if (!localStorage.getItem(NEXT_NOTIFICATION_KEY)) {
+        localStorage.setItem(NEXT_NOTIFICATION_KEY, (Date.now() + intervalMs).toString());
+      }
+
       timerRef.current = window.setInterval(() => {
         checkAndNotify(false);
-      }, intervalMinutes * 60 * 1000);
+      }, intervalMs);
 
       const handleVisibility = () => {
         if (document.visibilityState === "visible") {
-          const last = Number(localStorage.getItem("fluid-last-notified") || 0);
-          // If we missed a notification by at least 1 interval cycle
-          if (last > 0 && Date.now() - last >= intervalMinutes * 60 * 1000) {
+          const nextDue = Number(localStorage.getItem(NEXT_NOTIFICATION_KEY) || 0);
+
+          if (nextDue > 0 && Date.now() >= nextDue) {
             checkAndNotify(true);
-            // Reset interval so it doesn't fire immediately afterwards
+
             if (timerRef.current !== null) window.clearInterval(timerRef.current);
-            timerRef.current = window.setInterval(() => checkAndNotify(false), intervalMinutes * 60 * 1000);
+            timerRef.current = window.setInterval(() => checkAndNotify(false), intervalMs);
           }
         }
       };
@@ -123,6 +132,9 @@ export function useNotifications(
 
     return () => {
       if (timerRef.current !== null) window.clearInterval(timerRef.current);
+      if (!active || intervalMinutes <= 0) {
+        localStorage.removeItem(NEXT_NOTIFICATION_KEY);
+      }
     };
   }, [active, intervalMinutes, permission]);
 

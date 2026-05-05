@@ -3,9 +3,11 @@
 import { useSyncExternalStore } from "react";
 import {
   DEFAULT_GOAL,
+  clampHydrationAmount,
   getDefaultHydrationState,
   normalizeHydrationState,
   rolloverHydrationState,
+  type DrinkLogItem,
   type HydrationState,
   type HydrationHistoryItem,
 } from "@/lib/hydrationState";
@@ -19,6 +21,7 @@ const SERVER_SNAPSHOT: HydrationState = {
   hideNav: false,
   lastUpdated: "",
   history: [],
+  drinkLog: [],
 };
 
 function getDefaultState(): HydrationState {
@@ -98,16 +101,57 @@ export function useHydration() {
   const streak = state.streak + (state.intake >= state.goal ? 1 : 0);
 
   const addDrink = (amount: number) => {
+    const safeAmount = clampHydrationAmount(amount, 1, 5000);
+
     updateState((currentState) => ({
       ...currentState,
-      intake: currentState.intake + amount,
+      intake: clampHydrationAmount(currentState.intake + safeAmount),
+      drinkLog: [
+        {
+          id: `${Date.now()}-${safeAmount}-${Math.random().toString(16).slice(2)}`,
+          amount: safeAmount,
+          timestamp: Date.now(),
+        },
+        ...currentState.drinkLog,
+      ].slice(0, 20),
     }));
+  };
+
+  const subtractDrink = (amount: number) => {
+    const safeAmount = clampHydrationAmount(amount, 1, 5000);
+
+    updateState((currentState) => ({
+      ...currentState,
+      intake: clampHydrationAmount(currentState.intake - safeAmount),
+      drinkLog: [
+        {
+          id: `${Date.now()}-${safeAmount}-subtract-${Math.random().toString(16).slice(2)}`,
+          amount: -safeAmount,
+          timestamp: Date.now(),
+        },
+        ...currentState.drinkLog,
+      ].slice(0, 20),
+    }));
+  };
+
+  const undoLastDrink = () => {
+    updateState((currentState) => {
+      const [lastDrink, ...remainingLog] = currentState.drinkLog;
+
+      if (!lastDrink) return currentState;
+
+      return {
+        ...currentState,
+        intake: clampHydrationAmount(currentState.intake - lastDrink.amount),
+        drinkLog: remainingLog,
+      };
+    });
   };
 
   const setGoal = (newGoal: number) => {
     updateState((currentState) => ({
       ...currentState,
-      goal: newGoal,
+      goal: clampHydrationAmount(newGoal, 500, 10000),
     }));
   };
 
@@ -115,6 +159,7 @@ export function useHydration() {
     updateState((currentState) => ({
       ...currentState,
       intake: 0,
+      drinkLog: [],
     }));
   };
 
@@ -143,6 +188,8 @@ export function useHydration() {
     ...state,
     streak,
     addDrink,
+    subtractDrink,
+    undoLastDrink,
     setGoal,
     setReminderInterval,
     setQuietHours,
@@ -152,4 +199,4 @@ export function useHydration() {
   };
 }
 
-export type { HydrationHistoryItem, HydrationState };
+export type { DrinkLogItem, HydrationHistoryItem, HydrationState };

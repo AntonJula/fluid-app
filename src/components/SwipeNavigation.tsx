@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getScrollPosition, saveScrollPosition } from "@/hooks/useScrollPreservation";
-import { resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
+import { bumpSwipeNavigationTick, resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
 import HomePage from "@/app/page";
 import StatsPage from "@/app/stats/page";
 import SettingsPage from "@/app/settings/page";
 
 const PAGES = ["/", "/stats", "/settings"] as const;
-const NAV_TRIGGER = 120;
-const NAV_ANIMATION_MS = 280;
+const NAV_TRIGGER = 96;
+const NAV_ANIMATION_MS = 320;
 const SHELL_DRAG_RATIO = 1;
 
 type SwipeDirection = "left" | "right" | null;
@@ -159,6 +159,7 @@ export function SwipeNavigation() {
       }
 
       setSwipeUiState({ frozenPathname: pathname });
+      saveScrollPosition(pathname);
 
       touchStartRef.current = {
         x: e.targetTouches[0].clientX,
@@ -210,6 +211,7 @@ export function SwipeNavigation() {
         isNavigatingRef.current = true;
         syncTransitioningState(true);
         saveScrollPosition(pathname);
+        bumpSwipeNavigationTick();
         offsetRef.current = exitOffset;
         queueVisualState(exitOffset, false);
         navigationTimerRef.current = window.setTimeout(() => {

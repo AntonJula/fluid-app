@@ -3,32 +3,65 @@
 import React from "react";
 import { useHydration } from "@/hooks/useHydration";
 import { Card } from "@/components/ui/Card";
-import { Flame, Calendar, Trophy, Waves, ChartColumn, Crown } from "lucide-react";
+import { Flame, Calendar, Trophy, Waves, ChartColumn, Crown, TrendingUp, Target, CircleOff } from "lucide-react";
 import { formatDateLocal } from "@/lib/date";
+import { useSwipeUiState } from "@/hooks/useSwipeUiState";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+function getWeekDates(anchor: Date, offsetWeeks = 0) {
+  const currentDay = anchor.getDay();
+  const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1;
+  const monday = new Date(anchor);
+
+  monday.setDate(anchor.getDate() - distanceToMonday + offsetWeeks * 7);
+
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    return formatDateLocal(date);
+  });
+}
+
+function getBestStreak(days: { intake: number; goal: number }[]) {
+  let best = 0;
+  let current = 0;
+
+  days.forEach((day) => {
+    if (day.intake >= day.goal) {
+      current += 1;
+      best = Math.max(best, current);
+      return;
+    }
+
+    current = 0;
+  });
+
+  return best;
+}
+
 export default function StatsPage() {
   const { streak, history, intake, goal, mounted } = useHydration();
+  const { navigationTick } = useSwipeUiState();
+  const [barsReady, setBarsReady] = React.useState(false);
+
+  React.useEffect(() => {
+    let frameId = 0;
+
+    setBarsReady(false);
+    frameId = window.requestAnimationFrame(() => setBarsReady(true));
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [navigationTick]);
 
   if (!mounted) {
     return <main className="min-h-screen bg-water-50" />;
   }
 
   const todayDate = new Date();
-  const currentDay = todayDate.getDay();
-  const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1;
-
-  const monday = new Date(todayDate);
-  monday.setDate(todayDate.getDate() - distanceToMonday);
-
-  const currentWeek = Array.from({ length: 7 }).map((_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    return formatDateLocal(date);
-  });
-
   const today = formatDateLocal(todayDate);
+  const currentWeek = getWeekDates(todayDate);
+  const previousWeek = getWeekDates(todayDate, -1);
   const chartData = currentWeek.map((dateStr) => {
     if (dateStr === today) {
       return { date: dateStr, intake, goal };
@@ -37,17 +70,24 @@ export default function StatsPage() {
     const found = history.find((item) => item.date === dateStr);
     return found ?? { date: dateStr, intake: 0, goal };
   });
+  const previousWeekData = previousWeek.map((dateStr) => history.find((item) => item.date === dateStr) ?? { date: dateStr, intake: 0, goal });
+  const allTrackedDays = [...history, { date: today, intake, goal }].sort((a, b) => a.date.localeCompare(b.date));
 
   const maxIntake = Math.max(...chartData.map((day) => day.intake), goal, 1);
   const weeklyGoalHits = chartData.filter((day) => day.intake >= day.goal).length;
   const weeklyAverage = Math.round(chartData.reduce((sum, day) => sum + day.intake, 0) / chartData.length);
+  const previousAverage = Math.round(previousWeekData.reduce((sum, day) => sum + day.intake, 0) / previousWeekData.length);
+  const averageDelta = weeklyAverage - previousAverage;
   const bestDay = chartData.reduce((best, day) => (day.intake > best.intake ? day : best), chartData[0]);
   const consistency = Math.round((weeklyGoalHits / chartData.length) * 100);
   const bestDayLabel = DAY_NAMES[chartData.findIndex((day) => day.date === bestDay.date)] ?? "Today";
+  const bestStreak = getBestStreak(allTrackedDays);
+  const missedDays = chartData.filter((day) => day.date <= today && day.intake < day.goal).length;
+  const remainingWeeklyWins = Math.max(0, 7 - weeklyGoalHits);
 
   return (
     <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh]">
-      <header className="w-full text-center mt-4 mb-8">
+      <header key={`stats-header-${navigationTick}`} className="w-full text-center mt-4 mb-8 animate-[stats-rise_520ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Your Stats.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">
           Consistency builds the habit
@@ -58,7 +98,7 @@ export default function StatsPage() {
         </div>
       </header>
 
-      <div className="w-full grid grid-cols-2 gap-4 mb-6">
+      <div key={`stats-top-${navigationTick}`} className="w-full grid grid-cols-2 gap-4 mb-6 animate-[stats-rise_560ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
         <Card className="flex flex-col items-center justify-center p-5 text-center">
           <div className="flex items-center gap-2 mb-2">
             <Flame className="w-5 h-5 text-water-300 drop-shadow-sm" strokeWidth={2.5} />
@@ -81,7 +121,7 @@ export default function StatsPage() {
         </Card>
       </div>
 
-      <div className="w-full grid grid-cols-2 gap-4 mb-8">
+      <div key={`stats-mid-${navigationTick}`} className="w-full grid grid-cols-2 gap-4 mb-8 animate-[stats-rise_620ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
         <Card className="p-4">
           <div className="font-ui flex items-center gap-1.5 text-water-300 text-[0.78rem] sm:text-sm font-bold tracking-wide whitespace-nowrap">
             <Waves className="w-3.5 h-3.5 shrink-0" strokeWidth={2.4} />
@@ -101,7 +141,39 @@ export default function StatsPage() {
         </Card>
       </div>
 
-      <Card className="w-full p-6 mb-6">
+      <div key={`stats-insights-${navigationTick}`} className="w-full grid grid-cols-3 gap-3 mb-6 animate-[stats-rise_680ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
+        <Card className="p-3">
+          <div className="flex items-center gap-1.5 text-emerald-100">
+            <TrendingUp className="h-3.5 w-3.5" strokeWidth={2.5} />
+            <span className="font-ui text-[0.68rem] font-black uppercase tracking-[0.16em]">Trend</span>
+          </div>
+          <p className={`font-numeric mt-2 text-2xl font-black ${averageDelta >= 0 ? "text-emerald-100" : "text-rose-100"}`}>
+            {averageDelta >= 0 ? "+" : ""}
+            {averageDelta}
+          </p>
+          <p className="font-body mt-1 text-[0.68rem] font-semibold text-water-300/72">ml vs last week</p>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-1.5 text-cyan-100">
+            <Target className="h-3.5 w-3.5" strokeWidth={2.5} />
+            <span className="font-ui text-[0.68rem] font-black uppercase tracking-[0.16em]">Best</span>
+          </div>
+          <p className="font-numeric mt-2 text-2xl font-black text-white">{bestStreak}</p>
+          <p className="font-body mt-1 text-[0.68rem] font-semibold text-water-300/72">day streak</p>
+        </Card>
+
+        <Card className="p-3">
+          <div className="flex items-center gap-1.5 text-rose-100">
+            <CircleOff className="h-3.5 w-3.5" strokeWidth={2.5} />
+            <span className="font-ui text-[0.68rem] font-black uppercase tracking-[0.16em]">Missed</span>
+          </div>
+          <p className="font-numeric mt-2 text-2xl font-black text-white">{missedDays}</p>
+          <p className="font-body mt-1 text-[0.68rem] font-semibold text-water-300/72">so far</p>
+        </Card>
+      </div>
+
+      <Card key={`stats-best-${navigationTick}`} className="w-full p-6 mb-6 animate-[stats-rise_720ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
@@ -116,9 +188,17 @@ export default function StatsPage() {
             <p className="font-numeric mt-2 text-3xl font-black text-white">{weeklyGoalHits}</p>
           </div>
         </div>
+        <div className="mt-5 rounded-2xl border border-cyan-100/12 bg-cyan-300/10 px-4 py-3">
+          <p className="font-body text-sm font-semibold leading-relaxed text-water-100/88">
+            {averageDelta >= 0
+              ? `You are ${averageDelta} ml/day ahead of last week.`
+              : `You are ${Math.abs(averageDelta)} ml/day behind last week.`}{" "}
+            {remainingWeeklyWins === 0 ? "Perfect week locked in." : `${remainingWeeklyWins} more goal days would finish a clean week.`}
+          </p>
+        </div>
       </Card>
 
-      <Card className="w-full p-6">
+      <Card key={`stats-chart-${navigationTick}`} className="w-full p-6 animate-[stats-rise_760ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-water-400" strokeWidth={2.5} />
@@ -160,7 +240,7 @@ export default function StatsPage() {
                         ? "bg-gradient-to-t from-water-600 via-water-400 to-water-200"
                         : "bg-gradient-to-t from-water-900/80 to-water-700/70"
                     }`}
-                    style={{ height: `${Math.max(heightPercent, day.intake > 0 ? 10 : 0)}%` }}
+                    style={{ height: `${barsReady ? Math.max(heightPercent, day.intake > 0 ? 10 : 0) : 0}%` }}
                   />
                 </div>
                 <span
@@ -175,6 +255,25 @@ export default function StatsPage() {
           })}
         </div>
       </Card>
+
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes stats-rise {
+              0% {
+                opacity: 0;
+                transform: translateY(16px);
+                filter: blur(3px);
+              }
+              100% {
+                opacity: 1;
+                transform: translateY(0);
+                filter: blur(0);
+              }
+            }
+          `,
+        }}
+      />
     </main>
   );
 }

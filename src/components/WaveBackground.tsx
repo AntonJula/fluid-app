@@ -6,15 +6,18 @@ interface WaveBackgroundProps {
   progress?: number; // 0 to 1
 }
 
+const WAVE_BASE_REM = 8;
+
 export function WaveBackground({ progress = 0.5 }: WaveBackgroundProps) {
-  const fillHeight = Math.max(0, Math.min(100, progress * 100));
+  const safeProgress = Math.max(0, Math.min(1, progress));
+  const distanceToTop = 1 - safeProgress;
 
   return (
     <div className="fixed inset-0 z-[-1] overflow-hidden bg-background pointer-events-none">
-      {/* Single water body — anchored to bottom, grows upward with progress */}
+      {/* Single water body - anchored to bottom, grows upward with progress */}
       <div
-        className="absolute left-0 right-0 bottom-0 transition-all duration-[1500ms] ease-out"
-        style={{ height: `calc(${fillHeight}% + 8rem)` }}
+        className="absolute left-0 right-0 bottom-0 transition-[top] duration-[950ms] ease-out will-change-[top]"
+        style={{ top: `calc(${distanceToTop * 100}dvh - ${distanceToTop * WAVE_BASE_REM}rem)` }}
       >
         {/* Animated wave surface at the top of the water body */}
         <div className="absolute top-0 left-0 right-0 h-32 w-[200%] pointer-events-none">
@@ -46,10 +49,10 @@ export function WaveBackground({ progress = 0.5 }: WaveBackgroundProps) {
           </svg>
         </div>
 
-        {/* Solid fill — sits directly below waves, same color as front wave */}
+        {/* Solid fill - sits directly below waves, same color as front wave */}
         <div className="absolute left-0 right-0 bottom-0 top-32 bg-water-700 overflow-hidden">
           {/* Fish swim within the water */}
-          <FishLayer progress={progress} />
+          <FishLayer progress={safeProgress} />
         </div>
       </div>
 

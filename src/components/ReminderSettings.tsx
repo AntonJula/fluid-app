@@ -60,7 +60,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
         </div>
         <p className="font-body mt-1 text-xs text-water-400/80">
           {interval > 0
-            ? "Choose an interval that supports the habit without becoming background noise."
+            ? "Fluid nudges you while the app is open and catches up when you return."
             : "Turn them on if you want help building consistency."}
         </p>
       </div>

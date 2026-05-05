@@ -20,6 +20,23 @@ export function saveScrollPosition(
 export function useScrollPreservation() {
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
+  const restoreFrameRef = useRef<number | null>(null);
+  const restoreTimerRef = useRef<number | null>(null);
+
+  const restoreScroll = (path: string) => {
+    const savedScroll = getScrollPosition(path);
+
+    window.scrollTo(0, savedScroll);
+
+    restoreFrameRef.current = requestAnimationFrame(() => {
+      window.scrollTo(0, savedScroll);
+    });
+
+    restoreTimerRef.current = window.setTimeout(() => {
+      window.scrollTo(0, savedScroll);
+      restoreTimerRef.current = null;
+    }, 90);
+  };
 
   // Restore scroll when pathname changes
   useEffect(() => {
@@ -29,11 +46,15 @@ export function useScrollPreservation() {
     saveScrollPosition(previousPath);
     pathnameRef.current = newPath;
 
-    // Wait for the new page to be properly inserted into the DOM
-    requestAnimationFrame(() => {
-      const savedScroll = getScrollPosition(newPath);
-      window.scrollTo(0, savedScroll);
-    });
+    if (restoreFrameRef.current !== null) {
+      cancelAnimationFrame(restoreFrameRef.current);
+    }
+
+    if (restoreTimerRef.current !== null) {
+      window.clearTimeout(restoreTimerRef.current);
+    }
+
+    restoreFrameRef.current = requestAnimationFrame(() => restoreScroll(newPath));
   }, [pathname]);
 
   // Track scroll positions for the current path
@@ -48,6 +69,12 @@ export function useScrollPreservation() {
     // Also save current scroll before unmount/route-change
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      if (restoreFrameRef.current !== null) {
+        cancelAnimationFrame(restoreFrameRef.current);
+      }
+      if (restoreTimerRef.current !== null) {
+        window.clearTimeout(restoreTimerRef.current);
+      }
       saveScrollPosition(pathnameRef.current);
     };
   }, []);

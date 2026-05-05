@@ -22,7 +22,7 @@ export default function RootLayout({
         <SwipeNavigation />
         <NotificationManager />
         <div
-          className="flex-1 flex flex-col pb-28 relative z-10 w-full h-full"
+          className="flex-1 flex flex-col pb-24 relative z-10 w-full h-full"
           style={{
             transform: "translateX(var(--swipe-shell-offset, 0px))",
             transition: "var(--swipe-shell-transition, transform 220ms ease-out)",

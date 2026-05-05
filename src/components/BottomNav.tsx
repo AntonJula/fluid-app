@@ -33,14 +33,13 @@ export function BottomNav() {
         willChange: "transform",
       }}
     >
-      <div className="pointer-events-none absolute inset-x-0 bottom-full h-5 bg-gradient-to-t from-water-950/50 via-water-950/10 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 -bottom-4 h-24 bg-gradient-to-t from-black/76 via-black/38 to-transparent" />
 
       <nav
         data-bottom-nav="true"
-        className="pointer-events-auto relative w-full overflow-hidden border-t border-white/8 bg-water-950 shadow-[0_-4px_16px_rgba(0,0,0,0.15)]"
+        className="pointer-events-auto relative w-full overflow-hidden bg-transparent"
       >
-        <div className="absolute inset-x-0 top-0 h-px bg-water-300/12" />
-        <div className="mx-auto flex w-full max-w-md items-end justify-around px-3 pb-[max(0.55rem,env(safe-area-inset-bottom))] pt-1">
+        <div className="mx-auto flex w-full max-w-md items-end justify-around px-8 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-3">
           {NAV_ITEMS.map(({ href, label, Icon }) => {
             const isActive = activePathname === href;
 
@@ -49,21 +48,21 @@ export function BottomNav() {
                 key={href}
                 href={href}
                 aria-current={isActive ? "page" : undefined}
-                className="relative flex min-w-[4rem] flex-col items-center justify-end"
+                className="relative flex min-w-[4.25rem] flex-col items-center justify-end rounded-2xl py-1.5 transition-transform duration-300 active:scale-95"
               >
                 <div
-                  className={`flex h-8.5 w-8.5 items-center justify-center rounded-[0.85rem] transition-all duration-300 sm:h-9 sm:w-9 ${
+                  className={`flex h-8.5 w-8.5 items-center justify-center transition-all duration-300 sm:h-9 sm:w-9 ${
                     isActive
-                      ? "bg-water-400/16 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_8px_18px_rgba(14,165,233,0.14)]"
-                      : "text-water-200/62"
+                      ? "text-white drop-shadow-[0_5px_10px_rgba(0,0,0,0.45)]"
+                      : "text-water-100/55 drop-shadow-[0_3px_8px_rgba(0,0,0,0.4)] hover:text-water-100/85"
                   }`}
                 >
-                  <Icon className="h-4.25 w-4.25 sm:h-4.5 sm:w-4.5" strokeWidth={2.4} />
+                  <Icon className="h-5.5 w-5.5 sm:h-5.75 sm:w-5.75" strokeWidth={isActive ? 2.8 : 2.35} />
                 </div>
 
                 <span
-                  className={`font-ui mt-0.5 text-[0.6rem] font-semibold tracking-wide transition-colors duration-300 sm:text-[0.63rem] ${
-                    isActive ? "text-white" : "text-water-200/70"
+                  className={`font-ui mt-1 text-[0.66rem] font-bold tracking-normal transition-colors duration-300 sm:text-[0.69rem] ${
+                    isActive ? "text-white drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" : "text-water-100/58"
                   }`}
                 >
                   {label}

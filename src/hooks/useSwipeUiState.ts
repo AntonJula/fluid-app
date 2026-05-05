@@ -6,12 +6,14 @@ type SwipeUiState = {
   isDragging: boolean;
   isTransitioning: boolean;
   frozenPathname: string | null;
+  navigationTick: number;
 };
 
 const DEFAULT_STATE: SwipeUiState = {
   isDragging: false,
   isTransitioning: false,
   frozenPathname: null,
+  navigationTick: 0,
 };
 
 let swipeUiState: SwipeUiState = DEFAULT_STATE;
@@ -39,7 +41,8 @@ export function setSwipeUiState(nextState: Partial<SwipeUiState>) {
   if (
     resolvedState.isDragging === swipeUiState.isDragging &&
     resolvedState.isTransitioning === swipeUiState.isTransitioning &&
-    resolvedState.frozenPathname === swipeUiState.frozenPathname
+    resolvedState.frozenPathname === swipeUiState.frozenPathname &&
+    resolvedState.navigationTick === swipeUiState.navigationTick
   ) {
     return;
   }
@@ -50,6 +53,14 @@ export function setSwipeUiState(nextState: Partial<SwipeUiState>) {
 
 export function resetSwipeUiState() {
   swipeUiState = DEFAULT_STATE;
+  emitChange();
+}
+
+export function bumpSwipeNavigationTick() {
+  swipeUiState = {
+    ...swipeUiState,
+    navigationTick: swipeUiState.navigationTick + 1,
+  };
   emitChange();
 }
 

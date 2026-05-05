@@ -8,11 +8,13 @@ interface ProgressCardProps {
 }
 
 export function ProgressCard({ intake, goal }: ProgressCardProps) {
-  const progress = Math.min(1, intake / goal);
+  const safeGoal = Math.max(goal, 1);
+  const progress = Math.min(1, intake / safeGoal);
   const remaining = Math.max(0, goal - intake);
   const remainingGlasses = Math.ceil(remaining / 250);
   const percentage = Math.round(progress * 100);
   const isGoalMet = intake >= goal;
+  const overGoal = Math.max(0, intake - goal);
 
   return (
     <Card className="flex flex-col items-center justify-center text-center w-full max-w-sm mx-auto shadow-2xl p-7">
@@ -23,7 +25,7 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
             Daily progress
           </p>
         </div>
-        <div className="rounded-2xl border border-water-300/10 bg-water-900/18 px-3 py-2 text-right shadow-inner">
+        <div className="rounded-2xl border border-cyan-200/15 bg-water-900/18 px-3 py-2 text-right shadow-inner">
           <p className="font-numeric text-[1.7rem] font-black leading-none text-white">{percentage}%</p>
           <p className="font-ui mt-1 text-[0.62rem] font-bold uppercase tracking-[0.24em] text-water-300/75">done</p>
         </div>
@@ -34,7 +36,7 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
         <span className="font-ui text-4xl text-water-300/80 font-bold tracking-normal"> L</span>
       </div>
       <p className="font-body mt-2 text-sm font-semibold text-water-300/80">
-        Goal {(goal / 1000).toFixed(1)}L
+        Goal {(safeGoal / 1000).toFixed(1)}L
       </p>
 
       <div className="mt-6 w-full rounded-3xl border border-water-400/15 bg-water-800/30 p-2 shadow-inner">
@@ -69,8 +71,8 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
       )}
 
       {isGoalMet && (
-        <div className="mt-5 w-full rounded-3xl bg-gradient-to-br from-water-400/20 to-water-600/20 px-5 py-6 shadow-[0_0_30px_rgba(56,189,248,0.15)] border border-water-300/30 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.3)_0%,transparent_60%)] pointer-events-none" />
+        <div className="mt-5 w-full rounded-3xl bg-gradient-to-br from-emerald-300/18 via-water-400/18 to-cyan-500/20 px-5 py-6 shadow-[0_0_34px_rgba(45,212,191,0.16)] border border-emerald-200/25 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 relative overflow-hidden">
+          <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-emerald-200/70 to-transparent pointer-events-none" />
           
           <div className="relative w-[220px] h-[220px] -mt-8 -mb-12 drop-shadow-[0_0_25px_rgba(56,189,248,0.8)] shark-pulse pointer-events-none">
             <Image 
@@ -88,6 +90,11 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
           <p className="font-ui text-2xl font-black text-white text-center relative z-10">
             You&apos;re fully hydrated today!
           </p>
+          {overGoal > 0 && (
+            <p className="font-body relative z-10 mt-2 rounded-full border border-emerald-200/20 bg-emerald-300/12 px-3 py-1 text-xs font-bold text-emerald-100">
+              +{overGoal} ml over goal
+            </p>
+          )}
 
           <style
             dangerouslySetInnerHTML={{
