@@ -5,7 +5,6 @@ import { useHydration } from "@/hooks/useHydration";
 import { Card } from "@/components/ui/Card";
 import { Flame, Calendar, Trophy, Waves, ChartColumn, Crown, TrendingUp, Target, CircleOff } from "lucide-react";
 import { formatDateLocal } from "@/lib/date";
-import { useSwipeUiState } from "@/hooks/useSwipeUiState";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -42,17 +41,6 @@ function getBestStreak(days: { intake: number; goal: number }[]) {
 
 export default function StatsPage() {
   const { streak, history, intake, goal, mounted } = useHydration();
-  const { navigationTick } = useSwipeUiState();
-  const [barsReady, setBarsReady] = React.useState(false);
-
-  React.useEffect(() => {
-    let frameId = 0;
-
-    setBarsReady(false);
-    frameId = window.requestAnimationFrame(() => setBarsReady(true));
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [navigationTick]);
 
   if (!mounted) {
     return <main className="min-h-screen bg-water-50" />;
@@ -87,7 +75,7 @@ export default function StatsPage() {
 
   return (
     <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh]">
-      <header key={`stats-header-${navigationTick}`} className="w-full text-center mt-4 mb-8 animate-[stats-rise_520ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
+      <header className="w-full text-center mt-4 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Your Stats.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">
           Consistency builds the habit
@@ -98,7 +86,7 @@ export default function StatsPage() {
         </div>
       </header>
 
-      <div key={`stats-top-${navigationTick}`} className="w-full grid grid-cols-2 gap-4 mb-6 animate-[stats-rise_560ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
+      <div className="w-full grid grid-cols-2 gap-4 mb-6">
         <Card className="flex flex-col items-center justify-center p-5 text-center">
           <div className="flex items-center gap-2 mb-2">
             <Flame className="w-5 h-5 text-water-300 drop-shadow-sm" strokeWidth={2.5} />
@@ -121,7 +109,7 @@ export default function StatsPage() {
         </Card>
       </div>
 
-      <div key={`stats-mid-${navigationTick}`} className="w-full grid grid-cols-2 gap-4 mb-8 animate-[stats-rise_620ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
+      <div className="w-full grid grid-cols-2 gap-4 mb-8">
         <Card className="p-4">
           <div className="font-ui flex items-center gap-1.5 text-water-300 text-[0.78rem] sm:text-sm font-bold tracking-wide whitespace-nowrap">
             <Waves className="w-3.5 h-3.5 shrink-0" strokeWidth={2.4} />
@@ -141,7 +129,7 @@ export default function StatsPage() {
         </Card>
       </div>
 
-      <div key={`stats-insights-${navigationTick}`} className="w-full grid grid-cols-3 gap-3 mb-6 animate-[stats-rise_680ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
+      <div className="w-full grid grid-cols-3 gap-3 mb-6">
         <Card className="p-3">
           <div className="flex items-center gap-1.5 text-emerald-100">
             <TrendingUp className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -173,7 +161,7 @@ export default function StatsPage() {
         </Card>
       </div>
 
-      <Card key={`stats-best-${navigationTick}`} className="w-full p-6 mb-6 animate-[stats-rise_720ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
+      <Card className="w-full p-6 mb-6">
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
@@ -198,7 +186,7 @@ export default function StatsPage() {
         </div>
       </Card>
 
-      <Card key={`stats-chart-${navigationTick}`} className="w-full p-6 animate-[stats-rise_760ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
+      <Card className="w-full p-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-water-400" strokeWidth={2.5} />
@@ -240,7 +228,7 @@ export default function StatsPage() {
                         ? "bg-gradient-to-t from-water-600 via-water-400 to-water-200"
                         : "bg-gradient-to-t from-water-900/80 to-water-700/70"
                     }`}
-                    style={{ height: `${barsReady ? Math.max(heightPercent, day.intake > 0 ? 10 : 0) : 0}%` }}
+                    style={{ height: `${Math.max(heightPercent, day.intake > 0 ? 10 : 0)}%` }}
                   />
                 </div>
                 <span
@@ -256,24 +244,6 @@ export default function StatsPage() {
         </div>
       </Card>
 
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-            @keyframes stats-rise {
-              0% {
-                opacity: 0;
-                transform: translateY(16px);
-                filter: blur(3px);
-              }
-              100% {
-                opacity: 1;
-                transform: translateY(0);
-                filter: blur(0);
-              }
-            }
-          `,
-        }}
-      />
     </main>
   );
 }

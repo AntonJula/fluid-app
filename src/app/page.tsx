@@ -7,7 +7,6 @@ import { ProgressCard } from "@/components/ProgressCard";
 import { Button } from "@/components/ui/Button";
 import { Check, Minus, RefreshCw, RotateCcw, X } from "lucide-react";
 import { SipIcon, GlassIcon, MugIcon, BottleIcon } from "@/components/DrinkIcons";
-import { useSwipeUiState } from "@/hooks/useSwipeUiState";
 
 const QUICK_AMOUNTS = [
   { label: "Sip", amount: 150, Icon: SipIcon },
@@ -25,7 +24,6 @@ function formatLogTime(timestamp: number) {
 
 export default function Home() {
   const { intake, goal, drinkLog, addDrink, subtractDrink, undoLastDrink, resetDaily, mounted } = useHydration();
-  const { navigationTick } = useSwipeUiState();
   const [isResetConfirming, setIsResetConfirming] = React.useState(false);
 
   if (!mounted) {
@@ -51,7 +49,7 @@ export default function Home() {
     <main className="flex flex-col items-center p-6 pb-24 pt-6 w-full max-w-md mx-auto relative min-h-[100dvh] overflow-hidden">
       <WaveBackground progress={progressAttr} />
 
-      <div key={`home-${navigationTick}`} className="w-full z-10 flex flex-col gap-5 h-full flex-1 animate-[page-rise_520ms_cubic-bezier(0.22,0.9,0.32,1)_both]">
+      <div className="w-full z-10 flex flex-col gap-5 h-full flex-1">
         <header className="relative w-full text-center mt-2 z-20">
           <div className="absolute right-0 top-0 z-50">
             <Button
@@ -198,18 +196,6 @@ export default function Home() {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            @keyframes page-rise {
-              0% {
-                opacity: 0.84;
-                transform: translateY(14px) scale(0.992);
-                filter: blur(3px);
-              }
-              100% {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-                filter: blur(0);
-              }
-            }
             @keyframes quick-add-shimmer {
               0%, 8%, 100% {
                 transform: translateX(-150%) rotate(14deg);

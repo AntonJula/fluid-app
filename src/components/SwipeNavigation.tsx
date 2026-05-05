@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getScrollPosition, saveScrollPosition } from "@/hooks/useScrollPreservation";
-import { bumpSwipeNavigationTick, resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
+import { resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
 import HomePage from "@/app/page";
 import StatsPage from "@/app/stats/page";
 import SettingsPage from "@/app/settings/page";
@@ -211,7 +211,6 @@ export function SwipeNavigation() {
         isNavigatingRef.current = true;
         syncTransitioningState(true);
         saveScrollPosition(pathname);
-        bumpSwipeNavigationTick();
         offsetRef.current = exitOffset;
         queueVisualState(exitOffset, false);
         navigationTimerRef.current = window.setTimeout(() => {
