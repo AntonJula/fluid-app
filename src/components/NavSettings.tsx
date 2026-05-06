@@ -33,8 +33,10 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
         </div>
         
         <button
+          type="button"
           role="switch"
           aria-checked={hideNav}
+          aria-label={hideNav ? "Show navigation bar" : "Hide navigation bar"}
           onClick={() => setHideNav(!hideNav)}
           className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-water-300/50 focus:ring-offset-2 focus:ring-offset-background ${
             hideNav ? "bg-water-300" : "bg-water-900/50"

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { BottomNav } from "@/components/BottomNav";
 import { NotificationManager } from "@/components/NotificationManager";
 import { SwipeNavigation } from "@/components/SwipeNavigation";
@@ -8,6 +8,16 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Fluid | Hydration Tracker",
   description: "A beautiful, calm hydration tracking application.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Fluid",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#082f49",
 };
 
 export default function RootLayout({

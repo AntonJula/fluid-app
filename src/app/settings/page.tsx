@@ -5,17 +5,30 @@ import { useHydration } from "@/hooks/useHydration";
 import { GoalSettings } from "@/components/GoalSettings";
 import { ReminderSettings } from "@/components/ReminderSettings";
 import { NavSettings } from "@/components/NavSettings";
+import { DataSettings } from "@/components/DataSettings";
 import { Card } from "@/components/ui/Card";
 
 export default function SettingsPage() {
-  const { goal, setGoal, reminderInterval, setReminderInterval, quietHours, setQuietHours, hideNav, setHideNav, mounted } = useHydration();
+  const {
+    goal,
+    setGoal,
+    reminderInterval,
+    setReminderInterval,
+    quietHours,
+    setQuietHours,
+    hideNav,
+    setHideNav,
+    exportHydrationState,
+    importHydrationState,
+    mounted,
+  } = useHydration();
 
   if (!mounted) {
     return <main className="min-h-screen bg-background" />;
   }
 
   return (
-    <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh]">
+    <main className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full max-w-md mx-auto min-h-[100dvh]">
       <header className="w-full text-center mt-4 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Settings.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">Customize Fluid</p>
@@ -43,6 +56,9 @@ export default function SettingsPage() {
         </div>
         <div>
           <NavSettings hideNav={hideNav} setHideNav={setHideNav} />
+        </div>
+        <div>
+          <DataSettings exportHydrationState={exportHydrationState} importHydrationState={importHydrationState} />
         </div>
       </div>
     </main>

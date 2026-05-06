@@ -10,6 +10,7 @@ export interface DrinkLogItem {
   id: string;
   amount: number;
   timestamp: number;
+  note?: HydrationNote;
 }
 
 export interface HydrationState {
@@ -19,12 +20,66 @@ export interface HydrationState {
   reminderInterval: number;
   quietHours: { start: string; end: string };
   hideNav: boolean;
+  quickAddAmount: number;
   lastUpdated: string;
   history: HydrationHistoryItem[];
   drinkLog: DrinkLogItem[];
 }
 
 export const DEFAULT_GOAL = 2500;
+export const DEFAULT_QUICK_ADD_AMOUNT = 250;
+export const HYDRATION_NOTES = ["water", "coffee", "tea", "workout", "hot-day"] as const;
+export type HydrationNote = (typeof HYDRATION_NOTES)[number];
+
+function isHydrationNote(value: unknown): value is HydrationNote {
+  return typeof value === "string" && HYDRATION_NOTES.includes(value as HydrationNote);
+}
+
+function normalizeDrinkLogItem(item: unknown): DrinkLogItem | null {
+  if (!item || typeof item !== "object") return null;
+
+  const candidate = item as Partial<DrinkLogItem>;
+  const rawAmount = Number(candidate.amount);
+  const amount = Number.isFinite(rawAmount) ? clampHydrationAmount(rawAmount, -5000, 5000) : 0;
+  const timestamp = Number(candidate.timestamp);
+
+  if (!candidate.id || amount === 0 || !Number.isFinite(timestamp)) return null;
+
+  return {
+    id: String(candidate.id),
+    amount,
+    timestamp,
+    ...(isHydrationNote(candidate.note) ? { note: candidate.note } : {}),
+  };
+}
+
+function normalizeDrinkLog(log: unknown) {
+  if (!Array.isArray(log)) return [];
+
+  return log
+    .map(normalizeDrinkLogItem)
+    .filter((item): item is DrinkLogItem => item !== null)
+    .slice(0, 50);
+}
+
+function normalizeHistory(history: unknown, fallbackGoal: number): HydrationHistoryItem[] {
+  if (!Array.isArray(history)) return [];
+
+  return history
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+
+      const candidate = item as Partial<HydrationHistoryItem>;
+      if (typeof candidate.date !== "string") return null;
+
+      return {
+        date: candidate.date,
+        intake: clampHydrationAmount(candidate.intake ?? 0, 0, 50000),
+        goal: clampHydrationAmount(candidate.goal ?? fallbackGoal, 500, 10000),
+      };
+    })
+    .filter((item): item is HydrationHistoryItem => item !== null);
+}
 
 export function getDefaultHydrationState(): HydrationState {
   return {
@@ -34,6 +89,7 @@ export function getDefaultHydrationState(): HydrationState {
     reminderInterval: 0,
     quietHours: { start: "22:00", end: "07:00" },
     hideNav: false,
+    quickAddAmount: DEFAULT_QUICK_ADD_AMOUNT,
     lastUpdated: getTodayDateLocal(),
     history: [],
     drinkLog: [],
@@ -50,9 +106,10 @@ export function normalizeHydrationState(parsed: Partial<HydrationState>, today =
     reminderInterval: parsed.reminderInterval ?? 0,
     quietHours: parsed.quietHours ?? { start: "22:00", end: "07:00" },
     hideNav: parsed.hideNav ?? false,
+    quickAddAmount: clampHydrationAmount(parsed.quickAddAmount ?? DEFAULT_QUICK_ADD_AMOUNT, 50, 5000),
     lastUpdated: parsed.lastUpdated ?? today,
-    history: parsed.history ?? [],
-    drinkLog: parsed.drinkLog ?? [],
+    history: normalizeHistory(parsed.history, goal),
+    drinkLog: normalizeDrinkLog(parsed.drinkLog),
   };
 }
 

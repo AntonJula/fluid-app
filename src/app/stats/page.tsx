@@ -7,6 +7,7 @@ import { Flame, Calendar, Trophy, Waves, ChartColumn, Crown, TrendingUp, Target,
 import { formatDateLocal } from "@/lib/date";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const MONTH_FORMATTER = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
 
 function getWeekDates(anchor: Date, offsetWeeks = 0) {
   const currentDay = anchor.getDay();
@@ -39,6 +40,25 @@ function getBestStreak(days: { intake: number; goal: number }[]) {
   return best;
 }
 
+function getMonthDays(anchor: Date) {
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const leadingBlankDays = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  return [
+    ...Array.from({ length: leadingBlankDays }).map(() => null),
+    ...Array.from({ length: daysInMonth }).map((_, index) => {
+      const date = new Date(year, month, index + 1);
+      return {
+        date: formatDateLocal(date),
+        day: index + 1,
+      };
+    }),
+  ];
+}
+
 export default function StatsPage() {
   const { streak, history, intake, goal, mounted } = useHydration();
 
@@ -60,6 +80,8 @@ export default function StatsPage() {
   });
   const previousWeekData = previousWeek.map((dateStr) => history.find((item) => item.date === dateStr) ?? { date: dateStr, intake: 0, goal });
   const allTrackedDays = [...history, { date: today, intake, goal }].sort((a, b) => a.date.localeCompare(b.date));
+  const trackedByDate = new Map(allTrackedDays.map((day) => [day.date, day]));
+  const monthDays = getMonthDays(todayDate);
 
   const maxIntake = Math.max(...chartData.map((day) => day.intake), goal, 1);
   const weeklyGoalHits = chartData.filter((day) => day.intake >= day.goal).length;
@@ -74,7 +96,7 @@ export default function StatsPage() {
   const remainingWeeklyWins = Math.max(0, 7 - weeklyGoalHits);
 
   return (
-    <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh]">
+    <main className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full max-w-md mx-auto min-h-[100dvh]">
       <header className="w-full text-center mt-4 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Your Stats.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">
@@ -186,7 +208,66 @@ export default function StatsPage() {
         </div>
       </Card>
 
-      <Card className="w-full p-6">
+      <Card className="w-full p-5 sm:p-6 mb-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
+              <Calendar className="w-4 h-4" strokeWidth={2.4} />
+              Month View
+            </div>
+            <p className="font-ui mt-2 text-2xl font-black tracking-tight text-white">{MONTH_FORMATTER.format(todayDate)}</p>
+          </div>
+          <div className="rounded-2xl border border-water-400/15 bg-water-800/35 px-3 py-2 text-right">
+            <p className="font-ui text-[10px] uppercase tracking-[0.2em] font-bold text-water-400/80">Goal Days</p>
+            <p className="font-numeric mt-1 text-2xl font-black text-white">
+              {monthDays.filter((day) => day && (trackedByDate.get(day.date)?.intake ?? 0) >= (trackedByDate.get(day.date)?.goal ?? goal)).length}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-7 gap-1.5">
+          {DAY_NAMES.map((day) => (
+            <div key={day} className="font-ui text-center text-[0.62rem] font-black uppercase tracking-wider text-water-400/72">
+              {day.slice(0, 1)}
+            </div>
+          ))}
+          {monthDays.map((day, index) => {
+            if (!day) {
+              return <div key={`blank-${index}`} className="aspect-square" />;
+            }
+
+            const trackedDay = trackedByDate.get(day.date);
+            const dayIntake = trackedDay?.intake ?? 0;
+            const dayGoal = trackedDay?.goal ?? goal;
+            const isFuture = day.date > today;
+            const isToday = day.date === today;
+            const isGoalMet = dayIntake >= dayGoal;
+            const hasIntake = dayIntake > 0;
+
+            return (
+              <div
+                key={day.date}
+                className={`font-numeric flex aspect-square items-center justify-center rounded-xl border text-sm font-black transition-colors ${
+                  isToday
+                    ? "border-cyan-100/60 bg-cyan-200/22 text-white shadow-[0_0_18px_rgba(56,189,248,0.18)]"
+                    : isFuture
+                      ? "border-water-500/10 bg-water-950/12 text-water-500/45"
+                      : isGoalMet
+                        ? "border-emerald-100/28 bg-emerald-300/18 text-emerald-50"
+                        : hasIntake
+                          ? "border-water-300/18 bg-water-700/32 text-water-100"
+                          : "border-water-500/12 bg-water-950/18 text-water-400/60"
+                }`}
+                title={`${day.date}: ${dayIntake} ml`}
+              >
+                {day.day}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="w-full p-5 sm:p-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-water-400" strokeWidth={2.5} />

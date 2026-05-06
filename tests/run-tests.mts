@@ -25,6 +25,7 @@ const tests = [
 
       assert.equal(state.intake, 900);
       assert.equal(state.goal, 2500);
+      assert.equal(state.quickAddAmount, 250);
       assert.equal(state.lastUpdated, "2026-04-10");
       assert.deepEqual(state.quietHours, { start: "22:00", end: "07:00" });
       assert.deepEqual(state.drinkLog, []);
@@ -33,10 +34,27 @@ const tests = [
   {
     name: "normalizeHydrationState clamps invalid hydration values",
     run: () => {
-      const state = normalizeHydrationState({ intake: -200, goal: 100000 }, "2026-04-11");
+      const state = normalizeHydrationState({ intake: -200, goal: 100000, quickAddAmount: 2 }, "2026-04-11");
 
       assert.equal(state.intake, 0);
       assert.equal(state.goal, 10000);
+      assert.equal(state.quickAddAmount, 50);
+    },
+  },
+  {
+    name: "normalizeHydrationState keeps valid drink notes and removes invalid log rows",
+    run: () => {
+      const state = normalizeHydrationState(
+        {
+          drinkLog: [
+            { id: "drink-1", amount: 330, timestamp: 1775847600000, note: "tea" },
+            { id: "drink-2", amount: Number.NaN, timestamp: 1775847600000, note: "sparkles" },
+          ],
+        } as Parameters<typeof normalizeHydrationState>[0],
+        "2026-04-11"
+      );
+
+      assert.deepEqual(state.drinkLog, [{ id: "drink-1", amount: 330, timestamp: 1775847600000, note: "tea" }]);
     },
   },
   {

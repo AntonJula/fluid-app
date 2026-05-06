@@ -61,34 +61,47 @@ function TimePickerDialogContent({ value, onChange, onClose, title = "Select Tim
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-water-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-water-900 border border-water-400/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300">
+      <div
+        className="bg-water-900 border border-water-400/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="p-6 bg-water-800/40 border-b border-water-400/10 flex flex-col items-center">
           <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
           <div className="flex items-center justify-center gap-1">
             <button
+              type="button"
               onClick={() => setView("hour")}
               className={`font-numeric text-5xl font-black rounded-2xl p-2 transition-all duration-300 ${view === "hour" ? "text-white bg-water-500/30 scale-105 shadow-inner" : "text-water-400/70 hover:text-water-200 hover:bg-water-800/50"}`}
+              aria-label="Choose hour"
             >
               {hour.toString().padStart(2, "0")}
             </button>
             <span className="font-ui text-4xl font-bold text-water-500/50 pb-1 mb-1 animate-pulse">:</span>
             <button
+              type="button"
               onClick={() => setView("minute")}
               className={`font-numeric text-5xl font-black rounded-2xl p-2 transition-all duration-300 ${view === "minute" ? "text-white bg-water-500/30 scale-105 shadow-inner" : "text-water-400/70 hover:text-water-200 hover:bg-water-800/50"}`}
+              aria-label="Choose minute"
             >
               {minute.toString().padStart(2, "0")}
             </button>
 
             <div className="flex flex-col gap-1 ml-3 h-full justify-center">
               <button
+                type="button"
                 onClick={() => setAmpm("AM")}
                 className={`font-ui text-[12px] font-black px-3 py-1.5 rounded-xl transition-all uppercase tracking-wider ${ampm === "AM" ? "bg-gradient-to-r from-water-400 to-water-500 text-water-950 shadow-md shadow-water-500/30" : "text-water-400/80 hover:bg-water-800/60"}`}
+                aria-pressed={ampm === "AM"}
               >
                 AM
               </button>
               <button
+                type="button"
                 onClick={() => setAmpm("PM")}
                 className={`font-ui text-[12px] font-black px-3 py-1.5 rounded-xl transition-all uppercase tracking-wider ${ampm === "PM" ? "bg-gradient-to-r from-water-400 to-water-500 text-water-950 shadow-md shadow-water-500/30" : "text-water-400/80 hover:bg-water-800/60"}`}
+                aria-pressed={ampm === "PM"}
               >
                 PM
               </button>
@@ -101,6 +114,7 @@ function TimePickerDialogContent({ value, onChange, onClose, title = "Select Tim
             {(view === "hour" ? hours : minutes).map((val) => (
               <button
                 key={val}
+                type="button"
                 onClick={() => {
                   if (view === "hour") {
                     setHour(val);
@@ -109,6 +123,7 @@ function TimePickerDialogContent({ value, onChange, onClose, title = "Select Tim
                     setMinute(val);
                   }
                 }}
+                aria-label={`Set ${view} to ${val.toString().padStart(2, "0")}`}
                 className={`font-numeric h-11 w-full rounded-2xl flex items-center justify-center text-[17px] font-bold transition-all duration-300 ease-out
                   ${(view === "hour" ? hour : minute) === val
                     ? "bg-gradient-to-b from-water-400 to-water-600 text-white shadow-[0_8px_16px_-6px_rgba(56,189,248,0.5)] scale-[1.12]"

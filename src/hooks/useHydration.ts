@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import {
   DEFAULT_GOAL,
+  DEFAULT_QUICK_ADD_AMOUNT,
   clampHydrationAmount,
   getDefaultHydrationState,
   normalizeHydrationState,
@@ -10,6 +11,7 @@ import {
   type DrinkLogItem,
   type HydrationState,
   type HydrationHistoryItem,
+  type HydrationNote,
 } from "@/lib/hydrationState";
 const STORAGE_KEY = "fluid-hydration";
 const SERVER_SNAPSHOT: HydrationState = {
@@ -19,6 +21,7 @@ const SERVER_SNAPSHOT: HydrationState = {
   reminderInterval: 0,
   quietHours: { start: "22:00", end: "07:00" },
   hideNav: false,
+  quickAddAmount: DEFAULT_QUICK_ADD_AMOUNT,
   lastUpdated: "",
   history: [],
   drinkLog: [],
@@ -100,7 +103,7 @@ export function useHydration() {
   const state = useSyncExternalStore(subscribe, getSnapshot, () => SERVER_SNAPSHOT);
   const streak = state.streak + (state.intake >= state.goal ? 1 : 0);
 
-  const addDrink = (amount: number) => {
+  const addDrink = (amount: number, note?: HydrationNote) => {
     const safeAmount = clampHydrationAmount(amount, 1, 5000);
 
     updateState((currentState) => ({
@@ -111,13 +114,14 @@ export function useHydration() {
           id: `${Date.now()}-${safeAmount}-${Math.random().toString(16).slice(2)}`,
           amount: safeAmount,
           timestamp: Date.now(),
+          ...(note ? { note } : {}),
         },
         ...currentState.drinkLog,
-      ].slice(0, 20),
+      ].slice(0, 50),
     }));
   };
 
-  const subtractDrink = (amount: number) => {
+  const subtractDrink = (amount: number, note?: HydrationNote) => {
     const safeAmount = clampHydrationAmount(amount, 1, 5000);
 
     updateState((currentState) => ({
@@ -128,9 +132,10 @@ export function useHydration() {
           id: `${Date.now()}-${safeAmount}-subtract-${Math.random().toString(16).slice(2)}`,
           amount: -safeAmount,
           timestamp: Date.now(),
+          ...(note ? { note } : {}),
         },
         ...currentState.drinkLog,
-      ].slice(0, 20),
+      ].slice(0, 50),
     }));
   };
 
@@ -152,6 +157,50 @@ export function useHydration() {
     updateState((currentState) => ({
       ...currentState,
       goal: clampHydrationAmount(newGoal, 500, 10000),
+    }));
+  };
+
+  const updateDrinkLogItem = (id: string, amount: number, note?: HydrationNote) => {
+    const safeAmount = clampHydrationAmount(amount, -5000, 5000);
+    if (safeAmount === 0) return;
+
+    updateState((currentState) => {
+      const existingItem = currentState.drinkLog.find((item) => item.id === id);
+      if (!existingItem) return currentState;
+
+      return {
+        ...currentState,
+        intake: clampHydrationAmount(currentState.intake + safeAmount - existingItem.amount),
+        drinkLog: currentState.drinkLog.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                amount: safeAmount,
+                ...(note ? { note } : { note: item.note }),
+              }
+            : item
+        ),
+      };
+    });
+  };
+
+  const deleteDrinkLogItem = (id: string) => {
+    updateState((currentState) => {
+      const existingItem = currentState.drinkLog.find((item) => item.id === id);
+      if (!existingItem) return currentState;
+
+      return {
+        ...currentState,
+        intake: clampHydrationAmount(currentState.intake - existingItem.amount),
+        drinkLog: currentState.drinkLog.filter((item) => item.id !== id),
+      };
+    });
+  };
+
+  const setQuickAddAmount = (amount: number) => {
+    updateState((currentState) => ({
+      ...currentState,
+      quickAddAmount: clampHydrationAmount(amount, 50, 5000),
     }));
   };
 
@@ -184,19 +233,30 @@ export function useHydration() {
     }));
   };
 
+  const exportHydrationState = () => getCurrentState();
+
+  const importHydrationState = (stateLike: Partial<HydrationState>) => {
+    updateState(rolloverHydrationState(normalizeHydrationState(stateLike)));
+  };
+
   return {
     ...state,
     streak,
     addDrink,
     subtractDrink,
     undoLastDrink,
+    updateDrinkLogItem,
+    deleteDrinkLogItem,
     setGoal,
+    setQuickAddAmount,
     setReminderInterval,
     setQuietHours,
     setHideNav,
+    exportHydrationState,
+    importHydrationState,
     resetDaily,
     mounted,
   };
 }
 
-export type { DrinkLogItem, HydrationHistoryItem, HydrationState };
+export type { DrinkLogItem, HydrationHistoryItem, HydrationNote, HydrationState };

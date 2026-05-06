@@ -34,7 +34,7 @@ export function BottomNav() {
         data-bottom-nav="true"
         className="pointer-events-auto relative w-full overflow-hidden bg-transparent"
       >
-        <div className="mx-auto flex w-full max-w-md items-end justify-around px-8 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-3">
+        <div className="mx-auto flex w-full max-w-[20rem] items-end justify-between px-5 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-3 sm:max-w-md sm:px-8">
           {NAV_ITEMS.map(({ href, label, Icon }) => {
             const isActive = pathname === href;
 
@@ -43,7 +43,8 @@ export function BottomNav() {
                 key={href}
                 href={href}
                 aria-current={isActive ? "page" : undefined}
-                className="relative flex min-w-[4.25rem] flex-col items-center justify-end rounded-2xl py-1.5 transition-transform duration-300 active:scale-95"
+                aria-label={label}
+                className="relative flex min-w-[3.55rem] flex-col items-center justify-end rounded-2xl py-1.5 transition-transform duration-300 active:scale-95 sm:min-w-[4.25rem]"
               >
                 <div
                   className={`flex h-8.5 w-8.5 items-center justify-center transition-all duration-300 sm:h-9 sm:w-9 ${

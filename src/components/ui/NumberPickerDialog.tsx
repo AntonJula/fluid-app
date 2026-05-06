@@ -83,7 +83,12 @@ function NumberPickerDialogContent({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-water-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-water-900 border border-water-400/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300">
+      <div
+        className="bg-water-900 border border-water-400/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
         <div className="p-6 bg-water-800/40 border-b border-water-400/10 flex flex-col items-center">
           <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
           <div className="flex items-end justify-center min-h-[4rem]">
@@ -101,8 +106,10 @@ function NumberPickerDialogContent({
                 {row.map((num) => (
                   <button
                     key={num}
+                    type="button"
                     onClick={() => handleKeyPress(num.toString())}
                     className="font-numeric h-14 w-full rounded-2xl flex items-center justify-center text-2xl font-bold bg-water-800/40 text-water-200 hover:bg-water-700/80 hover:text-white transition-all active:scale-95 active:bg-water-500 active:text-white"
+                    aria-label={`Enter ${num}`}
                   >
                     {num}
                   </button>
@@ -113,16 +120,20 @@ function NumberPickerDialogContent({
             <div className="flex items-center justify-center" />
 
             <button
+              type="button"
               onClick={() => handleKeyPress("0")}
               className="font-numeric h-14 w-full rounded-2xl flex items-center justify-center text-2xl font-bold bg-water-800/40 text-water-200 hover:bg-water-700/80 hover:text-white transition-all active:scale-95 active:bg-water-500 active:text-white"
+              aria-label="Enter 0"
             >
               0
             </button>
 
             <button
+              type="button"
               onClick={handleBackspace}
               disabled={!currentVal}
               className="h-14 w-full rounded-2xl flex items-center justify-center text-water-300 bg-water-800/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-30 disabled:hover:bg-transparent active:scale-95"
+              aria-label="Delete last digit"
             >
               <Delete strokeWidth={2.5} />
             </button>

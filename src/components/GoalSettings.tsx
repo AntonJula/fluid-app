@@ -38,8 +38,10 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
           </div>
 
           <button
+            type="button"
             onClick={() => setIsCustomOpen(true)}
             className="font-numeric bg-water-800/50 border border-water-500/30 text-white text-sm rounded-xl hover:bg-water-700/50 hover:border-water-300 px-4 py-2 outline-none font-bold transition-all shadow-inner backdrop-blur-md flex items-center gap-2"
+            aria-label="Set custom daily goal"
           >
             {formatGoal(goal)}
             <Pen className="w-3.5 h-3.5 text-water-300" strokeWidth={3} />
@@ -54,7 +56,10 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
               return (
                 <button
                   key={preset}
+                  type="button"
                   onClick={() => handlePresetSelect(preset)}
+                  aria-pressed={isActive}
+                  aria-label={`Set daily goal to ${preset} milliliters`}
                   className={`font-numeric rounded-2xl px-3.5 py-2 text-sm font-bold transition-all ${
                     isActive
                       ? "bg-gradient-to-br from-water-400 to-water-600 text-white border border-water-200/25 shadow-lg shadow-water-500/20"

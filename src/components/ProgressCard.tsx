@@ -17,23 +17,23 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
   const overGoal = Math.max(0, intake - goal);
 
   return (
-    <Card className="flex flex-col items-center justify-center text-center w-full max-w-sm mx-auto shadow-2xl p-7">
+    <Card className="flex w-full max-w-[18.5rem] min-w-0 flex-col items-center justify-center text-center shadow-2xl p-5 sm:max-w-full sm:p-7">
       <div className="flex w-full items-start justify-between gap-4">
-        <div className="text-left">
+        <div className="min-w-0 text-left">
           <p className="font-ui text-water-300 text-sm font-bold tracking-wide">Today&apos;s Intake</p>
           <p className="font-ui mt-1 text-xs font-semibold uppercase tracking-[0.22em] text-water-400/75">
             Daily progress
           </p>
         </div>
-        <div className="rounded-2xl border border-cyan-200/15 bg-water-900/18 px-3 py-2 text-right shadow-inner">
-          <p className="font-numeric text-[1.7rem] font-black leading-none text-white">{percentage}%</p>
+        <div className="shrink-0 rounded-2xl border border-cyan-200/15 bg-water-900/18 px-3 py-2 text-right shadow-inner">
+          <p className="font-numeric text-[1.45rem] font-black leading-none text-white sm:text-[1.7rem]">{percentage}%</p>
           <p className="font-ui mt-1 text-[0.62rem] font-bold uppercase tracking-[0.24em] text-water-300/75">done</p>
         </div>
       </div>
 
-      <div className="font-numeric mt-4 text-6xl font-black text-white drop-shadow-xl">
+      <div className="font-numeric mt-4 text-5xl font-black text-white drop-shadow-xl sm:text-6xl">
         {(intake / 1000).toFixed(1)}
-        <span className="font-ui text-4xl text-water-300/80 font-bold tracking-normal"> L</span>
+        <span className="font-ui text-3xl text-water-300/80 font-bold tracking-normal sm:text-4xl"> L</span>
       </div>
       <p className="font-body mt-2 text-sm font-semibold text-water-300/80">
         Goal {(safeGoal / 1000).toFixed(1)}L
@@ -53,18 +53,21 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
       </div>
 
       {!isGoalMet && (
-        <div className="mt-5 grid w-full grid-cols-2 gap-3 text-left animate-in fade-in zoom-in duration-500">
+        <div className="mt-5 grid w-full grid-cols-2 gap-2.5 text-left animate-in fade-in zoom-in duration-500 sm:gap-3">
           <div className="rounded-2xl border border-water-400/10 bg-water-900/35 px-4 py-3 flex flex-col justify-center">
             <p className="font-ui text-water-300 text-[0.82rem] sm:text-sm font-bold tracking-wide">Left today</p>
-            <p className="font-numeric mt-1.5 flex items-baseline whitespace-nowrap text-[1.3rem] sm:text-[1.65rem] font-black text-white">
+            <p className="font-numeric mt-1.5 flex items-baseline whitespace-nowrap text-[1.15rem] font-black text-white sm:text-[1.65rem]">
               <span>{remaining}</span>
               <span className="font-ui ml-1 text-[0.82rem] sm:text-base font-bold text-water-300/80">ml</span>
             </p>
           </div>
           <div className="rounded-2xl border border-water-400/10 bg-water-900/35 px-4 py-3 flex flex-col justify-center">
             <p className="font-ui text-water-300 text-[0.82rem] sm:text-sm font-bold tracking-wide">Quick target</p>
-            <p className="font-numeric mt-1.5 whitespace-nowrap text-[1.18rem] sm:text-[1.65rem] font-black text-white">
-              {remainingGlasses} {remainingGlasses === 1 ? "glass" : "glasses"}
+            <p className="font-numeric mt-1.5 flex flex-wrap items-baseline gap-x-1.5 text-[1.05rem] font-black text-white sm:text-[1.65rem]">
+              <span>{remainingGlasses}</span>
+              <span className="font-ui text-[0.82rem] font-bold tracking-normal text-water-300/80 sm:text-base">
+                {remainingGlasses === 1 ? "glass" : "glasses"}
+              </span>
             </p>
           </div>
         </div>
