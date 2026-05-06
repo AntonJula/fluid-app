@@ -1,7 +1,5 @@
 "use client";
 
-import { FishLayer } from "./FishLayer";
-
 interface WaveBackgroundProps {
   progress?: number; // 0 to 1
 }
@@ -50,10 +48,7 @@ export function WaveBackground({ progress = 0.5 }: WaveBackgroundProps) {
         </div>
 
         {/* Solid fill - sits directly below waves, same color as front wave */}
-        <div className="absolute left-0 right-0 bottom-0 top-32 bg-water-700 overflow-hidden">
-          {/* Fish swim within the water */}
-          <FishLayer progress={safeProgress} />
-        </div>
+        <div className="absolute left-0 right-0 bottom-0 top-32 bg-water-700 overflow-hidden" />
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `

@@ -6,7 +6,6 @@ import { GoalSettings } from "@/components/GoalSettings";
 import { ReminderSettings } from "@/components/ReminderSettings";
 import { NavSettings } from "@/components/NavSettings";
 import { Card } from "@/components/ui/Card";
-import { SharkBackground } from "@/components/SharkBackground";
 
 export default function SettingsPage() {
   const { goal, setGoal, reminderInterval, setReminderInterval, quietHours, setQuietHours, hideNav, setHideNav, mounted } = useHydration();
@@ -17,8 +16,6 @@ export default function SettingsPage() {
 
   return (
     <main className="flex-1 flex flex-col items-center p-6 w-full max-w-md mx-auto min-h-[100dvh]">
-      <SharkBackground />
-      
       <header className="w-full text-center mt-4 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Settings.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">Customize Fluid</p>

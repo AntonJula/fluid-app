@@ -1,5 +1,5 @@
 import React from "react";
-import Image from "next/image";
+import { Trophy } from "lucide-react";
 import { Card } from "./ui/Card";
 
 interface ProgressCardProps {
@@ -71,23 +71,20 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
       )}
 
       {isGoalMet && (
-        <div className="mt-5 w-full rounded-3xl bg-gradient-to-br from-emerald-300/18 via-water-400/18 to-cyan-500/20 px-5 py-6 shadow-[0_0_34px_rgba(45,212,191,0.16)] border border-emerald-200/25 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 relative overflow-hidden">
+        <div className="mt-5 w-full rounded-3xl bg-gradient-to-br from-emerald-300/20 via-cyan-300/12 to-water-500/20 px-5 py-6 shadow-[0_0_34px_rgba(45,212,191,0.16)] border border-emerald-200/25 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 relative overflow-hidden">
           <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-emerald-200/70 to-transparent pointer-events-none" />
-          
-          <div className="relative w-[220px] h-[220px] -mt-8 -mb-12 drop-shadow-[0_0_25px_rgba(56,189,248,0.8)] shark-pulse pointer-events-none">
-            <Image 
-              src="/Fierce shark head in glowing frame.png" 
-              alt="Goal Met Shark" 
-              fill
-              className="object-contain scale-110"
-              unoptimized
-            />
+          <div className="absolute -top-16 h-32 w-32 rounded-full bg-emerald-200/15 blur-2xl pointer-events-none" />
+          <div className="absolute -bottom-16 h-32 w-40 rounded-full bg-cyan-300/14 blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-emerald-100/30 bg-emerald-200/14 shadow-[0_0_28px_rgba(45,212,191,0.22),inset_0_1px_0_rgba(255,255,255,0.18)]">
+            <div className="absolute inset-2 rounded-full border border-cyan-100/20" />
+            <Trophy className="h-8 w-8 text-emerald-100 drop-shadow-[0_0_12px_rgba(167,243,208,0.55)]" strokeWidth={2.4} />
           </div>
-          
-          <p className="font-ui text-[14px] font-bold text-water-200 uppercase tracking-[0.25em] mb-1 relative z-10">
-            Goal Achieved
-          </p>
-          <p className="font-ui text-2xl font-black text-white text-center relative z-10">
+
+          <div className="relative z-10 flex items-center text-water-200">
+            <p className="font-ui text-[13px] font-bold uppercase tracking-[0.24em]">Goal Achieved</p>
+          </div>
+          <p className="font-ui mt-2 max-w-[15rem] text-2xl font-black leading-tight text-white text-center relative z-10">
             You&apos;re fully hydrated today!
           </p>
           {overGoal > 0 && (
@@ -95,20 +92,6 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
               +{overGoal} ml over goal
             </p>
           )}
-
-          <style
-            dangerouslySetInnerHTML={{
-              __html: `
-                @keyframes shark-pulse-soft {
-                  0%, 100% { opacity: 1; transform: scale(1); }
-                  50% { opacity: 0.85; transform: scale(0.96); }
-                }
-                .shark-pulse {
-                  animation: shark-pulse-soft 3.5s ease-in-out infinite;
-                }
-              `
-            }}
-          />
         </div>
       )}
     </Card>
