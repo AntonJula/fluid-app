@@ -21,7 +21,7 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-water-400/10 bg-water-900/30 px-4 py-3 flex items-center justify-between">
+      <div className="rounded-2xl border border-[1.5px] border-water-300/14 bg-water-900/30 px-4 py-3 flex items-center justify-between">
         <div className="mr-4">
           <div className="font-ui flex items-center gap-2 text-water-200">
             <Navigation className="w-4 h-4" strokeWidth={2.5} />
@@ -38,7 +38,7 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
           aria-checked={hideNav}
           aria-label={hideNav ? "Show navigation bar" : "Hide navigation bar"}
           onClick={() => setHideNav(!hideNav)}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-water-300/50 focus:ring-offset-2 focus:ring-offset-background ${
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border border-[1.5px] border-water-300/16 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-water-300/50 focus:ring-offset-2 focus:ring-offset-background ${
             hideNav ? "bg-water-300" : "bg-water-900/50"
           }`}
         >

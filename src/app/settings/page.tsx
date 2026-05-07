@@ -65,7 +65,7 @@ export default function SettingsPage() {
             aria-controls="advanced-settings"
           >
             <span className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/20 bg-water-800/35 text-water-200">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[1.5px] border-water-300/16 bg-water-800/35 text-water-200">
                 <SlidersHorizontal className="h-5 w-5" strokeWidth={2.5} />
               </span>
               <span className="min-w-0">
@@ -82,7 +82,7 @@ export default function SettingsPage() {
           </button>
 
           {isAdvancedOpen && (
-            <div id="advanced-settings" className="space-y-4 border-t border-white/10 px-0 pb-4 pt-1">
+            <div id="advanced-settings" className="space-y-4 border-t border-water-300/12 px-0 pb-4 pt-1">
               <NavSettings hideNav={hideNav} setHideNav={setHideNav} />
               <DataSettings exportHydrationState={exportHydrationState} importHydrationState={importHydrationState} />
             </div>

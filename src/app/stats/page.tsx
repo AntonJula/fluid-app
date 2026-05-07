@@ -94,7 +94,7 @@ export default function StatsPage() {
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">
           Consistency builds the habit
         </p>
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-water-900/40 backdrop-blur-md rounded-2xl text-water-100 font-semibold text-sm shadow-inner border border-water-400/20">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-water-900/40 backdrop-blur-md rounded-2xl text-water-100 font-semibold text-sm shadow-inner border border-[1.5px] border-water-300/16">
           <span className="font-body opacity-80">Daily Goal:</span>
           <span className="font-numeric text-water-300 font-bold tracking-wide">{goal} ml</span>
         </div>
@@ -199,8 +199,8 @@ export default function StatsPage() {
                 <div
                   className={`relative w-full h-full flex-1 flex items-end justify-center rounded-[1.2rem] overflow-hidden shadow-inner transition-all duration-300 ${
                     isToday
-                      ? "bg-water-800/55 border border-water-300/45 shadow-[0_0_0_1px_rgba(125,211,252,0.18),0_0_22px_rgba(56,189,248,0.16)]"
-                      : "bg-water-800/40 border border-water-500/20"
+                      ? "bg-water-800/55 border border-[1.5px] border-water-300/34 shadow-[0_0_0_1px_rgba(125,211,252,0.14),0_0_22px_rgba(56,189,248,0.16)]"
+                      : "bg-water-800/40 border border-[1.5px] border-water-300/16"
                   }`}
                 >
                   <div
@@ -234,7 +234,7 @@ export default function StatsPage() {
             </div>
             <p className="font-ui mt-2 text-2xl font-black tracking-normal text-white">{MONTH_FORMATTER.format(todayDate)}</p>
           </div>
-          <div className="rounded-2xl border border-water-400/15 bg-water-800/35 px-3 py-2 text-right">
+          <div className="rounded-2xl border border-[1.5px] border-water-300/16 bg-water-800/35 px-3 py-2 text-right">
             <p className="font-ui text-[10px] uppercase tracking-[0.2em] font-bold text-water-400/80">Goal Days</p>
             <p className="font-numeric mt-1 text-2xl font-black text-white">
               {monthDays.filter((day) => day && (trackedByDate.get(day.date)?.intake ?? 0) >= (trackedByDate.get(day.date)?.goal ?? goal)).length}
@@ -264,15 +264,15 @@ export default function StatsPage() {
             return (
               <div
                 key={day.date}
-                className={`font-numeric flex aspect-square items-center justify-center rounded-xl border text-sm font-black transition-colors ${
+                className={`font-numeric flex aspect-square items-center justify-center rounded-xl border border-[1.5px] text-sm font-black transition-colors ${
                   isToday
-                    ? "border-cyan-100/60 bg-cyan-200/22 text-white shadow-[0_0_18px_rgba(56,189,248,0.18)]"
+                    ? "border-cyan-100/42 bg-cyan-200/22 text-white shadow-[0_0_18px_rgba(56,189,248,0.18)]"
                     : isFuture
                       ? "border-water-500/10 bg-water-950/12 text-water-500/45"
                       : isGoalMet
-                        ? "border-emerald-100/28 bg-emerald-300/18 text-emerald-50"
+                        ? "border-emerald-100/24 bg-emerald-300/18 text-emerald-50"
                         : hasIntake
-                          ? "border-water-300/18 bg-water-700/32 text-water-100"
+                          ? "border-water-300/16 bg-water-700/32 text-water-100"
                           : "border-water-500/12 bg-water-950/18 text-water-400/60"
                 }`}
                 title={`${day.date}: ${dayIntake} ml`}

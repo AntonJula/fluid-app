@@ -61,7 +61,7 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Data</h3>
           <p className="font-body mt-1 text-sm text-water-300/80">Keep a portable copy of your progress.</p>
         </div>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/20 bg-water-800/35 text-water-200">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[1.5px] border-water-300/16 bg-water-800/35 text-water-200">
           <ShieldCheck className="h-5 w-5" strokeWidth={2.5} />
         </div>
       </div>
@@ -99,10 +99,10 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
       />
 
       <p
-        className={`font-body rounded-2xl border px-4 py-3 text-xs font-semibold ${
+        className={`font-body rounded-2xl border border-[1.5px] px-4 py-3 text-xs font-semibold ${
           status === "error"
             ? "border-rose-200/20 bg-rose-500/12 text-rose-50"
-            : "border-water-400/10 bg-water-900/30 text-water-300/82"
+            : "border-water-300/14 bg-water-900/30 text-water-300/82"
         }`}
       >
         {statusText}

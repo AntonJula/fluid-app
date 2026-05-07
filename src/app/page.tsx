@@ -203,7 +203,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setIsNoteMenuOpen((isOpen) => !isOpen)}
-              className="font-ui inline-flex max-w-[11rem] items-center gap-1.5 rounded-full border border-white/10 bg-water-950/24 px-3 py-2 text-xs font-extrabold text-water-100 transition-all hover:border-cyan-100/25 hover:bg-white/10 hover:text-white active:scale-95"
+              className="font-ui inline-flex max-w-[11rem] items-center gap-1.5 rounded-full border border-[1.5px] border-water-300/16 bg-water-950/24 px-3 py-2 text-xs font-extrabold text-water-100 transition-all hover:border-cyan-100/26 hover:bg-white/10 hover:text-white active:scale-95"
               aria-expanded={isNoteMenuOpen}
               aria-controls="drink-type-menu"
               aria-label={`Change drink type. Current type: ${selectedNoteOption.label}`}
@@ -218,7 +218,7 @@ export default function Home() {
           {isNoteMenuOpen && (
             <div
               id="drink-type-menu"
-              className="grid grid-cols-2 gap-2 rounded-[1rem] border border-white/10 bg-water-950/28 p-2 shadow-inner backdrop-blur-md sm:grid-cols-3"
+              className="grid grid-cols-2 gap-2 rounded-[1rem] border border-[1.5px] border-water-300/14 bg-water-950/28 p-2 shadow-inner backdrop-blur-md sm:grid-cols-3"
             >
               {NOTE_OPTIONS.map(({ value, label, Icon }) => {
                 const isActive = selectedNote === value;
@@ -231,10 +231,10 @@ export default function Home() {
                       setSelectedNote(value);
                       setIsNoteMenuOpen(false);
                     }}
-                    className={`font-ui inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-extrabold transition-all ${
+                    className={`font-ui inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[1.5px] px-3 py-2 text-xs font-extrabold transition-all ${
                       isActive
-                        ? "border-cyan-100/35 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.16)]"
-                        : "border-white/10 bg-water-950/18 text-water-200/75 hover:bg-white/10 hover:text-white"
+                        ? "border-cyan-100/32 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.16)]"
+                        : "border-water-300/14 bg-water-950/18 text-water-200/75 hover:bg-white/10 hover:text-white"
                     }`}
                     aria-pressed={isActive}
                   >
@@ -249,7 +249,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => handleAddDrink(250)}
-            className="group relative flex min-h-[6rem] w-full items-center justify-between overflow-hidden rounded-[1.25rem] border border-cyan-100/25 bg-gradient-to-br from-cyan-300/26 via-water-500/18 to-emerald-300/18 px-4 py-4 text-left shadow-[0_18px_34px_rgba(8,47,73,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-100/40 hover:brightness-110 active:scale-[0.98]"
+            className="group relative flex min-h-[6rem] w-full items-center justify-between overflow-hidden rounded-[1.25rem] border border-[1.5px] border-cyan-100/24 bg-gradient-to-br from-cyan-300/26 via-water-500/18 to-emerald-300/18 px-4 py-4 text-left shadow-[0_18px_34px_rgba(8,47,73,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-100/34 hover:brightness-110 active:scale-[0.98]"
             aria-label={`Add 250 milliliters as ${getNoteLabel(selectedNote)}`}
           >
             <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent" />
@@ -274,7 +274,7 @@ export default function Home() {
                 key={amount}
                 type="button"
                 onClick={() => handleAddDrink(amount)}
-                className="group relative flex min-h-[6rem] flex-col items-center justify-center gap-2 overflow-hidden rounded-[1rem] border border-white/10 bg-white/5 px-2 py-3 shadow-[0_8px_16px_rgba(0,0,0,0.14),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-1 hover:border-white/20 hover:bg-white/10 hover:shadow-[0_12px_24px_rgba(56,189,248,0.18),inset_0_1px_2px_rgba(255,255,255,0.2)] active:scale-[0.97]"
+                className="group relative flex min-h-[6rem] flex-col items-center justify-center gap-2 overflow-hidden rounded-[1rem] border border-[1.5px] border-water-300/15 bg-white/5 px-2 py-3 shadow-[0_8px_16px_rgba(0,0,0,0.14),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-1 hover:border-water-200/24 hover:bg-white/10 hover:shadow-[0_12px_24px_rgba(56,189,248,0.18),inset_0_1px_2px_rgba(255,255,255,0.2)] active:scale-[0.97]"
                 aria-label={`Add ${amount} milliliters as ${getNoteLabel(selectedNote)}`}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
@@ -298,7 +298,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => handleAddDrink(quickAddAmount)}
-              className="flex items-center justify-between rounded-[1rem] border border-water-300/18 bg-water-950/24 px-4 py-3 text-left shadow-inner transition-all hover:bg-water-900/32 active:scale-[0.98]"
+              className="flex items-center justify-between rounded-[1rem] border border-[1.5px] border-water-300/16 bg-water-950/24 px-4 py-3 text-left shadow-inner transition-all hover:bg-water-900/32 active:scale-[0.98]"
               aria-label={`Add custom amount ${quickAddAmount} milliliters`}
             >
               <span>
@@ -313,7 +313,7 @@ export default function Home() {
             <button
               type="button"
               onClick={() => setIsCustomQuickOpen(true)}
-              className="flex w-12 items-center justify-center rounded-[1rem] border border-water-300/18 bg-water-950/24 text-water-200 transition-all hover:bg-water-900/32 hover:text-white active:scale-95"
+              className="flex w-12 items-center justify-center rounded-[1rem] border border-[1.5px] border-water-300/16 bg-water-950/24 text-water-200 transition-all hover:bg-water-900/32 hover:text-white active:scale-95"
               aria-label="Edit favorite amount"
             >
               <Pencil className="h-4 w-4" strokeWidth={2.5} />
@@ -326,7 +326,7 @@ export default function Home() {
               variant="secondary"
               onClick={undoLastDrink}
               disabled={drinkLog.length === 0}
-              className="rounded-[1rem] border-white/10 bg-water-950/28 px-3 py-3 text-water-100 disabled:opacity-35"
+              className="rounded-[1rem] border-water-300/16 bg-water-950/28 px-3 py-3 text-water-100 disabled:opacity-35"
             >
               <RotateCcw className="mr-2 h-4 w-4" strokeWidth={2.5} />
               Undo
@@ -336,7 +336,7 @@ export default function Home() {
               variant="secondary"
               onClick={() => subtractDrink(250, selectedNote)}
               disabled={intake === 0}
-              className="rounded-[1rem] border-rose-200/15 bg-rose-500/10 px-3 py-3 text-rose-50 hover:bg-rose-500/18 disabled:opacity-35"
+              className="rounded-[1rem] border-rose-200/18 bg-rose-500/10 px-3 py-3 text-rose-50 hover:bg-rose-500/18 disabled:opacity-35"
             >
               <Minus className="mr-2 h-4 w-4" strokeWidth={2.5} />
               250 ml
@@ -344,14 +344,14 @@ export default function Home() {
           </div>
 
           {latestLog.length > 0 && (
-            <div className="rounded-[1.15rem] border border-white/10 bg-water-950/22 px-4 py-3 backdrop-blur-md">
+            <div className="rounded-[1.15rem] border border-[1.5px] border-water-300/14 bg-water-950/22 px-4 py-3 backdrop-blur-md">
               <div className="mb-2 flex items-center justify-between">
                 <p className="font-ui text-[0.68rem] font-black uppercase tracking-[0.2em] text-water-300/82">Recent</p>
                 {drinkLog.length > 3 ? (
                   <button
                     type="button"
                     onClick={() => setIsDailyLogOpen(true)}
-                    className="font-ui rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[0.68rem] font-black uppercase tracking-[0.16em] text-water-200 transition-colors hover:bg-white/10 hover:text-white"
+                    className="font-ui rounded-full border border-[1.5px] border-water-300/14 bg-white/5 px-3 py-1 text-[0.68rem] font-black uppercase tracking-[0.16em] text-water-200 transition-colors hover:bg-white/10 hover:text-white"
                   >
                     View all
                   </button>
@@ -400,7 +400,7 @@ export default function Home() {
             type="button"
             onClick={() => setIsResetConfirming(true)}
             disabled={intake === 0 && drinkLog.length === 0}
-            className="font-ui mx-auto flex items-center justify-center gap-2 rounded-full border border-rose-200/14 bg-rose-500/8 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-rose-50/82 transition-all hover:bg-rose-500/14 hover:text-rose-50 active:scale-95 disabled:pointer-events-none disabled:opacity-35"
+            className="font-ui mx-auto flex items-center justify-center gap-2 rounded-full border border-[1.5px] border-rose-200/16 bg-rose-500/8 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-rose-50/82 transition-all hover:bg-rose-500/14 hover:text-rose-50 active:scale-95 disabled:pointer-events-none disabled:opacity-35"
             aria-label="Reset today's hydration"
           >
             <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -433,8 +433,8 @@ export default function Home() {
 
       {isDailyLogOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-water-950/72 p-4 backdrop-blur-xl sm:p-6">
-          <div className="flex max-h-[min(34rem,calc(100dvh-2rem))] w-full max-w-[23rem] flex-col overflow-hidden rounded-[1.35rem] border border-white/12 bg-water-950/90 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
-            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
+          <div className="flex max-h-[min(34rem,calc(100dvh-2rem))] w-full max-w-[23rem] flex-col overflow-hidden rounded-[1.35rem] border border-[1.5px] border-water-300/16 bg-water-950/90 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
+            <div className="flex items-start justify-between gap-4 border-b border-water-300/12 px-5 py-4">
               <div>
                 <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">Today</p>
                 <h2 className="font-ui mt-1 text-2xl font-black tracking-normal text-white">Drink log</h2>
@@ -453,7 +453,7 @@ export default function Home() {
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
               <div className="space-y-2">
                 {drinkLog.map((item) => (
-                  <div key={item.id} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-white/10 bg-water-900/22 px-3 py-3">
+                  <div key={item.id} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-[1.5px] border-water-300/14 bg-water-900/22 px-3 py-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <span className={`font-ui font-black ${item.amount > 0 ? "text-cyan-100" : "text-rose-100"}`}>
@@ -495,8 +495,8 @@ export default function Home() {
 
       {isResetConfirming && (
         <div className="fixed inset-0 z-[115] flex items-center justify-center bg-water-950/72 p-4 backdrop-blur-xl sm:p-6">
-          <div className="w-full max-w-[22rem] overflow-hidden rounded-[1.35rem] border border-rose-100/16 bg-water-950/92 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
-            <div className="border-b border-white/10 px-5 py-4">
+          <div className="w-full max-w-[22rem] overflow-hidden rounded-[1.35rem] border border-[1.5px] border-rose-100/18 bg-water-950/92 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
+            <div className="border-b border-water-300/12 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-rose-100/78">Today actions</p>
@@ -535,9 +535,9 @@ export default function Home() {
       )}
 
       {isOnboardingOpen && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-water-950/72 p-4 backdrop-blur-xl sm:p-6">
-          <div className="w-full max-w-[23rem] overflow-hidden rounded-[1.35rem] border border-white/12 bg-water-950/88 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
-            <div className="border-b border-white/10 px-5 py-4">
+        <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-water-950/72 px-4 pb-4 pt-3 backdrop-blur-xl sm:px-6 sm:pb-6 sm:pt-8">
+          <div className="w-full max-w-[23rem] overflow-hidden rounded-[1.35rem] border border-[1.5px] border-water-300/16 bg-water-950/88 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
+            <div className="border-b border-water-300/12 px-5 py-4">
               <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">First setup</p>
               <h2 className="font-ui mt-2 text-2xl font-black tracking-normal text-white">Make Fluid fit your day.</h2>
               <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-300/82">
@@ -560,10 +560,10 @@ export default function Home() {
                         key={preset}
                         type="button"
                         onClick={() => setOnboardingGoal(preset)}
-                        className={`font-numeric rounded-xl border px-3 py-3 text-sm font-black transition-all ${
+                        className={`font-numeric rounded-xl border border-[1.5px] px-3 py-3 text-sm font-black transition-all ${
                           isActive
                             ? "border-water-200/35 bg-water-400/22 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
-                            : "border-white/10 bg-water-900/28 text-water-200 hover:bg-white/10"
+                            : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
                         }`}
                         aria-pressed={isActive}
                       >
@@ -591,10 +591,10 @@ export default function Home() {
                         key={amount}
                         type="button"
                         onClick={() => setOnboardingQuickAmount(amount)}
-                        className={`font-numeric rounded-xl border px-3 py-3 text-sm font-black transition-all ${
+                        className={`font-numeric rounded-xl border border-[1.5px] px-3 py-3 text-sm font-black transition-all ${
                           isActive
                             ? "border-cyan-100/35 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
-                            : "border-white/10 bg-water-900/28 text-water-200 hover:bg-white/10"
+                            : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
                         }`}
                         aria-pressed={isActive}
                       >
@@ -622,10 +622,10 @@ export default function Home() {
                         key={label}
                         type="button"
                         onClick={() => setOnboardingReminder(value)}
-                        className={`font-ui rounded-xl border px-3 py-3 text-sm font-black transition-all ${
+                        className={`font-ui rounded-xl border border-[1.5px] px-3 py-3 text-sm font-black transition-all ${
                           isActive
                             ? "border-emerald-100/32 bg-emerald-300/14 text-white shadow-[0_8px_18px_rgba(45,212,191,0.12)]"
-                            : "border-white/10 bg-water-900/28 text-water-200 hover:bg-white/10"
+                            : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
                         }`}
                         aria-pressed={isActive}
                       >
@@ -642,7 +642,7 @@ export default function Home() {
               </section>
             </div>
 
-            <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-white/10 px-5 py-4">
+            <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-water-300/12 px-5 py-4">
               <Button type="button" variant="ghost" size="sm" onClick={skipOnboarding} className="rounded-xl px-3">
                 Skip
               </Button>

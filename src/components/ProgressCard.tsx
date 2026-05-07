@@ -25,7 +25,7 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
             Daily progress
           </p>
         </div>
-        <div className="shrink-0 rounded-2xl border border-cyan-200/15 bg-water-900/18 px-3 py-2 text-right shadow-inner">
+        <div className="shrink-0 rounded-2xl border border-[1.5px] border-water-300/16 bg-water-900/18 px-3 py-2 text-right shadow-inner">
           <p className="font-numeric text-[1.45rem] font-black leading-none text-white sm:text-[1.7rem]">{percentage}%</p>
           <p className="font-ui mt-1 text-[0.62rem] font-bold uppercase tracking-[0.24em] text-water-300/75">done</p>
         </div>
@@ -39,7 +39,7 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
         Goal {(safeGoal / 1000).toFixed(1)}L
       </p>
 
-      <div className="mt-6 w-full rounded-3xl border border-water-400/15 bg-water-800/30 p-2 shadow-inner">
+      <div className="mt-6 w-full rounded-3xl border border-[1.5px] border-water-300/16 bg-water-800/30 p-2 shadow-inner">
         <div className="h-4 overflow-hidden rounded-full bg-water-950/50">
           <div
             className={`h-full rounded-full transition-all duration-700 ease-out ${
@@ -54,14 +54,14 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
 
       {!isGoalMet && (
         <div className="mt-5 grid w-full grid-cols-2 gap-2.5 text-left animate-in fade-in zoom-in duration-500 sm:gap-3">
-          <div className="rounded-2xl border border-water-400/10 bg-water-900/35 px-4 py-3 flex flex-col justify-center">
+          <div className="rounded-2xl border border-[1.5px] border-water-300/14 bg-water-900/35 px-4 py-3 flex flex-col justify-center">
             <p className="font-ui text-water-300 text-[0.82rem] sm:text-sm font-bold tracking-wide">Left today</p>
             <p className="font-numeric mt-1.5 flex items-baseline whitespace-nowrap text-[1.15rem] font-black text-white sm:text-[1.65rem]">
               <span>{remaining}</span>
               <span className="font-ui ml-1 text-[0.82rem] sm:text-base font-bold text-water-300/80">ml</span>
             </p>
           </div>
-          <div className="rounded-2xl border border-water-400/10 bg-water-900/35 px-4 py-3 flex flex-col justify-center">
+          <div className="rounded-2xl border border-[1.5px] border-water-300/14 bg-water-900/35 px-4 py-3 flex flex-col justify-center">
             <p className="font-ui text-water-300 text-[0.82rem] sm:text-sm font-bold tracking-wide">Quick target</p>
             <p className="font-numeric mt-1.5 flex flex-wrap items-baseline gap-x-1.5 text-[1.05rem] font-black text-white sm:text-[1.65rem]">
               <span>{remainingGlasses}</span>
@@ -74,12 +74,12 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
       )}
 
       {isGoalMet && (
-        <div className="mt-5 w-full rounded-3xl bg-gradient-to-br from-emerald-300/20 via-cyan-300/12 to-water-500/20 px-5 py-6 shadow-[0_0_34px_rgba(45,212,191,0.16)] border border-emerald-200/25 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 relative overflow-hidden">
+        <div className="mt-5 w-full rounded-3xl bg-gradient-to-br from-emerald-300/20 via-cyan-300/12 to-water-500/20 px-5 py-6 shadow-[0_0_34px_rgba(45,212,191,0.16)] border border-[1.5px] border-emerald-200/22 flex flex-col items-center justify-center animate-in fade-in zoom-in duration-500 relative overflow-hidden">
           <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-emerald-200/70 to-transparent pointer-events-none" />
           <div className="absolute -top-16 h-32 w-32 rounded-full bg-emerald-200/15 blur-2xl pointer-events-none" />
           <div className="absolute -bottom-16 h-32 w-40 rounded-full bg-cyan-300/14 blur-2xl pointer-events-none" />
 
-          <div className="relative z-10 mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-emerald-100/30 bg-emerald-200/14 shadow-[0_0_28px_rgba(45,212,191,0.22),inset_0_1px_0_rgba(255,255,255,0.18)]">
+          <div className="relative z-10 mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[1.5px] border-emerald-100/26 bg-emerald-200/14 shadow-[0_0_28px_rgba(45,212,191,0.22),inset_0_1px_0_rgba(255,255,255,0.18)]">
             <div className="absolute inset-2 rounded-full border border-cyan-100/20" />
             <Trophy className="h-8 w-8 text-emerald-100 drop-shadow-[0_0_12px_rgba(167,243,208,0.55)]" strokeWidth={2.4} />
           </div>
@@ -91,7 +91,7 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
             You&apos;re fully hydrated today!
           </p>
           {overGoal > 0 && (
-            <p className="font-body relative z-10 mt-2 rounded-full border border-emerald-200/20 bg-emerald-300/12 px-3 py-1 text-xs font-bold text-emerald-100">
+            <p className="font-body relative z-10 mt-2 rounded-full border border-[1.5px] border-emerald-200/18 bg-emerald-300/12 px-3 py-1 text-xs font-bold text-emerald-100">
               +{overGoal} ml over goal
             </p>
           )}

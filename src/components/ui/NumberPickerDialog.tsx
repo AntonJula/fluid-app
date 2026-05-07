@@ -84,12 +84,12 @@ function NumberPickerDialogContent({
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-water-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div
-        className="bg-water-900 border border-water-400/20 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
+        className="bg-water-900 border border-[1.5px] border-water-300/16 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div className="p-6 bg-water-800/40 border-b border-water-400/10 flex flex-col items-center">
+        <div className="p-6 bg-water-800/40 border-b border-water-300/12 flex flex-col items-center">
           <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
           <div className="flex items-end justify-center min-h-[4rem]">
             <span className={`font-numeric text-6xl font-black transition-all ${currentVal ? "text-white" : "text-water-400/30"}`}>
@@ -140,7 +140,7 @@ function NumberPickerDialogContent({
           </div>
         </div>
 
-        <div className="p-4 flex justify-between gap-3 bg-water-950/30 border-t border-water-400/10">
+        <div className="p-4 flex justify-between gap-3 bg-water-950/30 border-t border-water-300/12">
           <Button variant="secondary" size="sm" onClick={onClose} className="rounded-xl px-5 text-water-300 bg-transparent border-transparent shadow-none hover:bg-water-800/50">
             Cancel
           </Button>
