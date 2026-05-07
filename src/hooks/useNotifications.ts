@@ -134,6 +134,7 @@ export function useNotifications(
   hydrationStatus?: NotificationHydrationStatus
 ) {
   const [permission, setPermission] = useState<NotificationPermission>(getInitialPermission);
+  const isSupported = typeof window === "undefined" || "Notification" in window;
   const timerRef = useRef<number | null>(null);
   const quietHoursRef = useRef(quietHours);
   const intervalRef = useRef(intervalMinutes);
@@ -189,7 +190,7 @@ export function useNotifications(
       if (result === "granted") {
         await showSystemNotification({
           title: "Fluid",
-          body: "Notifications are on. Fluid will gently remind you when it is time to log water.",
+          body: "App notifications are on. Fluid will gently remind you when it is time to drink and log water.",
           tag: "fluid-permission",
         });
       }
@@ -321,5 +322,5 @@ export function useNotifications(
     quietHours.start,
   ]);
 
-  return { permission, requestPermission };
+  return { permission, requestPermission, isSupported };
 }

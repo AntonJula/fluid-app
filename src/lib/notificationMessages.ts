@@ -89,14 +89,14 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
   {
     kind: "catch-up",
     label: "Welcome back",
-    title: "Fluid check-in",
+    title: "Fluid check-in 💧",
     priority: (context) => (context.isCatchUp ? 100 : 0),
-    body: () => "Welcome back to Fluid. If you drank water while away, log it now to keep your rhythm accurate.",
+    body: () => "Welcome back. If you drank while away, open Fluid and log it now to keep your rhythm accurate.",
   },
   {
     kind: "first-log",
     label: "First water",
-    title: "First glass",
+    title: "First glass 💧",
     priority: (context) => (context.intake <= 0 ? 92 : 0),
     body: () => `No water logged today. Add ${formatMl(QUICK_NOTIFICATION_LOG_AMOUNT)} and start the day gently.`,
   },
@@ -113,7 +113,7 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     body: (context) => {
       const minutes = minutesSinceLastDrink(context) ?? context.reminderInterval;
 
-      return `It has been ${formatMinutes(minutes)} since your last log. Add a few sips when you can.`;
+      return `It has been ${formatMinutes(minutes)} since your last log. A few sips now can help. Open Fluid when you drink.`;
     },
   },
   {
@@ -132,9 +132,9 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
   {
     kind: "morning-start",
     label: "Morning start",
-    title: "Easy start",
+    title: "Easy start ☀️",
     priority: (context) => (getHour(context) < 11 && context.intake < 400 ? 76 : 0),
-    body: () => "Mornings feel better with a little water on board. Log a small glass.",
+    body: () => "Mornings feel better with a little water on board. Open Fluid and log a small glass.",
   },
   {
     kind: "midday-reset",
@@ -145,7 +145,7 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
 
       return hour >= 11 && hour < 15 && getProgress(context) < 0.55 ? 72 : 0;
     },
-    body: () => "Lunch is a good time for water. Take a short pause and add what you drank.",
+    body: () => "Lunch is a good time for water. Take a short pause, drink a little, then log it in Fluid.",
   },
   {
     kind: "evening-catchup",
@@ -153,12 +153,12 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     title: "Easy evening",
     priority: (context) => (getHour(context) >= 17 && getRemaining(context) > 0 ? 70 : 0),
     body: (context) =>
-      `You have ${formatMl(getRemaining(context))} left. A little now is better than a lot late.`,
+      `You have ${formatMl(getRemaining(context))} left. A little now is better than a lot late. Log it when you sip.`,
   },
   {
     kind: "close-goal",
     label: "Close goal",
-    title: "Almost there",
+    title: "Almost there 🎯",
     priority: (context) => {
       const remaining = getRemaining(context);
 
@@ -176,7 +176,7 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
   {
     kind: "small-sip",
     label: "Small sips",
-    title: "Small sips",
+    title: "Small sips 💧",
     priority: () => 40,
     body: () => "A few sips are enough for the next step. Open Fluid and log your water.",
   },

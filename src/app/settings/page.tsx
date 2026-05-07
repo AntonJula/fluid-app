@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import { useState } from "react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useHydration } from "@/hooks/useHydration";
 import { GoalSettings } from "@/components/GoalSettings";
 import { ReminderSettings } from "@/components/ReminderSettings";
@@ -9,6 +10,7 @@ import { DataSettings } from "@/components/DataSettings";
 import { Card } from "@/components/ui/Card";
 
 export default function SettingsPage() {
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const {
     goal,
     setGoal,
@@ -54,12 +56,38 @@ export default function SettingsPage() {
             setQuietHours={setQuietHours}
           />
         </div>
-        <div>
-          <NavSettings hideNav={hideNav} setHideNav={setHideNav} />
-        </div>
-        <div>
-          <DataSettings exportHydrationState={exportHydrationState} importHydrationState={importHydrationState} />
-        </div>
+        <Card className="w-full max-w-sm mx-auto mt-4 overflow-hidden p-0 shadow-lg">
+          <button
+            type="button"
+            onClick={() => setIsAdvancedOpen((isOpen) => !isOpen)}
+            className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-white/[0.03]"
+            aria-expanded={isAdvancedOpen}
+            aria-controls="advanced-settings"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/20 bg-water-800/35 text-water-200">
+                <SlidersHorizontal className="h-5 w-5" strokeWidth={2.5} />
+              </span>
+              <span className="min-w-0">
+                <span className="font-ui block text-lg font-semibold tracking-normal text-white">Advanced</span>
+                <span className="font-body mt-1 block text-sm text-water-300/80">Less common display controls.</span>
+              </span>
+            </span>
+            <ChevronDown
+              className={`h-5 w-5 shrink-0 text-water-300 transition-transform duration-200 ${
+                isAdvancedOpen ? "rotate-180" : "rotate-0"
+              }`}
+              strokeWidth={2.5}
+            />
+          </button>
+
+          {isAdvancedOpen && (
+            <div id="advanced-settings" className="space-y-4 border-t border-white/10 px-0 pb-4 pt-1">
+              <NavSettings hideNav={hideNav} setHideNav={setHideNav} />
+              <DataSettings exportHydrationState={exportHydrationState} importHydrationState={importHydrationState} />
+            </div>
+          )}
+        </Card>
       </div>
     </main>
   );

@@ -6,8 +6,7 @@ import { TimePickerDialog } from "./ui/TimePickerDialog";
 import { NumberPickerDialog } from "./ui/NumberPickerDialog";
 import { Button } from "./ui/Button";
 import { useNotifications } from "@/hooks/useNotifications";
-import { HYDRATION_NOTIFICATION_TYPES } from "@/lib/notificationMessages";
-import { BellOff, BellRing, Sparkles } from "lucide-react";
+import { BellOff, BellRing, Clock, ShieldCheck, ShieldX } from "lucide-react";
 
 interface ReminderSettingsProps {
   interval: number;
@@ -16,11 +15,65 @@ interface ReminderSettingsProps {
   setQuietHours: (start: string, end: string) => void;
 }
 
+function getNotificationStatus({
+  interval,
+  isSupported,
+  permission,
+}: {
+  interval: number;
+  isSupported: boolean;
+  permission: NotificationPermission;
+}) {
+  if (interval <= 0) {
+    return {
+      Icon: BellOff,
+      title: "Reminders are off",
+      body: "Turn them on when you want Fluid to help you keep a steady rhythm.",
+      tone: "muted",
+    };
+  }
+
+  if (!isSupported) {
+    return {
+      Icon: ShieldX,
+      title: "Not available on this device",
+      body: "This setup does not support app notifications yet. You can still track water inside Fluid.",
+      tone: "blocked",
+    };
+  }
+
+  if (permission === "granted") {
+    return {
+      Icon: ShieldCheck,
+      title: "App notifications allowed",
+      body: `Fluid can remind you every ${interval} minutes and open the app when you tap a reminder.`,
+      tone: "ready",
+    };
+  }
+
+  if (permission === "denied") {
+    return {
+      Icon: ShieldX,
+      title: "Notifications are blocked",
+      body: "Turn notifications back on from your device or app settings, then return to Fluid.",
+      tone: "blocked",
+    };
+  }
+
+  return {
+    Icon: BellRing,
+    title: "Permission needed",
+    body: "Allow app notifications so Fluid can send reminders and quick log actions.",
+    tone: "attention",
+  };
+}
+
 export function ReminderSettings({ interval, setInterval, quietHours, setQuietHours }: ReminderSettingsProps) {
-  const { permission, requestPermission } = useNotifications(interval, quietHours, false);
+  const { permission, requestPermission, isSupported } = useNotifications(interval, quietHours, false);
   const intervals = [20, 40, 60];
-  const featuredNotificationTypes = HYDRATION_NOTIFICATION_TYPES.slice(0, 4);
   const remindersEnabled = interval > 0;
+  const notificationStatus = getNotificationStatus({ interval, isSupported, permission });
+  const StatusIcon = notificationStatus.Icon;
   const lastEnabledIntervalRef = React.useRef(interval > 0 ? interval : 40);
 
   const [isCustom, setIsCustom] = React.useState(false);
@@ -59,9 +112,9 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
     <Card className="w-full max-w-sm mx-auto mt-4 space-y-5 shadow-lg p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="font-ui font-semibold text-white tracking-tight text-lg">Reminders</h3>
+          <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Reminders</h3>
           <p className="font-body mt-1 text-sm text-water-300/80">
-            Gentle nudges work better than constant interruptions.
+            Fluid can nudge you to drink and log water when app notifications are allowed.
           </p>
         </div>
 
@@ -86,25 +139,37 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
         </button>
       </div>
 
-      <div className="rounded-2xl border border-water-400/10 bg-water-900/30 px-4 py-3">
-        <div className={`font-ui flex items-center gap-2 ${remindersEnabled ? "text-water-200" : "text-water-300/72"}`}>
-          {remindersEnabled ? <BellRing className="w-4 h-4" strokeWidth={2.5} /> : <BellOff className="w-4 h-4" strokeWidth={2.5} />}
-          <span className="text-sm font-bold">
-            {remindersEnabled ? `Every ${interval} minutes` : "Reminders are off"}
-          </span>
+      <div
+        className={`rounded-2xl border px-4 py-3 ${
+          notificationStatus.tone === "blocked"
+            ? "border-rose-200/18 bg-rose-500/10"
+            : notificationStatus.tone === "attention"
+              ? "border-cyan-100/18 bg-cyan-300/10"
+              : "border-water-400/10 bg-water-900/30"
+        }`}
+      >
+        <div
+          className={`font-ui flex items-center gap-2 ${
+            notificationStatus.tone === "blocked" ? "text-rose-100" : remindersEnabled ? "text-water-100" : "text-water-300/72"
+          }`}
+        >
+          <StatusIcon className="w-4 h-4" strokeWidth={2.5} />
+          <span className="text-sm font-bold">{notificationStatus.title}</span>
         </div>
-        <p className="font-body mt-1 text-xs text-water-400/80">
-          {remindersEnabled
-            ? "Fluid nudges you while the app is open and catches up when you return."
-            : "Turn them on if you want help building consistency."}
+        <p
+          className={`font-body mt-1 text-xs ${
+            notificationStatus.tone === "blocked" ? "text-rose-50/82" : "text-water-300/80"
+          }`}
+        >
+          {notificationStatus.body}
         </p>
       </div>
 
-      {remindersEnabled && permission !== "granted" && (
+      {remindersEnabled && isSupported && permission === "default" && (
         <div className="rounded-2xl border border-cyan-100/15 bg-cyan-300/10 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <p className="font-body text-sm font-semibold text-water-100/88">
-              Browser permission is needed before reminders can appear.
+              Enable app notifications to receive reminders outside the Fluid screen.
             </p>
             <Button variant="primary" size="sm" onClick={requestPermission} className="shrink-0 rounded-xl px-3 text-xs">
               Enable
@@ -177,36 +242,12 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       )}
 
       {remindersEnabled && (
-        <div className="rounded-2xl border border-cyan-100/15 bg-gradient-to-br from-water-900/38 via-water-800/22 to-emerald-400/10 px-4 py-3.5">
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-ui flex min-w-0 items-center gap-2 text-water-100">
-            <Sparkles className="h-4 w-4 shrink-0 text-cyan-200" strokeWidth={2.5} />
-            <span className="truncate text-sm font-bold">Smart reminder mix</span>
-          </div>
-          <span className="font-numeric shrink-0 rounded-full border border-cyan-100/15 bg-cyan-100/10 px-2.5 py-1 text-xs font-black text-cyan-100">
-            {HYDRATION_NOTIFICATION_TYPES.length} types
-          </span>
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {featuredNotificationTypes.map((type) => (
-            <div
-              key={type.kind}
-              className="font-ui rounded-xl border border-white/10 bg-water-950/22 px-3 py-2 text-xs font-bold leading-tight text-water-100/90"
-            >
-              {type.label}
-            </div>
-          ))}
-        </div>
-        <p className="font-body mt-3 text-xs leading-relaxed text-water-300/78">
-          Plus: morning, midday, evening, close-goal, streak, and small-sip nudges.
-        </p>
-      </div>
-      )}
-
-      {remindersEnabled && (
         <div className="pt-2">
-          <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-1">Do Not Disturb</p>
-          <p className="font-body text-xs text-water-400/75 mb-3">Keep reminders out of sleep or focus hours.</p>
+          <div className="mb-1 flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 text-water-400" strokeWidth={2.5} />
+            <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest">Do Not Disturb</p>
+          </div>
+          <p className="font-body text-xs text-water-400/75 mb-3">No reminders between these hours.</p>
           <div className="flex items-center gap-3">
             <button
               type="button"

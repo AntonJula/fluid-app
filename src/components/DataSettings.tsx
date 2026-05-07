@@ -58,7 +58,7 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
     <Card className="w-full max-w-sm mx-auto mt-4 space-y-4 shadow-lg p-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h3 className="font-ui font-semibold text-white tracking-tight text-lg">Data</h3>
+          <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Data</h3>
           <p className="font-body mt-1 text-sm text-water-300/80">Keep a portable copy of your progress.</p>
         </div>
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/20 bg-water-800/35 text-water-200">

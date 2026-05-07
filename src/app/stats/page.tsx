@@ -3,7 +3,7 @@
 import React from "react";
 import { useHydration } from "@/hooks/useHydration";
 import { Card } from "@/components/ui/Card";
-import { Flame, Calendar, Trophy, Waves, ChartColumn, Crown, TrendingUp, Target, CircleOff } from "lucide-react";
+import { Flame, Calendar, Trophy, Waves, ChartColumn, Target, GlassWater } from "lucide-react";
 import { formatDateLocal } from "@/lib/date";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -21,23 +21,6 @@ function getWeekDates(anchor: Date, offsetWeeks = 0) {
     date.setDate(monday.getDate() + index);
     return formatDateLocal(date);
   });
-}
-
-function getBestStreak(days: { intake: number; goal: number }[]) {
-  let best = 0;
-  let current = 0;
-
-  days.forEach((day) => {
-    if (day.intake >= day.goal) {
-      current += 1;
-      best = Math.max(best, current);
-      return;
-    }
-
-    current = 0;
-  });
-
-  return best;
 }
 
 function getMonthDays(anchor: Date) {
@@ -82,18 +65,27 @@ export default function StatsPage() {
   const allTrackedDays = [...history, { date: today, intake, goal }].sort((a, b) => a.date.localeCompare(b.date));
   const trackedByDate = new Map(allTrackedDays.map((day) => [day.date, day]));
   const monthDays = getMonthDays(todayDate);
+  const hasAnyTrackedWater = intake > 0 || history.some((day) => day.intake > 0);
 
   const maxIntake = Math.max(...chartData.map((day) => day.intake), goal, 1);
   const weeklyGoalHits = chartData.filter((day) => day.intake >= day.goal).length;
   const weeklyAverage = Math.round(chartData.reduce((sum, day) => sum + day.intake, 0) / chartData.length);
   const previousAverage = Math.round(previousWeekData.reduce((sum, day) => sum + day.intake, 0) / previousWeekData.length);
   const averageDelta = weeklyAverage - previousAverage;
-  const bestDay = chartData.reduce((best, day) => (day.intake > best.intake ? day : best), chartData[0]);
   const consistency = Math.round((weeklyGoalHits / chartData.length) * 100);
-  const bestDayLabel = DAY_NAMES[chartData.findIndex((day) => day.date === bestDay.date)] ?? "Today";
-  const bestStreak = getBestStreak(allTrackedDays);
-  const missedDays = chartData.filter((day) => day.date <= today && day.intake < day.goal).length;
   const remainingWeeklyWins = Math.max(0, 7 - weeklyGoalHits);
+  const insightTitle =
+    remainingWeeklyWins === 0
+      ? "Perfect week so far"
+      : averageDelta >= 0
+        ? "You're ahead this week"
+        : "A steady glass helps";
+  const insightBody =
+    remainingWeeklyWins === 0
+      ? "You've hit your goal every day this week. Keep the rhythm steady."
+      : averageDelta >= 0
+        ? `You're averaging ${averageDelta} ml more per day than last week. Hit ${remainingWeeklyWins} more goal days to finish the week strong.`
+        : `You're averaging ${Math.abs(averageDelta)} ml less per day than last week. One glass today can close the gap.`;
 
   return (
     <main className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full max-w-md mx-auto min-h-[100dvh]">
@@ -131,7 +123,20 @@ export default function StatsPage() {
         </Card>
       </div>
 
-      <div className="w-full grid grid-cols-2 gap-4 mb-8">
+      {!hasAnyTrackedWater && (
+        <Card className="w-full p-5 sm:p-6 mb-6">
+          <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
+            <GlassWater className="h-4 w-4" strokeWidth={2.5} />
+            First stats
+          </div>
+          <h2 className="font-ui mt-3 text-2xl font-black tracking-normal text-white">Your stats will fill in soon.</h2>
+          <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-300/82">
+            Start with one glass today and Fluid will build your weekly view as you log water.
+          </p>
+        </Card>
+      )}
+
+      <div className="w-full grid grid-cols-2 gap-4 mb-6">
         <Card className="p-4">
           <div className="font-ui flex items-center gap-1.5 text-water-300 text-[0.78rem] sm:text-sm font-bold tracking-wide whitespace-nowrap">
             <Waves className="w-3.5 h-3.5 shrink-0" strokeWidth={2.4} />
@@ -151,127 +156,22 @@ export default function StatsPage() {
         </Card>
       </div>
 
-      <div className="w-full grid grid-cols-3 gap-3 mb-6">
-        <Card className="p-3">
-          <div className="flex items-center gap-1.5 text-emerald-100">
-            <TrendingUp className="h-3.5 w-3.5" strokeWidth={2.5} />
-            <span className="font-ui text-[0.68rem] font-black uppercase tracking-[0.16em]">Trend</span>
+      <Card className="w-full p-5 sm:p-6 mb-6">
+        <div className="min-w-0">
+          <div className="font-ui flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-water-300/80">
+            <Target className="h-4 w-4" strokeWidth={2.5} />
+            This week
           </div>
-          <p className={`font-numeric mt-2 text-2xl font-black ${averageDelta >= 0 ? "text-emerald-100" : "text-rose-100"}`}>
-            {averageDelta >= 0 ? "+" : ""}
-            {averageDelta}
-          </p>
-          <p className="font-body mt-1 text-[0.68rem] font-semibold text-water-300/72">ml vs last week</p>
-        </Card>
-
-        <Card className="p-3">
-          <div className="flex items-center gap-1.5 text-cyan-100">
-            <Target className="h-3.5 w-3.5" strokeWidth={2.5} />
-            <span className="font-ui text-[0.68rem] font-black uppercase tracking-[0.16em]">Best</span>
-          </div>
-          <p className="font-numeric mt-2 text-2xl font-black text-white">{bestStreak}</p>
-          <p className="font-body mt-1 text-[0.68rem] font-semibold text-water-300/72">day streak</p>
-        </Card>
-
-        <Card className="p-3">
-          <div className="flex items-center gap-1.5 text-rose-100">
-            <CircleOff className="h-3.5 w-3.5" strokeWidth={2.5} />
-            <span className="font-ui text-[0.68rem] font-black uppercase tracking-[0.16em]">Missed</span>
-          </div>
-          <p className="font-numeric mt-2 text-2xl font-black text-white">{missedDays}</p>
-          <p className="font-body mt-1 text-[0.68rem] font-semibold text-water-300/72">so far</p>
-        </Card>
-      </div>
-
-      <Card className="w-full p-6 mb-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
-              <Crown className="w-4 h-4" strokeWidth={2.4} />
-              Best Day This Week
-            </div>
-            <p className="font-ui mt-3 text-3xl font-black tracking-tight text-white">{bestDayLabel}</p>
-            <p className="font-body mt-1 text-sm text-water-300/80">{bestDay.intake} ml was your strongest day.</p>
-          </div>
-          <div className="rounded-3xl border border-water-400/15 bg-water-800/40 px-4 py-3 text-center">
-            <p className="font-ui text-[10px] uppercase tracking-[0.2em] font-bold text-water-400/80">Wins</p>
-            <p className="font-numeric mt-2 text-3xl font-black text-white">{weeklyGoalHits}</p>
-          </div>
-        </div>
-        <div className="mt-5 rounded-2xl border border-cyan-100/12 bg-cyan-300/10 px-4 py-3">
-          <p className="font-body text-sm font-semibold leading-relaxed text-water-100/88">
-            {averageDelta >= 0
-              ? `You are ${averageDelta} ml/day ahead of last week.`
-              : `You are ${Math.abs(averageDelta)} ml/day behind last week.`}{" "}
-            {remainingWeeklyWins === 0 ? "Perfect week locked in." : `${remainingWeeklyWins} more goal days would finish a clean week.`}
-          </p>
+          <h2 className="font-ui mt-2 text-2xl font-black tracking-normal text-white">{insightTitle}</h2>
+          <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-100/86">{insightBody}</p>
         </div>
       </Card>
 
       <Card className="w-full p-5 sm:p-6 mb-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
-              <Calendar className="w-4 h-4" strokeWidth={2.4} />
-              Month View
-            </div>
-            <p className="font-ui mt-2 text-2xl font-black tracking-tight text-white">{MONTH_FORMATTER.format(todayDate)}</p>
-          </div>
-          <div className="rounded-2xl border border-water-400/15 bg-water-800/35 px-3 py-2 text-right">
-            <p className="font-ui text-[10px] uppercase tracking-[0.2em] font-bold text-water-400/80">Goal Days</p>
-            <p className="font-numeric mt-1 text-2xl font-black text-white">
-              {monthDays.filter((day) => day && (trackedByDate.get(day.date)?.intake ?? 0) >= (trackedByDate.get(day.date)?.goal ?? goal)).length}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-7 gap-1.5">
-          {DAY_NAMES.map((day) => (
-            <div key={day} className="font-ui text-center text-[0.62rem] font-black uppercase tracking-wider text-water-400/72">
-              {day.slice(0, 1)}
-            </div>
-          ))}
-          {monthDays.map((day, index) => {
-            if (!day) {
-              return <div key={`blank-${index}`} className="aspect-square" />;
-            }
-
-            const trackedDay = trackedByDate.get(day.date);
-            const dayIntake = trackedDay?.intake ?? 0;
-            const dayGoal = trackedDay?.goal ?? goal;
-            const isFuture = day.date > today;
-            const isToday = day.date === today;
-            const isGoalMet = dayIntake >= dayGoal;
-            const hasIntake = dayIntake > 0;
-
-            return (
-              <div
-                key={day.date}
-                className={`font-numeric flex aspect-square items-center justify-center rounded-xl border text-sm font-black transition-colors ${
-                  isToday
-                    ? "border-cyan-100/60 bg-cyan-200/22 text-white shadow-[0_0_18px_rgba(56,189,248,0.18)]"
-                    : isFuture
-                      ? "border-water-500/10 bg-water-950/12 text-water-500/45"
-                      : isGoalMet
-                        ? "border-emerald-100/28 bg-emerald-300/18 text-emerald-50"
-                        : hasIntake
-                          ? "border-water-300/18 bg-water-700/32 text-water-100"
-                          : "border-water-500/12 bg-water-950/18 text-water-400/60"
-                }`}
-                title={`${day.date}: ${dayIntake} ml`}
-              >
-                {day.day}
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      <Card className="w-full p-5 sm:p-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Calendar className="w-5 h-5 text-water-400" strokeWidth={2.5} />
-            <h2 className="font-ui text-white text-lg font-bold tracking-tight drop-shadow-sm">Tracking History</h2>
+            <h2 className="font-ui text-white text-lg font-bold tracking-normal drop-shadow-sm">Tracking History</h2>
           </div>
           <span className="font-ui text-[11px] uppercase tracking-[0.22em] font-bold text-water-400/70">This week</span>
         </div>
@@ -319,6 +219,65 @@ export default function StatsPage() {
                 >
                   {DAY_NAMES[idx]}
                 </span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="w-full p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
+              <Calendar className="w-4 h-4" strokeWidth={2.4} />
+              Month View
+            </div>
+            <p className="font-ui mt-2 text-2xl font-black tracking-normal text-white">{MONTH_FORMATTER.format(todayDate)}</p>
+          </div>
+          <div className="rounded-2xl border border-water-400/15 bg-water-800/35 px-3 py-2 text-right">
+            <p className="font-ui text-[10px] uppercase tracking-[0.2em] font-bold text-water-400/80">Goal Days</p>
+            <p className="font-numeric mt-1 text-2xl font-black text-white">
+              {monthDays.filter((day) => day && (trackedByDate.get(day.date)?.intake ?? 0) >= (trackedByDate.get(day.date)?.goal ?? goal)).length}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-7 gap-1.5">
+          {DAY_NAMES.map((day) => (
+            <div key={day} className="font-ui text-center text-[0.62rem] font-black uppercase tracking-wider text-water-400/72">
+              {day.slice(0, 1)}
+            </div>
+          ))}
+          {monthDays.map((day, index) => {
+            if (!day) {
+              return <div key={`blank-${index}`} className="aspect-square" />;
+            }
+
+            const trackedDay = trackedByDate.get(day.date);
+            const dayIntake = trackedDay?.intake ?? 0;
+            const dayGoal = trackedDay?.goal ?? goal;
+            const isFuture = day.date > today;
+            const isToday = day.date === today;
+            const isGoalMet = dayIntake >= dayGoal;
+            const hasIntake = dayIntake > 0;
+
+            return (
+              <div
+                key={day.date}
+                className={`font-numeric flex aspect-square items-center justify-center rounded-xl border text-sm font-black transition-colors ${
+                  isToday
+                    ? "border-cyan-100/60 bg-cyan-200/22 text-white shadow-[0_0_18px_rgba(56,189,248,0.18)]"
+                    : isFuture
+                      ? "border-water-500/10 bg-water-950/12 text-water-500/45"
+                      : isGoalMet
+                        ? "border-emerald-100/28 bg-emerald-300/18 text-emerald-50"
+                        : hasIntake
+                          ? "border-water-300/18 bg-water-700/32 text-water-100"
+                          : "border-water-500/12 bg-water-950/18 text-water-400/60"
+                }`}
+                title={`${day.date}: ${dayIntake} ml`}
+              >
+                {day.day}
               </div>
             );
           })}

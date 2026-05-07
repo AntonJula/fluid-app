@@ -50,13 +50,6 @@ export function WaveBackground({ progress = 0.5 }: WaveBackgroundProps) {
         {/* Solid fill - sits directly below waves, same color as front wave */}
         <div className="absolute left-0 right-0 bottom-0 top-32 bg-water-700 overflow-hidden" />
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes wave {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-      `}} />
     </div>
   );
 }

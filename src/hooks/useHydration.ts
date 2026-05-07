@@ -8,12 +8,33 @@ import {
   getDefaultHydrationState,
   normalizeHydrationState,
   rolloverHydrationState,
-  type DrinkLogItem,
-  type HydrationState,
-  type HydrationHistoryItem,
-  type HydrationNote,
 } from "@/lib/hydrationState";
+import type {
+  DrinkLogItem,
+  HydrationHistoryItem,
+  HydrationNote,
+  HydrationState,
+} from "@/lib/hydrationState";
+
 const STORAGE_KEY = "fluid-hydration";
+
+export type UseHydrationReturn = HydrationState & {
+  addDrink: (amount: number, note?: HydrationNote) => void;
+  subtractDrink: (amount: number, note?: HydrationNote) => void;
+  undoLastDrink: () => void;
+  updateDrinkLogItem: (id: string, amount: number, note?: HydrationNote) => void;
+  deleteDrinkLogItem: (id: string) => void;
+  setGoal: (newGoal: number) => void;
+  setQuickAddAmount: (amount: number) => void;
+  setReminderInterval: (interval: number) => void;
+  setQuietHours: (start: string, end: string) => void;
+  setHideNav: (hide: boolean) => void;
+  exportHydrationState: () => HydrationState;
+  importHydrationState: (stateLike: Partial<HydrationState>) => void;
+  resetDaily: () => void;
+  mounted: boolean;
+};
+
 const SERVER_SNAPSHOT: HydrationState = {
   intake: 0,
   goal: DEFAULT_GOAL,
@@ -35,57 +56,71 @@ let memoryState: HydrationState | null = null;
 const listeners = new Set<() => void>();
 
 function emitChange() {
-  listeners.forEach(listener => listener());
+  listeners.forEach((listener) => listener());
 }
 
-function getSnapshot() {
-  if (typeof window === "undefined") return SERVER_SNAPSHOT;
-  
-  if (memoryState) return memoryState;
-
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) {
-    memoryState = getDefaultState();
-    return memoryState;
-  }
+function persistState(state: HydrationState) {
+  if (typeof window === "undefined") return;
 
   try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.error("Failed to save hydration data", err);
+  }
+}
+
+function getSnapshot(): HydrationState {
+  if (typeof window === "undefined") return SERVER_SNAPSHOT;
+
+  if (memoryState) return memoryState;
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      memoryState = getDefaultState();
+      return memoryState;
+    }
+
     const parsed = JSON.parse(stored) as Partial<HydrationState>;
     const loadedState = normalizeHydrationState(parsed);
     memoryState = rolloverHydrationState(loadedState);
-    
-    // Save the daily reset back
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryState));
-    
+    persistState(memoryState);
+
     return memoryState;
   } catch (err) {
-    console.error("Failed to parse hydration data", err);
+    console.error("Failed to load hydration data", err);
     memoryState = getDefaultState();
     return memoryState;
   }
 }
 
-function getCurrentState() {
+function getCurrentState(): HydrationState {
   return memoryState ?? getSnapshot();
 }
 
 function updateState(nextState: HydrationState | ((state: HydrationState) => HydrationState)) {
   const resolvedState = typeof nextState === "function" ? nextState(getCurrentState()) : nextState;
   memoryState = resolvedState;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(resolvedState));
+  persistState(resolvedState);
   emitChange();
 }
 
-function subscribe(listener: () => void) {
+function subscribe(listener: () => void): () => void {
   listeners.add(listener);
-  
+
+  if (typeof window === "undefined") {
+    return () => {
+      listeners.delete(listener);
+    };
+  }
+
   const handleStorage = (e: StorageEvent) => {
     if (e.key === STORAGE_KEY) {
-      memoryState = null; // force reload from localstorage
+      memoryState = null;
       emitChange();
     }
   };
-  
+
   window.addEventListener("storage", handleStorage);
   return () => {
     listeners.delete(listener);
@@ -93,7 +128,7 @@ function subscribe(listener: () => void) {
   };
 }
 
-export function useHydration() {
+export function useHydration(): UseHydrationReturn {
   const mounted = useSyncExternalStore(
     () => () => undefined,
     () => true,
@@ -239,7 +274,7 @@ export function useHydration() {
     updateState(rolloverHydrationState(normalizeHydrationState(stateLike)));
   };
 
-  return {
+  const hydration: UseHydrationReturn = {
     ...state,
     streak,
     addDrink,
@@ -257,6 +292,8 @@ export function useHydration() {
     resetDaily,
     mounted,
   };
+
+  return hydration;
 }
 
 export type { DrinkLogItem, HydrationHistoryItem, HydrationNote, HydrationState };

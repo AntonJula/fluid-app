@@ -80,8 +80,11 @@
   --color-water-900: #0c4a6e;
   --color-water-950: #082f49;
 
-  --font-sans: var(--font-body);
-  --font-poppins: var(--font-poppins);
+  --font-sans: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Poppins", "Trebuchet MS", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-ui: "Outfit", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-numeric: "Outfit", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 :root {
@@ -112,12 +115,12 @@ body {
 
 .font-display {
   font-family: var(--font-display), sans-serif;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .font-ui {
   font-family: var(--font-ui), sans-serif;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .font-body {
@@ -127,7 +130,7 @@ body {
 .font-numeric {
   font-family: var(--font-numeric), sans-serif;
   font-variant-numeric: lining-nums tabular-nums;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 html[data-swipe-dragging="true"] {
@@ -141,4 +144,36 @@ html[data-swipe-dragging="true"] body {
 html[data-swipe-transitioning="true"] [data-bottom-nav="true"],
 html[data-swipe-transitioning="true"] [data-bottom-nav="true"] * {
   transition: none !important;
+}
+
+@keyframes wave {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes quick-add-shimmer {
+  0%,
+  8%,
+  100% {
+    transform: translateX(-150%) rotate(14deg);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.3;
+  }
+
+  15% {
+    transform: translateX(135%) rotate(14deg);
+    opacity: 0.62;
+  }
+
+  17% {
+    opacity: 0;
+  }
 }

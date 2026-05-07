@@ -33,7 +33,7 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
       <Card className="w-full max-w-sm mx-auto shadow-lg p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h3 className="font-ui font-semibold text-white tracking-tight text-lg">Daily Goal</h3>
+            <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Daily Goal</h3>
             <p className="font-body mt-1 text-sm text-water-300/80">Pick a target that feels consistent and sustainable.</p>
           </div>
 

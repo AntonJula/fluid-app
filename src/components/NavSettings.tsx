@@ -14,7 +14,7 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
     <Card className="w-full max-w-sm mx-auto mt-4 space-y-5 shadow-lg p-5">
       <div className="flex items-center gap-4">
         <div>
-          <h3 className="font-ui font-semibold text-white tracking-tight text-lg">Navigation</h3>
+          <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Navigation</h3>
           <p className="font-body mt-1 text-sm text-water-300/80">
             Keep the screen completely clean.
           </p>
