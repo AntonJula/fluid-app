@@ -109,7 +109,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   };
 
   return (
-    <Card className="w-full max-w-sm mx-auto mt-4 space-y-5 shadow-lg p-5">
+    <Card className="w-full max-w-sm md:max-w-[28rem] mx-auto mt-4 space-y-5 shadow-lg p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Reminders</h3>
@@ -124,7 +124,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
           aria-checked={remindersEnabled}
           aria-label={remindersEnabled ? "Turn reminders off" : "Turn reminders on"}
           onClick={toggleReminders}
-          className={`relative mt-1 inline-flex h-8 w-14 shrink-0 rounded-full border border-[1.5px] border-water-300/16 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-water-300/55 focus:ring-offset-2 focus:ring-offset-background ${
+          className={`relative mt-1 inline-flex h-8 w-14 shrink-0 rounded-full border border-water-300/14 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-water-300/55 focus:ring-offset-2 focus:ring-offset-background ${
             remindersEnabled ? "bg-water-300" : "bg-water-950/55"
           }`}
         >
@@ -140,12 +140,12 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       </div>
 
       <div
-        className={`rounded-2xl border border-[1.5px] px-4 py-3 ${
+        className={`rounded-2xl border px-4 py-3 ${
           notificationStatus.tone === "blocked"
-            ? "border-rose-200/18 bg-rose-500/10"
+            ? "border-rose-200/16 bg-rose-500/10"
             : notificationStatus.tone === "attention"
-              ? "border-cyan-100/18 bg-cyan-300/10"
-              : "border-water-300/14 bg-water-900/30"
+              ? "border-cyan-100/16 bg-cyan-300/10"
+              : "border-water-300/12 bg-water-900/30"
         }`}
       >
         <div
@@ -166,7 +166,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       </div>
 
       {remindersEnabled && isSupported && permission === "default" && (
-        <div className="rounded-2xl border border-[1.5px] border-cyan-100/16 bg-cyan-300/10 px-4 py-3">
+        <div className="rounded-2xl border border-cyan-100/14 bg-cyan-300/10 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <p className="font-body text-sm font-semibold text-water-100/88">
               Enable app notifications to receive reminders outside the Fluid screen.
@@ -252,7 +252,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
             <button
               type="button"
               onClick={() => setActivePicker("start")}
-              className="font-numeric flex-1 bg-water-800/50 p-2.5 text-sm text-center border border-[1.5px] rounded-xl font-bold text-white border-water-300/18 hover:border-water-200/28 hover:bg-water-700/50 transition-all shadow-inner"
+              className="font-numeric flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-300/16 hover:border-water-200/24 hover:bg-water-700/50 transition-all shadow-inner"
               aria-label="Set do not disturb start time"
             >
               {formatDisplayTime(quietHours.start)}
@@ -261,7 +261,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
             <button
               type="button"
               onClick={() => setActivePicker("end")}
-              className="font-numeric flex-1 bg-water-800/50 p-2.5 text-sm text-center border border-[1.5px] rounded-xl font-bold text-white border-water-300/18 hover:border-water-200/28 hover:bg-water-700/50 transition-all shadow-inner"
+              className="font-numeric flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-300/16 hover:border-water-200/24 hover:bg-water-700/50 transition-all shadow-inner"
               aria-label="Set do not disturb end time"
             >
               {formatDisplayTime(quietHours.end)}

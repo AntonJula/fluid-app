@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Download, FileUp, ShieldCheck } from "lucide-react";
+import { Download, FileUp, LoaderCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import type { HydrationState } from "@/hooks/useHydration";
@@ -13,7 +13,8 @@ interface DataSettingsProps {
 
 export function DataSettings({ exportHydrationState, importHydrationState }: DataSettingsProps) {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const [status, setStatus] = React.useState<"idle" | "exported" | "imported" | "error">("idle");
+  const [status, setStatus] = React.useState<"idle" | "exported" | "imported" | "importing" | "error">("idle");
+  const isImporting = status === "importing";
 
   const handleExport = () => {
     const backup = JSON.stringify(exportHydrationState(), null, 2);
@@ -33,6 +34,8 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setStatus("importing");
+
     try {
       const text = await file.text();
       const parsed = JSON.parse(text) as Partial<HydrationState>;
@@ -50,18 +53,20 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
       ? "Backup downloaded."
       : status === "imported"
         ? "Backup restored."
+        : status === "importing"
+          ? "Reading backup..."
         : status === "error"
           ? "Import failed."
           : "Local backup";
 
   return (
-    <Card className="w-full max-w-sm mx-auto mt-4 space-y-4 shadow-lg p-5">
+    <Card className="w-full max-w-sm md:max-w-[28rem] mx-auto mt-4 space-y-4 shadow-lg p-5">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Data</h3>
           <p className="font-body mt-1 text-sm text-water-300/80">Keep a portable copy of your progress.</p>
         </div>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[1.5px] border-water-300/16 bg-water-800/35 text-water-200">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/14 bg-water-800/35 text-water-200">
           <ShieldCheck className="h-5 w-5" strokeWidth={2.5} />
         </div>
       </div>
@@ -71,6 +76,7 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
           type="button"
           variant="secondary"
           onClick={handleExport}
+          disabled={isImporting}
           className="rounded-xl px-3 py-3 text-sm"
           aria-label="Export hydration backup"
         >
@@ -81,11 +87,16 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
           type="button"
           variant="secondary"
           onClick={() => fileInputRef.current?.click()}
+          disabled={isImporting}
           className="rounded-xl px-3 py-3 text-sm"
           aria-label="Import hydration backup"
         >
-          <FileUp className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Import
+          {isImporting ? (
+            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" strokeWidth={2.5} />
+          ) : (
+            <FileUp className="mr-2 h-4 w-4" strokeWidth={2.5} />
+          )}
+          {isImporting ? "Reading" : "Import"}
         </Button>
       </div>
 
@@ -99,13 +110,16 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
       />
 
       <p
-        className={`font-body rounded-2xl border border-[1.5px] px-4 py-3 text-xs font-semibold ${
+        className={`font-body flex items-center gap-2 rounded-2xl border px-4 py-3 text-xs font-semibold ${
           status === "error"
-            ? "border-rose-200/20 bg-rose-500/12 text-rose-50"
-            : "border-water-300/14 bg-water-900/30 text-water-300/82"
+            ? "border-rose-200/16 bg-rose-500/12 text-rose-50"
+            : status === "importing"
+              ? "border-cyan-100/16 bg-cyan-300/10 text-water-100"
+            : "border-water-300/12 bg-water-900/30 text-water-300/82"
         }`}
       >
-        {statusText}
+        {isImporting && <LoaderCircle className="h-3.5 w-3.5 shrink-0 animate-spin text-cyan-100" strokeWidth={2.5} />}
+        <span>{statusText}</span>
       </p>
     </Card>
   );

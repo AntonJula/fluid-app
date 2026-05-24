@@ -30,7 +30,7 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
 
   return (
     <>
-      <Card className="w-full max-w-sm mx-auto shadow-lg p-5">
+      <Card className="w-full max-w-sm md:max-w-[28rem] mx-auto shadow-lg p-5">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Daily Goal</h3>
@@ -40,7 +40,7 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
           <button
             type="button"
             onClick={() => setIsCustomOpen(true)}
-            className="font-numeric bg-water-800/50 border border-[1.5px] border-water-300/18 text-white text-sm rounded-xl hover:bg-water-700/50 hover:border-water-200/28 px-4 py-2 outline-none font-bold transition-all shadow-inner backdrop-blur-md flex items-center gap-2"
+            className="font-numeric bg-water-800/50 border border-water-300/16 text-white text-sm rounded-xl hover:bg-water-700/50 hover:border-water-200/24 px-4 py-2 outline-none font-bold transition-all shadow-inner backdrop-blur-md flex items-center gap-2"
             aria-label="Set custom daily goal"
           >
             {formatGoal(goal)}
@@ -48,7 +48,7 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
           </button>
         </div>
 
-        <div className="mt-5 rounded-[1.4rem] border border-[1.5px] border-water-300/14 bg-water-900/30 px-4 py-4">
+        <div className="mt-5 rounded-[1.4rem] border border-water-300/12 bg-water-900/30 px-4 py-4">
           <div className="flex flex-wrap gap-2.5">
             {GOAL_PRESETS.map((preset) => {
               const isActive = goal === preset;
@@ -62,8 +62,8 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
                   aria-label={`Set daily goal to ${preset} milliliters`}
                   className={`font-numeric rounded-2xl px-3.5 py-2 text-sm font-bold transition-all ${
                     isActive
-                      ? "bg-gradient-to-br from-water-400 to-water-600 text-white border border-[1.5px] border-water-200/24 shadow-lg shadow-water-500/20"
-                      : "bg-water-800/40 border border-[1.5px] border-water-300/16 text-water-100 hover:bg-water-700/55 hover:border-water-200/26"
+                      ? "bg-gradient-to-br from-water-400 to-water-600 text-white border border-water-200/20 shadow-lg shadow-water-500/20"
+                      : "bg-water-800/40 border border-water-300/14 text-water-100 hover:bg-water-700/55 hover:border-water-200/22"
                   }`}
                 >
                   {formatGoal(preset)}

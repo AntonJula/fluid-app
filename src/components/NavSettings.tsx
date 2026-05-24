@@ -11,7 +11,7 @@ interface NavSettingsProps {
 
 export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
   return (
-    <Card className="w-full max-w-sm mx-auto mt-4 space-y-5 shadow-lg p-5">
+    <Card className="w-full max-w-sm md:max-w-[28rem] mx-auto mt-4 space-y-5 shadow-lg p-5">
       <div className="flex items-center gap-4">
         <div>
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Navigation</h3>
@@ -21,7 +21,7 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[1.5px] border-water-300/14 bg-water-900/30 px-4 py-3 flex items-center justify-between">
+      <div className="rounded-2xl border border-water-300/12 bg-water-900/30 px-4 py-3 flex items-center justify-between">
         <div className="mr-4">
           <div className="font-ui flex items-center gap-2 text-water-200">
             <Navigation className="w-4 h-4" strokeWidth={2.5} />
@@ -38,7 +38,7 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
           aria-checked={hideNav}
           aria-label={hideNav ? "Show navigation bar" : "Hide navigation bar"}
           onClick={() => setHideNav(!hideNav)}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border border-[1.5px] border-water-300/16 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-water-300/50 focus:ring-offset-2 focus:ring-offset-background ${
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border border-water-300/14 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-water-300/50 focus:ring-offset-2 focus:ring-offset-background ${
             hideNav ? "bg-water-300" : "bg-water-900/50"
           }`}
         >

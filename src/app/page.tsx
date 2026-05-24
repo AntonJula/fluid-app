@@ -21,6 +21,7 @@ import { useHydration, type DrinkLogItem } from "@/hooks/useHydration";
 import { useNotifications } from "@/hooks/useNotifications";
 import { WaveBackground } from "@/components/WaveBackground";
 import { ProgressCard } from "@/components/ProgressCard";
+import { HydrationLoadingState } from "@/components/HydrationLoadingState";
 import { NumberPickerDialog } from "@/components/ui/NumberPickerDialog";
 import { Button } from "@/components/ui/Button";
 import { SipIcon, GlassIcon, MugIcon, BottleIcon } from "@/components/DrinkIcons";
@@ -63,20 +64,6 @@ function formatLogTime(timestamp: number) {
 
 function getNoteLabel(note?: HydrationNote) {
   return NOTE_OPTIONS.find((item) => item.value === note)?.label ?? "Water";
-}
-
-function getHomeStatusMessage(intake: number, goal: number) {
-  const safeGoal = Math.max(goal, 1);
-  const remaining = Math.max(0, safeGoal - intake);
-  const overGoal = Math.max(0, intake - safeGoal);
-
-  if (intake <= 0) return "Start with one glass";
-  if (overGoal > 0) return `${overGoal} ml over goal`;
-  if (remaining === 0) return "Goal complete, nice work";
-  if (remaining <= 250) return "One small glass to finish";
-  if (remaining <= 500) return "One glass to finish";
-
-  return `${remaining} ml left today`;
 }
 
 function formatLiters(amount: number) {
@@ -137,12 +124,11 @@ export default function Home() {
   }, [addDrink, mounted]);
 
   if (!mounted) {
-    return <main className="min-h-screen bg-water-50" />;
+    return <HydrationLoadingState />;
   }
 
   const progressAttr = Math.min(1, Math.max(0, intake / goal));
   const latestLog = drinkLog.slice(0, 3);
-  const homeStatusMessage = getHomeStatusMessage(intake, goal);
   const selectedNoteOption = NOTE_OPTIONS.find((item) => item.value === selectedNote) ?? NOTE_OPTIONS[0];
   const SelectedNoteIcon = selectedNoteOption.Icon;
 
@@ -182,22 +168,19 @@ export default function Home() {
   };
 
   return (
-    <main className="relative mx-auto flex min-h-[100dvh] w-[100vw] max-w-[23rem] min-w-0 flex-col items-center overflow-x-hidden p-4 pb-24 pt-5 sm:max-w-[26rem] sm:p-6 sm:pb-24">
+    <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[23rem] min-w-0 flex-col items-center overflow-x-hidden p-4 pb-24 pt-5 sm:max-w-[26rem] sm:p-6 sm:pb-24 md:max-w-[30rem]">
       <WaveBackground progress={progressAttr} />
 
       <div className="z-10 flex h-full min-w-0 flex-1 flex-col gap-5 w-full">
         <header className="relative z-20 mt-1 w-full text-center">
           <h1 className="font-display text-5xl font-black text-white drop-shadow-md sm:text-6xl">Fluid.</h1>
-          <p className="font-ui mt-1 text-xs font-semibold uppercase tracking-widest text-water-200">
-            {homeStatusMessage}
-          </p>
         </header>
 
-        <div className="mt-2 flex min-h-0 w-full flex-col items-center">
+        <div className="mt-4 flex min-h-0 w-full flex-col items-center">
           <ProgressCard intake={intake} goal={goal} />
         </div>
 
-        <section className="w-full max-w-[18.5rem] self-center space-y-3 sm:max-w-full">
+        <section className="w-full max-w-[19.75rem] self-center space-y-3 sm:max-w-[22.5rem] md:max-w-full">
           <div className="flex items-center justify-between gap-3 px-1">
             <p className="font-ui text-[12px] font-bold uppercase tracking-[0.18em] text-water-200/90">Quick add</p>
             <button
