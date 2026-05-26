@@ -90,6 +90,10 @@
 :root {
   --background: #082f49; /* deep ocean blue background */
   --foreground: #f0f9ff; /* light sea foreground */
+  --app-safe-top: env(safe-area-inset-top, 0px);
+  --app-safe-right: env(safe-area-inset-right, 0px);
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-safe-left: env(safe-area-inset-left, 0px);
   --font-outfit: "Outfit", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-manrope: "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-poppins: "Poppins", "Trebuchet MS", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
@@ -106,11 +110,24 @@
     filter 280ms cubic-bezier(0.22, 0.9, 0.32, 1);
 }
 
+html {
+  min-height: 100%;
+  min-height: 100dvh;
+  background: var(--background);
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
+  min-height: 100%;
+  min-height: 100dvh;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 .font-display {
@@ -141,9 +158,22 @@ html[data-swipe-dragging="true"] body {
   touch-action: none;
 }
 
+html[data-swipe-dragging="true"] [data-bottom-nav-shell="true"],
+html[data-swipe-transitioning="true"] [data-bottom-nav-shell="true"] {
+  transition: none !important;
+}
+
 html[data-swipe-transitioning="true"] [data-bottom-nav="true"],
 html[data-swipe-transitioning="true"] [data-bottom-nav="true"] * {
   transition: none !important;
+}
+
+[data-bottom-nav-shell="true"] {
+  backface-visibility: hidden;
+  contain: layout paint;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 @keyframes wave {

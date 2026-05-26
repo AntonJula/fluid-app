@@ -1,18 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { pickHydrationNotification } from "@/lib/notificationMessages";
+import {
+  getNextHydrationLifecycleDueAt,
+  pickHydrationLifecycleNotification,
+  pickHydrationNotification,
+  type HydrationLifecycleNotificationState,
+} from "@/lib/notificationMessages";
 
 const PERMISSION_EVENT = "fluid-notification-permission-changed";
 const LAST_NOTIFIED_KEY = "fluid-last-notified";
 const NEXT_NOTIFICATION_KEY = "fluid-next-notification-due";
 const LAST_NOTIFICATION_TYPE_KEY = "fluid-last-notification-type";
+const LIFECYCLE_NEXT_NOTIFICATION_KEY = "fluid-lifecycle-next-notification-due";
+const LIFECYCLE_LAST_DAILY_KEY = "fluid-lifecycle-last-daily";
+const LIFECYCLE_LAST_WEEKLY_KEY = "fluid-lifecycle-last-weekly";
+const LIFECYCLE_LAST_MONTHLY_KEY = "fluid-lifecycle-last-monthly";
 const SERVICE_WORKER_PATH = "/fluid-notifications-sw.js";
+const MIN_NOTIFICATION_GAP_MS = 10 * 60 * 1000;
+const ONE_MINUTE_MS = 60 * 1000;
 
 interface NotificationHydrationStatus {
   intake: number;
   goal: number;
   lastDrinkAt: number | null;
+  inactiveDays?: number;
 }
 
 type FluidNotificationOptions = NotificationOptions & {
@@ -25,6 +37,7 @@ function getSafeHydrationStatus(status?: NotificationHydrationStatus): Notificat
     intake: Math.max(0, Math.round(status?.intake ?? 0)),
     goal: Math.max(1, Math.round(status?.goal ?? 2500)),
     lastDrinkAt: status?.lastDrinkAt ?? null,
+    inactiveDays: Math.max(0, Math.round(status?.inactiveDays ?? 0)),
   };
 }
 
@@ -34,6 +47,34 @@ function getInitialPermission(): NotificationPermission {
   }
 
   return Notification.permission;
+}
+
+function getStoredTimestamp(key: string) {
+  const value = Number(localStorage.getItem(key) || 0);
+
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function getLifecycleNotificationState(): HydrationLifecycleNotificationState {
+  return {
+    lastDailyAt: getStoredTimestamp(LIFECYCLE_LAST_DAILY_KEY),
+    lastWeeklyAt: getStoredTimestamp(LIFECYCLE_LAST_WEEKLY_KEY),
+    lastMonthlyAt: getStoredTimestamp(LIFECYCLE_LAST_MONTHLY_KEY),
+  };
+}
+
+function setLifecycleNotificationSent(cadence: string | undefined, timestamp: number) {
+  if (cadence === "daily" || cadence === "weekly" || cadence === "monthly") {
+    localStorage.setItem(LIFECYCLE_LAST_DAILY_KEY, timestamp.toString());
+  }
+
+  if (cadence === "weekly") {
+    localStorage.setItem(LIFECYCLE_LAST_WEEKLY_KEY, timestamp.toString());
+  }
+
+  if (cadence === "monthly") {
+    localStorage.setItem(LIFECYCLE_LAST_MONTHLY_KEY, timestamp.toString());
+  }
 }
 
 function parseClockToMinutes(time: string) {
@@ -101,7 +142,7 @@ async function showSystemNotification({
     body,
     badge: "/favicon.ico",
     data: { url: actionAmount ? `/?quickAdd=${actionAmount}` : "/" },
-    icon: "/icon.svg",
+    icon: "/app-icon-192.png",
     tag,
     renotify: true,
   };
@@ -136,6 +177,7 @@ export function useNotifications(
   const [permission, setPermission] = useState<NotificationPermission>(getInitialPermission);
   const isSupported = typeof window === "undefined" || "Notification" in window;
   const timerRef = useRef<number | null>(null);
+  const lifecycleTimerRef = useRef<number | null>(null);
   const quietHoursRef = useRef(quietHours);
   const intervalRef = useRef(intervalMinutes);
   const activeRef = useRef(active);
@@ -143,6 +185,7 @@ export function useNotifications(
   const hydrationIntake = hydrationStatus?.intake;
   const hydrationGoal = hydrationStatus?.goal;
   const hydrationLastDrinkAt = hydrationStatus?.lastDrinkAt;
+  const hydrationInactiveDays = hydrationStatus?.inactiveDays;
 
   useEffect(() => {
     quietHoursRef.current = quietHours;
@@ -161,8 +204,9 @@ export function useNotifications(
       intake: hydrationIntake ?? 0,
       goal: hydrationGoal ?? 2500,
       lastDrinkAt: hydrationLastDrinkAt ?? null,
+      inactiveDays: hydrationInactiveDays ?? 0,
     });
-  }, [hydrationGoal, hydrationIntake, hydrationLastDrinkAt]);
+  }, [hydrationGoal, hydrationInactiveDays, hydrationIntake, hydrationLastDrinkAt]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -189,8 +233,8 @@ export function useNotifications(
 
       if (result === "granted") {
         await showSystemNotification({
-          title: "Fluid",
-          body: "App notifications are on. Fluid will gently remind you when it is time to drink and log water.",
+          title: "Fluid is ready 💧",
+          body: "Friendly water reminders are on. I will nudge you gently when it is time to drink.",
           tag: "fluid-permission",
         });
       }
@@ -234,7 +278,15 @@ export function useNotifications(
         const quietEndsAt = getQuietWindowEnd(now, quietHoursRef.current);
 
         if (quietEndsAt) {
-          updateNextDue(quietEndsAt + 60 * 1000);
+          updateNextDue(quietEndsAt + ONE_MINUTE_MS);
+          return;
+        }
+
+        const lastNotificationAt = getStoredTimestamp(LAST_NOTIFIED_KEY);
+        const nextAllowedAt = lastNotificationAt + MIN_NOTIFICATION_GAP_MS;
+
+        if (lastNotificationAt > 0 && Date.now() < nextAllowedAt) {
+          updateNextDue(nextAllowedAt);
           return;
         }
 
@@ -259,7 +311,7 @@ export function useNotifications(
 
         localStorage.setItem(LAST_NOTIFICATION_TYPE_KEY, message.kind);
         localStorage.setItem(LAST_NOTIFIED_KEY, Date.now().toString());
-        updateNextDue(Date.now() + intervalRef.current * 60 * 1000);
+        updateNextDue(Date.now() + (message.nextDelayMinutes ?? intervalRef.current) * 60 * 1000);
       };
 
       const storedNextDue = Number(localStorage.getItem(NEXT_NOTIFICATION_KEY) || 0);
@@ -274,7 +326,7 @@ export function useNotifications(
 
       const quietEndsAt = getQuietWindowEnd(new Date(), quietHoursRef.current);
       if (quietEndsAt && nextDue <= Date.now()) {
-        nextDue = quietEndsAt + 60 * 1000;
+        nextDue = quietEndsAt + ONE_MINUTE_MS;
       }
 
       localStorage.setItem(NEXT_NOTIFICATION_KEY, nextDue.toString());
@@ -314,6 +366,140 @@ export function useNotifications(
   }, [
     active,
     hydrationGoal,
+    hydrationInactiveDays,
+    hydrationIntake,
+    hydrationLastDrinkAt,
+    intervalMinutes,
+    permission,
+    quietHours.end,
+    quietHours.start,
+  ]);
+
+  useEffect(() => {
+    if (permission === "granted" && intervalMinutes > 0 && active) {
+      let isDisposed = false;
+
+      const clearTimer = () => {
+        if (lifecycleTimerRef.current !== null) {
+          window.clearTimeout(lifecycleTimerRef.current);
+          lifecycleTimerRef.current = null;
+        }
+      };
+
+      const scheduleFor = (timestamp: number) => {
+        if (isDisposed) return;
+
+        clearTimer();
+        lifecycleTimerRef.current = window.setTimeout(() => {
+          void checkLifecycleAndNotify(false);
+        }, Math.max(1000, timestamp - Date.now()));
+      };
+
+      const updateNextDue = (timestamp: number) => {
+        localStorage.setItem(LIFECYCLE_NEXT_NOTIFICATION_KEY, timestamp.toString());
+        scheduleFor(timestamp);
+      };
+
+      const getLifecycleContext = (isCatchUp: boolean) => ({
+        ...hydrationStatusRef.current,
+        reminderInterval: intervalRef.current,
+        now: new Date(),
+        isCatchUp,
+      });
+
+      const scheduleNextLifecycleCheck = () => {
+        const context = getLifecycleContext(false);
+        const quietEndsAt = getQuietWindowEnd(context.now, quietHoursRef.current);
+        let nextDue = getNextHydrationLifecycleDueAt(context, getLifecycleNotificationState());
+
+        if (quietEndsAt && nextDue <= quietEndsAt) {
+          nextDue = quietEndsAt + ONE_MINUTE_MS;
+        }
+
+        updateNextDue(nextDue);
+      };
+
+      const checkLifecycleAndNotify = async (isCatchUp = false) => {
+        if (isDisposed || !activeRef.current || intervalRef.current <= 0 || Notification.permission !== "granted") {
+          return;
+        }
+
+        const context = getLifecycleContext(isCatchUp);
+        const quietEndsAt = getQuietWindowEnd(context.now, quietHoursRef.current);
+
+        if (quietEndsAt) {
+          updateNextDue(quietEndsAt + ONE_MINUTE_MS);
+          return;
+        }
+
+        const lastNotificationAt = getStoredTimestamp(LAST_NOTIFIED_KEY);
+        const nextAllowedAt = lastNotificationAt + MIN_NOTIFICATION_GAP_MS;
+
+        if (lastNotificationAt > 0 && Date.now() < nextAllowedAt) {
+          updateNextDue(nextAllowedAt);
+          return;
+        }
+
+        const message = pickHydrationLifecycleNotification(context, getLifecycleNotificationState());
+
+        if (!message) {
+          scheduleNextLifecycleCheck();
+          return;
+        }
+
+        await showSystemNotification({
+          title: message.title,
+          body: message.body,
+          tag: `fluid-${message.cadence}-${message.kind}`,
+          actionAmount: message.actionAmount,
+        });
+
+        if (isDisposed) return;
+
+        const sentAt = Date.now();
+        setLifecycleNotificationSent(message.cadence, sentAt);
+        localStorage.setItem(LAST_NOTIFICATION_TYPE_KEY, message.kind);
+        localStorage.setItem(LAST_NOTIFIED_KEY, sentAt.toString());
+        scheduleNextLifecycleCheck();
+      };
+
+      const storedNextDue = getStoredTimestamp(LIFECYCLE_NEXT_NOTIFICATION_KEY);
+      const initialContext = getLifecycleContext(false);
+      const initialDue =
+        storedNextDue > 0 ? storedNextDue : getNextHydrationLifecycleDueAt(initialContext, getLifecycleNotificationState());
+
+      updateNextDue(initialDue);
+
+      const handleVisibility = () => {
+        if (document.visibilityState !== "visible") return;
+
+        const storedDue = getStoredTimestamp(LIFECYCLE_NEXT_NOTIFICATION_KEY);
+
+        if (storedDue > 0 && Date.now() >= storedDue) {
+          void checkLifecycleAndNotify(true);
+        }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibility);
+      window.addEventListener("focus", handleVisibility);
+
+      return () => {
+        isDisposed = true;
+        clearTimer();
+        document.removeEventListener("visibilitychange", handleVisibility);
+        window.removeEventListener("focus", handleVisibility);
+      };
+    }
+
+    return () => {
+      if (!active || intervalMinutes <= 0) {
+        localStorage.removeItem(LIFECYCLE_NEXT_NOTIFICATION_KEY);
+      }
+    };
+  }, [
+    active,
+    hydrationGoal,
+    hydrationInactiveDays,
     hydrationIntake,
     hydrationLastDrinkAt,
     intervalMinutes,

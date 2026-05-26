@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 import {
   BellRing,
   Coffee,
@@ -54,6 +55,7 @@ const ONBOARDING_REMINDERS = [
   { label: "40m", value: 40 },
   { label: "60m", value: 60 },
 ];
+const HYDRATION_REVEAL_DURATION_MS = 950;
 
 function formatLogTime(timestamp: number) {
   return new Intl.DateTimeFormat("en", {
@@ -69,6 +71,197 @@ function getNoteLabel(note?: HydrationNote) {
 function formatLiters(amount: number) {
   const liters = amount / 1000;
   return Number.isInteger(liters) ? `${liters}L` : `${liters.toFixed(1)}L`;
+}
+
+function easeOutCubic(progress: number) {
+  return 1 - Math.pow(1 - progress, 3);
+}
+
+function useLockedViewport(isLocked: boolean) {
+  React.useEffect(() => {
+    if (!isLocked || typeof window === "undefined") return;
+
+    const scrollY = window.scrollY;
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+    const previousBodyTouchAction = body.style.touchAction;
+
+    root.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.touchAction = "none";
+
+    return () => {
+      root.style.overflow = previousRootOverflow;
+      body.style.overflow = previousBodyOverflow;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
+      body.style.touchAction = previousBodyTouchAction;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isLocked]);
+}
+
+function useHydrationReveal(targetIntake: number) {
+  const [animatedIntake, setAnimatedIntake] = React.useState(0);
+  const currentValueRef = React.useRef(0);
+  const frameRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") {
+      setAnimatedIntake(targetIntake);
+      return;
+    }
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReducedMotion) {
+      currentValueRef.current = targetIntake;
+      setAnimatedIntake(targetIntake);
+      return;
+    }
+
+    if (frameRef.current !== null) {
+      window.cancelAnimationFrame(frameRef.current);
+    }
+
+    const startValue = currentValueRef.current;
+    const change = targetIntake - startValue;
+    const startedAt = performance.now();
+
+    if (Math.abs(change) < 1) {
+      currentValueRef.current = targetIntake;
+      setAnimatedIntake(targetIntake);
+      return;
+    }
+
+    const tick = (timestamp: number) => {
+      const elapsed = timestamp - startedAt;
+      const progress = Math.min(1, elapsed / HYDRATION_REVEAL_DURATION_MS);
+      const nextValue = startValue + change * easeOutCubic(progress);
+
+      currentValueRef.current = nextValue;
+      setAnimatedIntake(Math.round(nextValue));
+
+      if (progress < 1) {
+        frameRef.current = window.requestAnimationFrame(tick);
+        return;
+      }
+
+      currentValueRef.current = targetIntake;
+      setAnimatedIntake(targetIntake);
+      frameRef.current = null;
+    };
+
+    frameRef.current = window.requestAnimationFrame(tick);
+
+    return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
+  }, [targetIntake]);
+
+  return animatedIntake;
+}
+
+function ResetConfirmDialog({
+  isOpen,
+  onCancel,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  useLockedViewport(isOpen);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onCancel();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onCancel]);
+
+  if (!isOpen || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[115] grid place-items-center overflow-hidden bg-water-950/76 px-4 py-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl"
+      data-swipe-ignore="true"
+      onClick={onCancel}
+      onTouchMove={(event) => event.preventDefault()}
+      onWheel={(event) => event.preventDefault()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reset-today-title"
+        className="w-full max-w-[22rem] overflow-hidden rounded-[1.25rem] border border-[1.5px] border-rose-100/18 bg-water-950/94 shadow-[0_24px_70px_rgba(0,0,0,0.42)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="border-b border-water-300/12 px-5 py-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-rose-100/78">Today actions</p>
+              <h2 id="reset-today-title" className="font-ui mt-2 text-2xl font-black tracking-normal text-white">
+                Reset today?
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="rounded-full p-2 text-water-200/80 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Cancel reset"
+            >
+              <X className="h-5 w-5" strokeWidth={2.5} />
+            </button>
+          </div>
+          <p className="font-body mt-3 text-sm font-semibold leading-relaxed text-water-300/82">
+            This clears today&apos;s intake and drink log. Your previous days stay saved.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 px-5 py-4">
+          <Button type="button" variant="secondary" size="sm" onClick={onCancel} className="rounded-xl">
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onConfirm}
+            className="rounded-xl border-rose-200/20 bg-rose-500/14 text-rose-50 hover:bg-rose-500/22"
+          >
+            Reset today
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export default function Home() {
@@ -90,6 +283,7 @@ export default function Home() {
     mounted,
   } = useHydration();
   const { requestPermission, isSupported: notificationsSupported } = useNotifications(0, quietHours, false);
+  const revealedIntake = useHydrationReveal(intake);
   const [isResetConfirming, setIsResetConfirming] = React.useState(false);
   const [selectedNote, setSelectedNote] = React.useState<HydrationNote>("water");
   const [isNoteMenuOpen, setIsNoteMenuOpen] = React.useState(false);
@@ -127,7 +321,7 @@ export default function Home() {
     return <HydrationLoadingState />;
   }
 
-  const progressAttr = Math.min(1, Math.max(0, intake / goal));
+  const progressAttr = Math.min(1, Math.max(0, revealedIntake / goal));
   const latestLog = drinkLog.slice(0, 3);
   const selectedNoteOption = NOTE_OPTIONS.find((item) => item.value === selectedNote) ?? NOTE_OPTIONS[0];
   const SelectedNoteIcon = selectedNoteOption.Icon;
@@ -168,7 +362,7 @@ export default function Home() {
   };
 
   return (
-    <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[23rem] min-w-0 flex-col items-center overflow-x-hidden p-4 pb-24 pt-5 sm:max-w-[26rem] sm:p-6 sm:pb-24 md:max-w-[30rem]">
+    <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] min-w-0 flex-col items-center overflow-x-hidden px-3.5 pb-24 pt-5 min-[380px]:p-4 min-[380px]:pb-24 sm:p-6 sm:pb-24 md:max-w-[30rem]">
       <WaveBackground progress={progressAttr} />
 
       <div className="z-10 flex h-full min-w-0 flex-1 flex-col gap-5 w-full">
@@ -177,10 +371,10 @@ export default function Home() {
         </header>
 
         <div className="mt-4 flex min-h-0 w-full flex-col items-center">
-          <ProgressCard intake={intake} goal={goal} />
+          <ProgressCard intake={revealedIntake} goal={goal} />
         </div>
 
-        <section className="w-full max-w-[19.75rem] self-center space-y-3 sm:max-w-[22.5rem] md:max-w-full">
+        <section className="w-full max-w-full self-center space-y-3">
           <div className="flex items-center justify-between gap-3 px-1">
             <p className="font-ui text-[12px] font-bold uppercase tracking-[0.18em] text-water-200/90">Quick add</p>
             <button
@@ -232,7 +426,7 @@ export default function Home() {
           <button
             type="button"
             onClick={() => handleAddDrink(250)}
-            className="group relative flex min-h-[6rem] w-full items-center justify-between overflow-hidden rounded-[1.25rem] border border-[1.5px] border-cyan-100/24 bg-gradient-to-br from-cyan-300/26 via-water-500/18 to-emerald-300/18 px-4 py-4 text-left shadow-[0_18px_34px_rgba(8,47,73,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-100/34 hover:brightness-110 active:scale-[0.98]"
+            className="group relative flex min-h-[6rem] w-full items-center justify-between overflow-hidden rounded-[1.1rem] border border-[1.5px] border-cyan-100/24 bg-gradient-to-br from-cyan-300/26 via-water-500/18 to-emerald-300/18 px-3.5 py-4 text-left shadow-[0_18px_34px_rgba(8,47,73,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-100/34 hover:brightness-110 active:scale-[0.98] min-[380px]:rounded-[1.25rem] min-[380px]:px-4"
             aria-label={`Add 250 milliliters as ${getNoteLabel(selectedNote)}`}
           >
             <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent" />
@@ -277,18 +471,18 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="grid grid-cols-[1fr_auto] gap-2.5">
+          <div className="grid grid-cols-[minmax(0,1fr)_3rem] gap-2.5 min-[380px]:grid-cols-[1fr_auto]">
             <button
               type="button"
               onClick={() => handleAddDrink(quickAddAmount)}
               className="flex items-center justify-between rounded-[1rem] border border-[1.5px] border-water-300/16 bg-water-950/24 px-4 py-3 text-left shadow-inner transition-all hover:bg-water-900/32 active:scale-[0.98]"
               aria-label={`Add custom amount ${quickAddAmount} milliliters`}
             >
-              <span>
+              <span className="min-w-0">
                 <span className="font-ui block text-xs font-black uppercase tracking-[0.18em] text-water-300/85">Favorite</span>
                 <span className="font-body mt-1 block text-xs font-semibold text-water-300/70">Your usual one-tap amount</span>
               </span>
-              <span className="font-numeric text-2xl font-black text-white">
+              <span className="font-numeric shrink-0 pl-2 text-right text-2xl font-black text-white">
                 {quickAddAmount}
                 <span className="font-ui ml-1 text-xs font-extrabold text-water-300">ml</span>
               </span>
@@ -476,46 +670,11 @@ export default function Home() {
         </div>
       )}
 
-      {isResetConfirming && (
-        <div className="fixed inset-0 z-[115] flex items-center justify-center bg-water-950/72 p-4 backdrop-blur-xl sm:p-6">
-          <div className="w-full max-w-[22rem] overflow-hidden rounded-[1.35rem] border border-[1.5px] border-rose-100/18 bg-water-950/92 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
-            <div className="border-b border-water-300/12 px-5 py-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-rose-100/78">Today actions</p>
-                  <h2 className="font-ui mt-2 text-2xl font-black tracking-normal text-white">Reset today?</h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsResetConfirming(false)}
-                  className="rounded-full p-2 text-water-200/80 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Cancel reset"
-                >
-                  <X className="h-5 w-5" strokeWidth={2.5} />
-                </button>
-              </div>
-              <p className="font-body mt-3 text-sm font-semibold leading-relaxed text-water-300/82">
-                This clears today&apos;s intake and drink log. Your previous days stay saved.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 px-5 py-4">
-              <Button type="button" variant="secondary" size="sm" onClick={() => setIsResetConfirming(false)} className="rounded-xl">
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={handleReset}
-                className="rounded-xl border-rose-200/20 bg-rose-500/14 text-rose-50 hover:bg-rose-500/22"
-              >
-                Reset today
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ResetConfirmDialog
+        isOpen={isResetConfirming}
+        onCancel={() => setIsResetConfirming(false)}
+        onConfirm={handleReset}
+      />
 
       {isOnboardingOpen && (
         <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-water-950/72 px-4 pb-4 pt-3 backdrop-blur-xl sm:px-6 sm:pb-6 sm:pt-8">

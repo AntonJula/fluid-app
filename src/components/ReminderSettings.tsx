@@ -46,7 +46,7 @@ function getNotificationStatus({
     return {
       Icon: ShieldCheck,
       title: "App notifications allowed",
-      body: `Fluid can remind you every ${interval} minutes and open the app when you tap a reminder.`,
+      body: `Fluid can remind you every ${interval} minutes, then follow up gently after 15 minutes if nothing was logged.`,
       tone: "ready",
     };
   }
@@ -109,12 +109,12 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   };
 
   return (
-    <Card className="w-full max-w-sm md:max-w-[28rem] mx-auto mt-4 space-y-5 shadow-lg p-5">
+    <Card className="mx-auto mt-4 w-full max-w-sm space-y-4 p-4 shadow-lg min-[380px]:space-y-5 min-[380px]:p-5 md:max-w-[28rem]">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Reminders</h3>
           <p className="font-body mt-1 text-sm text-water-300/80">
-            Fluid can nudge you to drink and log water when app notifications are allowed.
+            Fluid can nudge you to drink, follow up gently, and help you return after quiet days.
           </p>
         </div>
 
@@ -140,7 +140,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       </div>
 
       <div
-        className={`rounded-2xl border px-4 py-3 ${
+        className={`rounded-xl border px-3 py-3 min-[380px]:rounded-2xl min-[380px]:px-4 ${
           notificationStatus.tone === "blocked"
             ? "border-rose-200/16 bg-rose-500/10"
             : notificationStatus.tone === "attention"
@@ -166,8 +166,8 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       </div>
 
       {remindersEnabled && isSupported && permission === "default" && (
-        <div className="rounded-2xl border border-cyan-100/14 bg-cyan-300/10 px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
+        <div className="rounded-xl border border-cyan-100/14 bg-cyan-300/10 px-3 py-3 min-[380px]:rounded-2xl min-[380px]:px-4">
+          <div className="flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
             <p className="font-body text-sm font-semibold text-water-100/88">
               Enable app notifications to receive reminders outside the Fluid screen.
             </p>
@@ -248,7 +248,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
             <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest">Do Not Disturb</p>
           </div>
           <p className="font-body text-xs text-water-400/75 mb-3">No reminders between these hours.</p>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 min-[380px]:gap-3">
             <button
               type="button"
               onClick={() => setActivePicker("start")}

@@ -89,7 +89,7 @@ export default function StatsPage() {
         : `You're averaging ${Math.abs(averageDelta)} ml less per day than last week. One glass today can close the gap.`;
 
   return (
-    <main className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full max-w-[25.5rem] md:max-w-[30rem] mx-auto min-h-[100dvh]">
+    <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 py-4 min-[380px]:p-4 sm:p-6 md:max-w-[30rem]">
       <header className="w-full text-center mt-4 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Your Stats.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">
@@ -101,8 +101,8 @@ export default function StatsPage() {
         </div>
       </header>
 
-      <div className="w-full grid grid-cols-2 gap-4 mb-6">
-        <Card className="flex flex-col items-center justify-center p-5 text-center">
+      <div className="mb-6 grid w-full grid-cols-2 gap-3 min-[380px]:gap-4">
+        <Card className="flex min-h-[9.4rem] flex-col items-center justify-center p-4 text-center min-[380px]:p-5">
           <div className="flex items-center gap-2 mb-2">
             <Flame className="w-5 h-5 text-water-300 drop-shadow-sm" strokeWidth={2.5} />
             <span className="font-ui text-water-300 font-bold text-sm tracking-wide">Streak</span>
@@ -111,7 +111,7 @@ export default function StatsPage() {
           <span className="font-ui text-water-400/80 text-[10px] mt-2 uppercase tracking-widest font-bold">Days in a row</span>
         </Card>
 
-        <Card className="flex flex-col items-center justify-center p-5 text-center">
+        <Card className="flex min-h-[9.4rem] flex-col items-center justify-center p-4 text-center min-[380px]:p-5">
           <div className="flex items-center gap-2 mb-2">
             <Trophy className="w-5 h-5 text-water-200 drop-shadow-sm" strokeWidth={2.5} />
             <span className="font-ui text-water-300 font-bold text-sm tracking-wide">Today</span>
@@ -125,7 +125,7 @@ export default function StatsPage() {
       </div>
 
       {!hasAnyTrackedWater && (
-        <Card className="w-full p-5 sm:p-6 mb-6">
+        <Card className="mb-6 w-full p-4 min-[380px]:p-5 sm:p-6">
           <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
             <GlassWater className="h-4 w-4" strokeWidth={2.5} />
             First stats
@@ -137,7 +137,7 @@ export default function StatsPage() {
         </Card>
       )}
 
-      <div className="w-full grid grid-cols-1 gap-4 mb-6 min-[390px]:grid-cols-2">
+      <div className="mb-6 grid w-full grid-cols-1 gap-3 min-[390px]:grid-cols-2 min-[390px]:gap-4">
         <Card className="p-4">
           <div className="font-ui flex items-center gap-1.5 text-water-300 text-[0.78rem] sm:text-sm font-bold tracking-wide">
             <Waves className="w-3.5 h-3.5 shrink-0" strokeWidth={2.4} />
@@ -157,7 +157,7 @@ export default function StatsPage() {
         </Card>
       </div>
 
-      <Card className="w-full p-5 sm:p-6 mb-6">
+      <Card className="mb-6 w-full p-4 min-[380px]:p-5 sm:p-6">
         <div className="min-w-0">
           <div className="font-ui flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-water-300/80">
             <Target className="h-4 w-4" strokeWidth={2.5} />
@@ -168,20 +168,24 @@ export default function StatsPage() {
         </div>
       </Card>
 
-      <Card className="w-full p-5 sm:p-6 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+      <Card className="mb-6 w-full p-4 min-[380px]:p-5 sm:p-6">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <Calendar className="w-5 h-5 text-water-400" strokeWidth={2.5} />
-            <h2 className="font-ui text-white text-lg font-bold tracking-normal drop-shadow-sm">Tracking History</h2>
+            <h2 className="font-ui min-w-0 text-base font-bold leading-tight tracking-normal text-white drop-shadow-sm min-[360px]:text-lg">
+              Tracking History
+            </h2>
           </div>
-          <span className="font-ui text-[11px] uppercase tracking-[0.22em] font-bold text-water-400/70">This week</span>
+          <span className="font-ui shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-water-400/70 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em]">
+            This week
+          </span>
         </div>
 
-        <p className="font-body text-sm text-water-300/80 mb-6">
+        <p className="font-body mb-5 text-sm text-water-300/80 min-[380px]:mb-6">
           Taller bars mean stronger hydration days. Bright bars are days when you hit your goal.
         </p>
 
-        <div className="flex items-end justify-between h-56 pt-4 gap-2">
+        <div className="flex h-48 items-end justify-between gap-1.5 pt-3 min-[380px]:h-56 min-[380px]:gap-2 min-[380px]:pt-4">
           {chartData.map((day, idx) => {
             const heightPercent = Math.min(100, (day.intake / maxIntake) * 100);
             const isGoalMet = day.intake > 0 && day.intake >= day.goal;
@@ -214,7 +218,7 @@ export default function StatsPage() {
                   />
                 </div>
                 <span
-                  className={`font-ui text-[10px] uppercase font-bold tracking-wider ${
+                  className={`font-ui text-[0.55rem] font-bold uppercase tracking-wide min-[360px]:text-[10px] min-[360px]:tracking-wider ${
                     isToday ? "text-water-100 drop-shadow-sm" : "text-water-400/80"
                   }`}
                 >
@@ -226,24 +230,24 @@ export default function StatsPage() {
         </div>
       </Card>
 
-      <Card className="w-full p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+      <Card className="w-full p-4 min-[380px]:p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3 min-[380px]:gap-4">
+          <div className="min-w-0">
             <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
               <Calendar className="w-4 h-4" strokeWidth={2.4} />
               Month View
             </div>
-            <p className="font-ui mt-2 text-2xl font-black tracking-normal text-white">{MONTH_FORMATTER.format(todayDate)}</p>
+            <p className="font-ui mt-2 text-xl font-black tracking-normal text-white min-[380px]:text-2xl">{MONTH_FORMATTER.format(todayDate)}</p>
           </div>
-          <div className="rounded-2xl border border-water-300/14 bg-water-800/35 px-3 py-2 text-right">
-            <p className="font-ui text-[10px] uppercase tracking-[0.2em] font-bold text-water-400/80">Goal Days</p>
+          <div className="rounded-2xl border border-water-300/14 bg-water-800/35 px-2.5 py-2 text-right min-[380px]:px-3">
+            <p className="font-ui text-[0.56rem] font-bold uppercase tracking-[0.16em] text-water-400/80 min-[380px]:text-[10px] min-[380px]:tracking-[0.2em]">Goal Days</p>
             <p className="font-numeric mt-1 text-2xl font-black text-white">
               {monthDays.filter((day) => day && (trackedByDate.get(day.date)?.intake ?? 0) >= (trackedByDate.get(day.date)?.goal ?? goal)).length}
             </p>
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-7 gap-1.5">
+        <div className="mt-5 grid grid-cols-7 gap-1 min-[380px]:gap-1.5">
           {DAY_NAMES.map((day) => (
             <div key={day} className="font-ui text-center text-[0.62rem] font-black uppercase tracking-wider text-water-400/72">
               {day.slice(0, 1)}

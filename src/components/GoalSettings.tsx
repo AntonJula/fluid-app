@@ -30,9 +30,9 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
 
   return (
     <>
-      <Card className="w-full max-w-sm md:max-w-[28rem] mx-auto shadow-lg p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+      <Card className="mx-auto w-full max-w-sm p-4 shadow-lg min-[380px]:p-5 md:max-w-[28rem]">
+        <div className="flex items-start justify-between gap-3 min-[380px]:gap-4">
+          <div className="min-w-0">
             <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Daily Goal</h3>
             <p className="font-body mt-1 text-sm text-water-300/80">Pick a target that feels consistent and sustainable.</p>
           </div>
@@ -40,7 +40,7 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
           <button
             type="button"
             onClick={() => setIsCustomOpen(true)}
-            className="font-numeric bg-water-800/50 border border-water-300/16 text-white text-sm rounded-xl hover:bg-water-700/50 hover:border-water-200/24 px-4 py-2 outline-none font-bold transition-all shadow-inner backdrop-blur-md flex items-center gap-2"
+            className="font-numeric flex shrink-0 items-center gap-2 rounded-xl border border-water-300/16 bg-water-800/50 px-3 py-2 text-sm font-bold text-white shadow-inner outline-none backdrop-blur-md transition-all hover:border-water-200/24 hover:bg-water-700/50 min-[380px]:px-4"
             aria-label="Set custom daily goal"
           >
             {formatGoal(goal)}
@@ -48,8 +48,8 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
           </button>
         </div>
 
-        <div className="mt-5 rounded-[1.4rem] border border-water-300/12 bg-water-900/30 px-4 py-4">
-          <div className="flex flex-wrap gap-2.5">
+        <div className="mt-5 rounded-[1.05rem] border border-water-300/12 bg-water-900/30 px-3 py-3 min-[380px]:rounded-[1.25rem] min-[380px]:px-4 min-[380px]:py-4">
+          <div className="flex flex-wrap gap-2 min-[380px]:gap-2.5">
             {GOAL_PRESETS.map((preset) => {
               const isActive = goal === preset;
 
@@ -60,7 +60,7 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
                   onClick={() => handlePresetSelect(preset)}
                   aria-pressed={isActive}
                   aria-label={`Set daily goal to ${preset} milliliters`}
-                  className={`font-numeric rounded-2xl px-3.5 py-2 text-sm font-bold transition-all ${
+                  className={`font-numeric rounded-xl px-3 py-2 text-sm font-bold transition-all min-[380px]:rounded-2xl min-[380px]:px-3.5 ${
                     isActive
                       ? "bg-gradient-to-br from-water-400 to-water-600 text-white border border-water-200/20 shadow-lg shadow-water-500/20"
                       : "bg-water-800/40 border border-water-300/14 text-water-100 hover:bg-water-700/55 hover:border-water-200/22"

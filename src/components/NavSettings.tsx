@@ -7,11 +7,12 @@ import { Navigation } from "lucide-react";
 interface NavSettingsProps {
   hideNav: boolean;
   setHideNav: (hide: boolean) => void;
+  embedded?: boolean;
 }
 
-export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
-  return (
-    <Card className="w-full max-w-sm md:max-w-[28rem] mx-auto mt-4 space-y-5 shadow-lg p-5">
+export function NavSettings({ hideNav, setHideNav, embedded = false }: NavSettingsProps) {
+  const content = (
+    <>
       <div className="flex items-center gap-4">
         <div>
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Navigation</h3>
@@ -21,8 +22,8 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-water-300/12 bg-water-900/30 px-4 py-3 flex items-center justify-between">
-        <div className="mr-4">
+      <div className="flex items-center justify-between rounded-xl border border-water-300/12 bg-water-900/30 px-3 py-3 min-[380px]:rounded-2xl min-[380px]:px-4">
+        <div className="mr-3 min-w-0 min-[380px]:mr-4">
           <div className="font-ui flex items-center gap-2 text-water-200">
             <Navigation className="w-4 h-4" strokeWidth={2.5} />
             <span className="text-sm font-bold">Hide Nav Bar</span>
@@ -50,6 +51,20 @@ export function NavSettings({ hideNav, setHideNav }: NavSettingsProps) {
           />
         </button>
       </div>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section className="w-full space-y-4 rounded-[1.05rem] border border-water-300/12 bg-water-950/22 p-4 min-[380px]:space-y-5 min-[380px]:rounded-[1.2rem] min-[380px]:p-5">
+        {content}
+      </section>
+    );
+  }
+
+  return (
+    <Card className="mx-auto mt-4 w-full max-w-sm space-y-4 p-4 shadow-lg min-[380px]:space-y-5 min-[380px]:p-5 md:max-w-[28rem]">
+      {content}
     </Card>
   );
 }

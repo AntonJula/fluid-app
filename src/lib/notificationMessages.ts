@@ -1,7 +1,19 @@
 export const QUICK_NOTIFICATION_LOG_AMOUNT = 250;
+export const FOLLOW_UP_DELAY_MINUTES = 15;
+export const DAILY_EMPTY_CHECK_HOUR = 18;
+export const WEEKLY_RETURN_DAYS = 4;
+export const MONTHLY_RETURN_DAYS = 21;
+export const WEEKLY_RETURN_COOLDOWN_DAYS = 7;
+export const MONTHLY_RETURN_COOLDOWN_DAYS = 30;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type HydrationNotificationKind =
-  | "catch-up"
+  | "monthly-return"
+  | "weekly-return"
+  | "all-day-empty"
+  | "first-log-follow-up"
+  | "long-gap-follow-up"
   | "first-log"
   | "long-gap"
   | "behind-pace"
@@ -19,6 +31,8 @@ export interface HydrationNotificationContext {
   lastDrinkAt: number | null;
   now: Date;
   isCatchUp: boolean;
+  inactiveDays?: number;
+  previousKind?: string | null;
 }
 
 export interface HydrationNotificationMessage {
@@ -26,6 +40,14 @@ export interface HydrationNotificationMessage {
   title: string;
   body: string;
   actionAmount: number;
+  cadence?: "interval" | "daily" | "weekly" | "monthly";
+  nextDelayMinutes?: number;
+}
+
+export interface HydrationLifecycleNotificationState {
+  lastDailyAt: number;
+  lastWeeklyAt: number;
+  lastMonthlyAt: number;
 }
 
 export interface HydrationNotificationType {
@@ -34,10 +56,13 @@ export interface HydrationNotificationType {
   title: string;
   priority: (context: HydrationNotificationContext) => number;
   body: (context: HydrationNotificationContext) => string;
+  nextDelayMinutes?: (context: HydrationNotificationContext) => number | undefined;
 }
 
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 22;
+const EVENING_CHECK_HOUR = DAILY_EMPTY_CHECK_HOUR;
+const INTERVAL_EXCLUDED_KINDS = new Set<HydrationNotificationKind>(["monthly-return", "weekly-return"]);
 
 function safeGoal(goal: number) {
   return Number.isFinite(goal) && goal > 0 ? goal : 2500;
@@ -85,25 +110,191 @@ function getHour(context: HydrationNotificationContext) {
   return context.now.getHours();
 }
 
+function wasFirstLogReminder(kind?: string | null) {
+  return kind === "first-log" || kind === "morning-start" || kind === "first-log-follow-up";
+}
+
+function wasDrinkGapReminder(kind?: string | null) {
+  return kind === "long-gap" || kind === "small-sip" || kind === "long-gap-follow-up";
+}
+
+function followUpDelay(context: HydrationNotificationContext) {
+  return context.intake < safeGoal(context.goal) ? FOLLOW_UP_DELAY_MINUTES : undefined;
+}
+
+function getNotificationType(kind: HydrationNotificationKind) {
+  return HYDRATION_NOTIFICATION_TYPES.find((type) => type.kind === kind);
+}
+
+function isSameLocalDay(timestamp: number, now: Date) {
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return false;
+
+  const previous = new Date(timestamp);
+
+  return (
+    previous.getFullYear() === now.getFullYear() &&
+    previous.getMonth() === now.getMonth() &&
+    previous.getDate() === now.getDate()
+  );
+}
+
+function hasCooldownElapsed(lastSentAt: number, now: Date, days: number) {
+  return !Number.isFinite(lastSentAt) || lastSentAt <= 0 || now.getTime() - lastSentAt >= days * DAY_MS;
+}
+
+function createNotificationMessage(
+  kind: HydrationNotificationKind,
+  context: HydrationNotificationContext,
+  cadence: HydrationNotificationMessage["cadence"]
+): HydrationNotificationMessage | null {
+  const type = getNotificationType(kind);
+  if (!type) return null;
+
+  return {
+    kind,
+    title: type.title,
+    body: type.body(context),
+    actionAmount: QUICK_NOTIFICATION_LOG_AMOUNT,
+    cadence,
+    nextDelayMinutes: type.nextDelayMinutes?.(context),
+  };
+}
+
+function getDailyCheckTimestamp(now: Date, dayOffset = 0) {
+  const checkAt = new Date(now);
+  checkAt.setDate(checkAt.getDate() + dayOffset);
+  checkAt.setHours(DAILY_EMPTY_CHECK_HOUR, 0, 0, 0);
+
+  return checkAt.getTime();
+}
+
+export function pickHydrationLifecycleNotification(
+  context: HydrationNotificationContext,
+  state: HydrationLifecycleNotificationState
+): HydrationNotificationMessage | null {
+  const inactiveDays = context.inactiveDays ?? 0;
+
+  if (
+    inactiveDays >= MONTHLY_RETURN_DAYS &&
+    hasCooldownElapsed(state.lastMonthlyAt, context.now, MONTHLY_RETURN_COOLDOWN_DAYS)
+  ) {
+    return createNotificationMessage("monthly-return", context, "monthly");
+  }
+
+  if (
+    inactiveDays >= WEEKLY_RETURN_DAYS &&
+    inactiveDays < MONTHLY_RETURN_DAYS &&
+    hasCooldownElapsed(state.lastWeeklyAt, context.now, WEEKLY_RETURN_COOLDOWN_DAYS)
+  ) {
+    return createNotificationMessage("weekly-return", context, "weekly");
+  }
+
+  if (
+    context.intake <= 0 &&
+    getHour(context) >= DAILY_EMPTY_CHECK_HOUR &&
+    !isSameLocalDay(state.lastDailyAt, context.now)
+  ) {
+    return createNotificationMessage("all-day-empty", context, "daily");
+  }
+
+  return null;
+}
+
+export function getNextHydrationLifecycleDueAt(
+  context: HydrationNotificationContext,
+  state: HydrationLifecycleNotificationState
+) {
+  const now = context.now;
+  const nowTime = now.getTime();
+  const candidates: number[] = [];
+  const inactiveDays = context.inactiveDays ?? 0;
+  const todayDailyCheck = getDailyCheckTimestamp(now);
+
+  if (pickHydrationLifecycleNotification(context, state)) {
+    return nowTime;
+  }
+
+  if (!isSameLocalDay(state.lastDailyAt, now)) {
+    candidates.push(todayDailyCheck > nowTime ? todayDailyCheck : getDailyCheckTimestamp(now, 1));
+  } else {
+    candidates.push(getDailyCheckTimestamp(now, 1));
+  }
+
+  if (inactiveDays >= MONTHLY_RETURN_DAYS && state.lastMonthlyAt > 0) {
+    candidates.push(state.lastMonthlyAt + MONTHLY_RETURN_COOLDOWN_DAYS * DAY_MS);
+  }
+
+  if (inactiveDays >= WEEKLY_RETURN_DAYS && inactiveDays < MONTHLY_RETURN_DAYS && state.lastWeeklyAt > 0) {
+    candidates.push(state.lastWeeklyAt + WEEKLY_RETURN_COOLDOWN_DAYS * DAY_MS);
+  }
+
+  return Math.max(nowTime + 60 * 1000, Math.min(...candidates));
+}
+
 export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
   {
-    kind: "catch-up",
-    label: "Welcome back",
-    title: "Fluid check-in 💧",
-    priority: (context) => (context.isCatchUp ? 100 : 0),
-    body: () => "Welcome back. If you drank while away, open Fluid and log it now to keep your rhythm accurate.",
+    kind: "monthly-return",
+    label: "Monthly return",
+    title: "Fluid missed you 💧",
+    priority: (context) => ((context.inactiveDays ?? 0) >= MONTHLY_RETURN_DAYS ? 110 : 0),
+    body: () => "No pressure. Open Fluid, add one glass, and restart gently today.",
+  },
+  {
+    kind: "weekly-return",
+    label: "Weekly return",
+    title: "A fresh start is ready 🥤",
+    priority: (context) => {
+      const inactiveDays = context.inactiveDays ?? 0;
+
+      return inactiveDays >= WEEKLY_RETURN_DAYS && inactiveDays < MONTHLY_RETURN_DAYS ? 106 : 0;
+    },
+    body: (context) =>
+      `It has been ${context.inactiveDays ?? WEEKLY_RETURN_DAYS} quiet days. One ${formatMl(
+        QUICK_NOTIFICATION_LOG_AMOUNT
+      )} log is enough to restart the habit.`,
+  },
+  {
+    kind: "all-day-empty",
+    label: "No water today",
+    title: "Still time for water 🌙",
+    priority: (context) => (getHour(context) >= EVENING_CHECK_HOUR && context.intake <= 0 ? 104 : 0),
+    body: () => "Nothing is logged today yet. A small glass now still counts.",
+    nextDelayMinutes: followUpDelay,
+  },
+  {
+    kind: "first-log-follow-up",
+    label: "First water follow-up",
+    title: "Still no water logged? 🥤",
+    priority: (context) => (context.intake <= 0 && wasFirstLogReminder(context.previousKind) ? 98 : 0),
+    body: () => `If you skipped the last nudge, try one calm ${formatMl(QUICK_NOTIFICATION_LOG_AMOUNT)} glass now.`,
+    nextDelayMinutes: followUpDelay,
+  },
+  {
+    kind: "long-gap-follow-up",
+    label: "Long gap follow-up",
+    title: "Tiny sip check 💦",
+    priority: (context) => {
+      const minutes = minutesSinceLastDrink(context);
+
+      return context.intake > 0 && wasDrinkGapReminder(context.previousKind) && minutes !== null && minutes >= FOLLOW_UP_DELAY_MINUTES
+        ? 96
+        : 0;
+    },
+    body: () => "If you did not drink after the last reminder, a few sips now are perfect.",
+    nextDelayMinutes: followUpDelay,
   },
   {
     kind: "first-log",
     label: "First water",
     title: "First glass 💧",
     priority: (context) => (context.intake <= 0 ? 92 : 0),
-    body: () => `No water logged today. Add ${formatMl(QUICK_NOTIFICATION_LOG_AMOUNT)} and start the day gently.`,
+    body: () => `No water logged today. Add ${formatMl(QUICK_NOTIFICATION_LOG_AMOUNT)} and start gently.`,
+    nextDelayMinutes: followUpDelay,
   },
   {
     kind: "long-gap",
     label: "Long gap",
-    title: "Hydration break",
+    title: "Hydration break 💧",
     priority: (context) => {
       const minutes = minutesSinceLastDrink(context);
       if (minutes === null) return 0;
@@ -113,47 +304,9 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     body: (context) => {
       const minutes = minutesSinceLastDrink(context) ?? context.reminderInterval;
 
-      return `It has been ${formatMinutes(minutes)} since your last log. A few sips now can help. Open Fluid when you drink.`;
+      return `It has been ${formatMinutes(minutes)} since your last log. A few sips now can help.`;
     },
-  },
-  {
-    kind: "behind-pace",
-    label: "Behind pace",
-    title: "Gentle catch-up",
-    priority: (context) => {
-      const progress = getProgress(context);
-      const expected = getExpectedProgress(context);
-
-      return expected - progress >= 0.18 ? 82 : 0;
-    },
-    body: (context) =>
-      `You are at ${formatPercent(getProgress(context))} of your goal. A small glass can bring you closer to today's rhythm.`,
-  },
-  {
-    kind: "morning-start",
-    label: "Morning start",
-    title: "Easy start ☀️",
-    priority: (context) => (getHour(context) < 11 && context.intake < 400 ? 76 : 0),
-    body: () => "Mornings feel better with a little water on board. Open Fluid and log a small glass.",
-  },
-  {
-    kind: "midday-reset",
-    label: "Midday reset",
-    title: "Midday reset",
-    priority: (context) => {
-      const hour = getHour(context);
-
-      return hour >= 11 && hour < 15 && getProgress(context) < 0.55 ? 72 : 0;
-    },
-    body: () => "Lunch is a good time for water. Take a short pause, drink a little, then log it in Fluid.",
-  },
-  {
-    kind: "evening-catchup",
-    label: "Evening catch-up",
-    title: "Easy evening",
-    priority: (context) => (getHour(context) >= 17 && getRemaining(context) > 0 ? 70 : 0),
-    body: (context) =>
-      `You have ${formatMl(getRemaining(context))} left. A little now is better than a lot late. Log it when you sip.`,
+    nextDelayMinutes: followUpDelay,
   },
   {
     kind: "close-goal",
@@ -162,16 +315,65 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     priority: (context) => {
       const remaining = getRemaining(context);
 
-      return remaining > 0 && remaining <= 500 ? 86 : 0;
+      return remaining > 0 && remaining <= 500 ? 94 : 0;
     },
-    body: (context) => `Only ${formatMl(getRemaining(context))} left. One glass could get you to your goal.`,
+    body: (context) => {
+      const remaining = formatMl(getRemaining(context));
+
+      return getHour(context) >= 17
+        ? `Only ${remaining} left for tonight. One calm glass could finish your goal.`
+        : `Only ${remaining} left. One glass could get you to your goal.`;
+    },
+  },
+  {
+    kind: "behind-pace",
+    label: "Behind pace",
+    title: "Gentle catch-up 🌊",
+    priority: (context) => {
+      const progress = getProgress(context);
+      const expected = getExpectedProgress(context);
+
+      return expected - progress >= 0.18 ? 82 : 0;
+    },
+    body: (context) =>
+      `You are at ${formatPercent(getProgress(context))} of your goal. A small glass can bring you closer to today's rhythm.`,
+    nextDelayMinutes: followUpDelay,
+  },
+  {
+    kind: "morning-start",
+    label: "Morning start",
+    title: "Easy start ☀️",
+    priority: (context) => (getHour(context) < 11 && context.intake < 400 ? 76 : 0),
+    body: () => "Mornings feel better with a little water on board. Log a small glass when you drink.",
+    nextDelayMinutes: followUpDelay,
+  },
+  {
+    kind: "midday-reset",
+    label: "Midday reset",
+    title: "Midday reset 🥤",
+    priority: (context) => {
+      const hour = getHour(context);
+
+      return hour >= 11 && hour < 15 && getProgress(context) < 0.55 ? 72 : 0;
+    },
+    body: () => "Lunch is a good time for water. Take a short pause, drink a little, then log it.",
+    nextDelayMinutes: followUpDelay,
+  },
+  {
+    kind: "evening-catchup",
+    label: "Evening catch-up",
+    title: "Easy evening 🌙",
+    priority: (context) => (getHour(context) >= 17 && getRemaining(context) > 0 ? 70 : 0),
+    body: (context) => `You have ${formatMl(getRemaining(context))} left. A little now is better than a lot late.`,
+    nextDelayMinutes: followUpDelay,
   },
   {
     kind: "streak-care",
     label: "Streak care",
-    title: "Keep the rhythm",
+    title: "Keep the rhythm 💧",
     priority: (context) => (context.intake > 0 && getProgress(context) < 1 ? 58 : 0),
     body: () => "It does not have to be perfect. One small log keeps the habit moving.",
+    nextDelayMinutes: followUpDelay,
   },
   {
     kind: "small-sip",
@@ -179,6 +381,7 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     title: "Small sips 💧",
     priority: () => 40,
     body: () => "A few sips are enough for the next step. Open Fluid and log your water.",
+    nextDelayMinutes: followUpDelay,
   },
 ];
 
@@ -186,8 +389,10 @@ export function pickHydrationNotification(
   context: HydrationNotificationContext,
   previousKind: string | null = null
 ): HydrationNotificationMessage {
+  const hydratedContext = { ...context, previousKind };
   const rankedTypes = HYDRATION_NOTIFICATION_TYPES
-    .map((type) => ({ type, priority: type.priority(context) }))
+    .filter((type) => !INTERVAL_EXCLUDED_KINDS.has(type.kind))
+    .map((type) => ({ type, priority: type.priority(hydratedContext) }))
     .filter((entry) => entry.priority > 0)
     .sort((a, b) => b.priority - a.priority);
 
@@ -200,7 +405,9 @@ export function pickHydrationNotification(
   return {
     kind: selected.type.kind,
     title: selected.type.title,
-    body: selected.type.body(context),
+    body: selected.type.body(hydratedContext),
     actionAmount: QUICK_NOTIFICATION_LOG_AMOUNT,
+    cadence: "interval",
+    nextDelayMinutes: selected.type.nextDelayMinutes?.(hydratedContext),
   };
 }

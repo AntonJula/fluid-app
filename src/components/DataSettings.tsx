@@ -9,9 +9,10 @@ import type { HydrationState } from "@/hooks/useHydration";
 interface DataSettingsProps {
   exportHydrationState: () => HydrationState;
   importHydrationState: (state: Partial<HydrationState>) => void;
+  embedded?: boolean;
 }
 
-export function DataSettings({ exportHydrationState, importHydrationState }: DataSettingsProps) {
+export function DataSettings({ exportHydrationState, importHydrationState, embedded = false }: DataSettingsProps) {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [status, setStatus] = React.useState<"idle" | "exported" | "imported" | "importing" | "error">("idle");
   const isImporting = status === "importing";
@@ -59,10 +60,10 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
           ? "Import failed."
           : "Local backup";
 
-  return (
-    <Card className="w-full max-w-sm md:max-w-[28rem] mx-auto mt-4 space-y-4 shadow-lg p-5">
+  const content = (
+    <>
       <div className="flex items-center justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Data</h3>
           <p className="font-body mt-1 text-sm text-water-300/80">Keep a portable copy of your progress.</p>
         </div>
@@ -71,7 +72,7 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-2.5 min-[380px]:gap-3">
         <Button
           type="button"
           variant="secondary"
@@ -110,7 +111,7 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
       />
 
       <p
-        className={`font-body flex items-center gap-2 rounded-2xl border px-4 py-3 text-xs font-semibold ${
+        className={`font-body flex items-center gap-2 rounded-xl border px-3 py-3 text-xs font-semibold min-[380px]:rounded-2xl min-[380px]:px-4 ${
           status === "error"
             ? "border-rose-200/16 bg-rose-500/12 text-rose-50"
             : status === "importing"
@@ -121,6 +122,20 @@ export function DataSettings({ exportHydrationState, importHydrationState }: Dat
         {isImporting && <LoaderCircle className="h-3.5 w-3.5 shrink-0 animate-spin text-cyan-100" strokeWidth={2.5} />}
         <span>{statusText}</span>
       </p>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <section className="w-full space-y-4 rounded-[1.05rem] border border-water-300/12 bg-water-950/22 p-4 min-[380px]:rounded-[1.2rem] min-[380px]:p-5">
+        {content}
+      </section>
+    );
+  }
+
+  return (
+    <Card className="mx-auto mt-4 w-full max-w-sm space-y-4 p-4 shadow-lg min-[380px]:p-5 md:max-w-[28rem]">
+      {content}
     </Card>
   );
 }

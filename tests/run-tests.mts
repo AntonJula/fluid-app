@@ -7,6 +7,8 @@ import {
 } from "../src/lib/hydrationState.ts";
 import {
   HYDRATION_NOTIFICATION_TYPES,
+  getNextHydrationLifecycleDueAt,
+  pickHydrationLifecycleNotification,
   pickHydrationNotification,
 } from "../src/lib/notificationMessages.ts";
 
@@ -104,10 +106,10 @@ const tests = [
     },
   },
   {
-    name: "notification library exposes exactly ten reminder types",
+    name: "notification library exposes unique reminder types",
     run: () => {
-      assert.equal(HYDRATION_NOTIFICATION_TYPES.length, 10);
-      assert.equal(new Set(HYDRATION_NOTIFICATION_TYPES.map((type) => type.kind)).size, 10);
+      assert.equal(HYDRATION_NOTIFICATION_TYPES.length, 14);
+      assert.equal(new Set(HYDRATION_NOTIFICATION_TYPES.map((type) => type.kind)).size, 14);
     },
   },
   {
@@ -125,6 +127,191 @@ const tests = [
       assert.equal(message.kind, "first-log");
       assert.match(message.body, /No water logged today/);
       assert.match(message.body, /250 ml/);
+      assert.equal(message.nextDelayMinutes, 15);
+    },
+  },
+  {
+    name: "pickHydrationNotification follows up after an ignored first reminder",
+    run: () => {
+      const message = pickHydrationNotification(
+        {
+          intake: 0,
+          goal: 2500,
+          reminderInterval: 40,
+          lastDrinkAt: null,
+          now: new Date(2026, 4, 5, 9, 45),
+          isCatchUp: false,
+        },
+        "first-log"
+      );
+
+      assert.equal(message.kind, "first-log-follow-up");
+      assert.match(message.title, /Still no water logged/);
+      assert.equal(message.nextDelayMinutes, 15);
+    },
+  },
+  {
+    name: "pickHydrationNotification catches a no-water evening",
+    run: () => {
+      const message = pickHydrationNotification({
+        intake: 0,
+        goal: 2500,
+        reminderInterval: 40,
+        lastDrinkAt: null,
+        now: new Date(2026, 4, 5, 19, 15),
+        isCatchUp: false,
+      });
+
+      assert.equal(message.kind, "all-day-empty");
+      assert.match(message.body, /Nothing is logged today/);
+    },
+  },
+  {
+    name: "pickHydrationNotification keeps return nudges out of interval reminders",
+    run: () => {
+      const message = pickHydrationNotification({
+        intake: 0,
+        goal: 2500,
+        reminderInterval: 40,
+        lastDrinkAt: null,
+        now: new Date(2026, 4, 5, 10, 0),
+        isCatchUp: true,
+        inactiveDays: 22,
+      });
+
+      assert.notEqual(message.kind, "weekly-return");
+      assert.notEqual(message.kind, "monthly-return");
+      assert.equal(message.kind, "first-log");
+    },
+  },
+  {
+    name: "pickHydrationNotification uses a close-goal message on interval reminders",
+    run: () => {
+      const message = pickHydrationNotification({
+        intake: 2250,
+        goal: 2500,
+        reminderInterval: 40,
+        lastDrinkAt: new Date(2026, 4, 5, 17, 0).getTime(),
+        now: new Date(2026, 4, 5, 19, 0),
+        isCatchUp: false,
+      });
+
+      assert.equal(message.kind, "close-goal");
+      assert.match(message.body, /Only 250 ml left for tonight/);
+    },
+  },
+  {
+    name: "pickHydrationLifecycleNotification sends one daily no-water check",
+    run: () => {
+      const now = new Date(2026, 4, 5, 19, 15);
+      const context = {
+        intake: 0,
+        goal: 2500,
+        reminderInterval: 40,
+        lastDrinkAt: null,
+        now,
+        isCatchUp: false,
+        inactiveDays: 1,
+      };
+      const message = pickHydrationLifecycleNotification(context, {
+        lastDailyAt: 0,
+        lastWeeklyAt: 0,
+        lastMonthlyAt: 0,
+      });
+      const repeated = pickHydrationLifecycleNotification(context, {
+        lastDailyAt: new Date(2026, 4, 5, 18, 0).getTime(),
+        lastWeeklyAt: 0,
+        lastMonthlyAt: 0,
+      });
+
+      assert.equal(message?.kind, "all-day-empty");
+      assert.equal(message?.cadence, "daily");
+      assert.equal(repeated, null);
+    },
+  },
+  {
+    name: "pickHydrationLifecycleNotification respects weekly and monthly cadence",
+    run: () => {
+      const now = new Date(2026, 4, 20, 10, 0);
+      const weekly = pickHydrationLifecycleNotification(
+        {
+          intake: 0,
+          goal: 2500,
+          reminderInterval: 40,
+          lastDrinkAt: null,
+          now,
+          isCatchUp: true,
+          inactiveDays: 4,
+        },
+        {
+          lastDailyAt: 0,
+          lastWeeklyAt: 0,
+          lastMonthlyAt: 0,
+        }
+      );
+      const weeklyCoolingDown = pickHydrationLifecycleNotification(
+        {
+          intake: 0,
+          goal: 2500,
+          reminderInterval: 40,
+          lastDrinkAt: null,
+          now,
+          isCatchUp: true,
+          inactiveDays: 4,
+        },
+        {
+          lastDailyAt: 0,
+          lastWeeklyAt: new Date(2026, 4, 17, 10, 0).getTime(),
+          lastMonthlyAt: 0,
+        }
+      );
+      const monthly = pickHydrationLifecycleNotification(
+        {
+          intake: 0,
+          goal: 2500,
+          reminderInterval: 40,
+          lastDrinkAt: null,
+          now,
+          isCatchUp: true,
+          inactiveDays: 22,
+        },
+        {
+          lastDailyAt: 0,
+          lastWeeklyAt: 0,
+          lastMonthlyAt: 0,
+        }
+      );
+
+      assert.equal(weekly?.kind, "weekly-return");
+      assert.equal(weekly?.cadence, "weekly");
+      assert.equal(weeklyCoolingDown, null);
+      assert.equal(monthly?.kind, "monthly-return");
+      assert.equal(monthly?.cadence, "monthly");
+    },
+  },
+  {
+    name: "getNextHydrationLifecycleDueAt schedules the daily evening check",
+    run: () => {
+      const now = new Date(2026, 4, 5, 12, 0);
+      const dueAt = getNextHydrationLifecycleDueAt(
+        {
+          intake: 0,
+          goal: 2500,
+          reminderInterval: 40,
+          lastDrinkAt: null,
+          now,
+          isCatchUp: false,
+          inactiveDays: 1,
+        },
+        {
+          lastDailyAt: 0,
+          lastWeeklyAt: 0,
+          lastMonthlyAt: 0,
+        }
+      );
+
+      assert.equal(new Date(dueAt).getHours(), 18);
+      assert.equal(new Date(dueAt).getMinutes(), 0);
     },
   },
 ];

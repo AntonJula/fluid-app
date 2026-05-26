@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart2, Droplets, Settings } from "lucide-react";
 import { useHydration } from "@/hooks/useHydration";
+import { useSwipeUiState } from "@/hooks/useSwipeUiState";
 
 const NAV_ITEMS = [
   { href: "/", label: "Home", Icon: Droplets },
@@ -14,11 +15,15 @@ const NAV_ITEMS = [
 export function BottomNav() {
   const pathname = usePathname();
   const { hideNav, mounted } = useHydration();
+  const swipeUi = useSwipeUiState();
+  const activePathname = swipeUi.frozenPathname ?? pathname;
 
   if (!mounted) return null;
 
   return (
     <div
+      data-bottom-nav-shell="true"
+      data-swipe-ignore="true"
       className={`fixed inset-x-0 bottom-0 z-[80] pointer-events-none transition-all duration-700 ease-out ${
         hideNav ? "translate-y-32 opacity-0" : "translate-y-0 opacity-100"
       }`}
@@ -36,7 +41,7 @@ export function BottomNav() {
       >
         <div className="mx-auto flex w-full max-w-[20rem] items-end justify-between px-5 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-3 sm:max-w-md sm:px-8">
           {NAV_ITEMS.map(({ href, label, Icon }) => {
-            const isActive = pathname === href;
+            const isActive = activePathname === href;
 
             return (
               <Link

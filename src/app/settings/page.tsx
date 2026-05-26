@@ -31,13 +31,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="flex-1 flex flex-col items-center p-4 sm:p-6 w-full max-w-[25.5rem] md:max-w-[30rem] mx-auto min-h-[100dvh]">
+    <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 py-4 min-[380px]:p-4 sm:p-6 md:max-w-[30rem]">
       <header className="w-full text-center mt-4 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Settings.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">Customize Fluid</p>
       </header>
 
-      <Card className="w-full mb-6 p-5">
+      <Card className="mb-6 w-full p-4 min-[380px]:p-5">
         <p className="font-ui text-[11px] uppercase tracking-[0.22em] font-bold text-water-300/80">Habit setup</p>
         <p className="font-ui mt-2 text-xl font-black text-white">Keep it easy to win every day.</p>
         <p className="font-body mt-2 text-sm text-water-300/80">
@@ -57,35 +57,76 @@ export default function SettingsPage() {
             setQuietHours={setQuietHours}
           />
         </div>
-        <Card className="w-full max-w-sm md:max-w-[28rem] mx-auto mt-4 overflow-hidden p-0 shadow-lg">
+        <Card
+          className={`mx-auto mt-4 w-full max-w-sm overflow-hidden p-0 shadow-lg md:max-w-[28rem] ${
+            isAdvancedOpen
+              ? "border-cyan-100/24 bg-gradient-to-br from-water-900/38 via-water-900/20 to-emerald-500/10 shadow-cyan-950/24"
+              : "hover:border-water-200/18 hover:bg-water-900/22"
+          }`}
+        >
           <button
             type="button"
             onClick={() => setIsAdvancedOpen((isOpen) => !isOpen)}
-            className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-white/[0.03]"
+            className={`relative flex w-full items-center justify-between gap-3 overflow-hidden px-4 py-4 text-left transition-all duration-300 min-[380px]:gap-4 min-[380px]:px-5 ${
+              isAdvancedOpen ? "bg-cyan-300/8" : "hover:bg-white/[0.03]"
+            }`}
             aria-expanded={isAdvancedOpen}
             aria-controls="advanced-settings"
           >
+            {isAdvancedOpen && (
+              <span className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-cyan-100/72 to-transparent" />
+            )}
             <span className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/14 bg-water-800/35 text-water-200">
+              <span
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border transition-all duration-300 min-[380px]:h-10 min-[380px]:w-10 ${
+                  isAdvancedOpen
+                    ? "border-cyan-100/28 bg-cyan-300/16 text-cyan-50 shadow-[0_0_22px_rgba(125,211,252,0.18)]"
+                    : "border-water-300/14 bg-water-800/35 text-water-200"
+                }`}
+              >
                 <SlidersHorizontal className="h-5 w-5" strokeWidth={2.5} />
               </span>
               <span className="min-w-0">
                 <span className="font-ui block text-lg font-semibold tracking-normal text-white">Advanced</span>
-                <span className="font-body mt-1 block text-sm text-water-300/80">Less common display controls.</span>
+                <span
+                  className={`font-body mt-1 block text-sm transition-colors duration-300 ${
+                    isAdvancedOpen ? "text-cyan-100/84" : "text-water-300/80"
+                  }`}
+                >
+                  Less common display controls.
+                </span>
               </span>
             </span>
-            <ChevronDown
-              className={`h-5 w-5 shrink-0 text-water-300 transition-transform duration-200 ${
-                isAdvancedOpen ? "rotate-180" : "rotate-0"
-              }`}
-              strokeWidth={2.5}
-            />
+            <span className="flex shrink-0 items-center gap-2">
+              <span
+                className={`font-ui hidden rounded-full border px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.14em] transition-all min-[360px]:inline-flex ${
+                  isAdvancedOpen
+                    ? "border-cyan-100/20 bg-cyan-100/12 text-cyan-50"
+                    : "border-water-300/12 bg-water-950/22 text-water-300/72"
+                }`}
+              >
+                {isAdvancedOpen ? "Open" : "More"}
+              </span>
+              <ChevronDown
+                className={`h-5 w-5 text-water-300 transition-transform duration-300 ${
+                  isAdvancedOpen ? "rotate-180 text-cyan-100" : "rotate-0"
+                }`}
+                strokeWidth={2.5}
+              />
+            </span>
           </button>
 
           {isAdvancedOpen && (
-            <div id="advanced-settings" className="space-y-4 border-t border-water-300/12 px-0 pb-4 pt-1">
-              <NavSettings hideNav={hideNav} setHideNav={setHideNav} />
-              <DataSettings exportHydrationState={exportHydrationState} importHydrationState={importHydrationState} />
+            <div
+              id="advanced-settings"
+              className="space-y-3 border-t border-cyan-100/14 bg-water-950/10 px-3 pb-3 pt-3 min-[380px]:space-y-4 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-4"
+            >
+              <NavSettings hideNav={hideNav} setHideNav={setHideNav} embedded />
+              <DataSettings
+                exportHydrationState={exportHydrationState}
+                importHydrationState={importHydrationState}
+                embedded
+              />
             </div>
           )}
         </Card>

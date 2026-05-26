@@ -2,9 +2,8 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   const data = event.notification.data || {};
-  const actionPath = event.action && event.action.startsWith("add-")
-    ? data.url || "/?quickAdd=250"
-    : "/";
+  const addActionMatch = typeof event.action === "string" ? event.action.match(/^add-(\d+)$/) : null;
+  const actionPath = addActionMatch ? `/?quickAdd=${encodeURIComponent(addActionMatch[1])}` : "/";
   const actionUrl = new URL(actionPath, self.registration.scope).href;
 
   event.waitUntil(
