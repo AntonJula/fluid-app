@@ -12,6 +12,12 @@ interface DataSettingsProps {
   embedded?: boolean;
 }
 
+const MAX_IMPORT_BYTES = 256 * 1024;
+
+function isBackupShape(value: unknown): value is Partial<HydrationState> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 export function DataSettings({ exportHydrationState, importHydrationState, embedded = false }: DataSettingsProps) {
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [status, setStatus] = React.useState<"idle" | "exported" | "imported" | "importing" | "error">("idle");
@@ -38,8 +44,17 @@ export function DataSettings({ exportHydrationState, importHydrationState, embed
     setStatus("importing");
 
     try {
+      if (file.size > MAX_IMPORT_BYTES) {
+        throw new Error("Backup is too large.");
+      }
+
       const text = await file.text();
-      const parsed = JSON.parse(text) as Partial<HydrationState>;
+      const parsed: unknown = JSON.parse(text);
+
+      if (!isBackupShape(parsed)) {
+        throw new Error("Backup shape is invalid.");
+      }
+
       importHydrationState(parsed);
       setStatus("imported");
     } catch {

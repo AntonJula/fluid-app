@@ -14,7 +14,7 @@ export function WaveBackground({ progress = 0.5 }: WaveBackgroundProps) {
     <div className="fixed inset-0 z-[-1] overflow-hidden bg-background pointer-events-none">
       {/* Single water body - anchored to bottom, grows upward with progress */}
       <div
-        className="absolute left-0 right-0 bottom-0 transition-[top] duration-[950ms] ease-out will-change-[top]"
+        className="absolute left-0 right-0 bottom-0 transition-[top] duration-[850ms] ease-out will-change-[top]"
         style={{ top: `calc(${distanceToTop * 100}dvh - ${distanceToTop * WAVE_BASE_REM}rem)` }}
       >
         {/* Animated wave surface at the top of the water body */}

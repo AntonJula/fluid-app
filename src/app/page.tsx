@@ -3,6 +3,8 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import {
+  Battery,
+  BatteryFull,
   BellRing,
   Coffee,
   Droplets,
@@ -15,10 +17,12 @@ import {
   Sun,
   Tag,
   Target,
+  Trophy,
   Trash2,
   X,
+  Zap,
 } from "lucide-react";
-import { useHydration, type DrinkLogItem } from "@/hooks/useHydration";
+import { useHydration, type DrinkLogItem, type HydrationHistoryItem } from "@/hooks/useHydration";
 import { useNotifications } from "@/hooks/useNotifications";
 import { WaveBackground } from "@/components/WaveBackground";
 import { ProgressCard } from "@/components/ProgressCard";
@@ -27,6 +31,7 @@ import { NumberPickerDialog } from "@/components/ui/NumberPickerDialog";
 import { Button } from "@/components/ui/Button";
 import { SipIcon, GlassIcon, MugIcon, BottleIcon } from "@/components/DrinkIcons";
 import type { HydrationNote } from "@/lib/hydrationState";
+import { formatDateLocal } from "@/lib/date";
 
 const QUICK_AMOUNTS = [
   { label: "Sip", amount: 150, Icon: SipIcon },
@@ -55,7 +60,10 @@ const ONBOARDING_REMINDERS = [
   { label: "40m", value: 40 },
   { label: "60m", value: 60 },
 ];
-const HYDRATION_REVEAL_DURATION_MS = 950;
+const HYDRATION_REVEAL_DURATION_MS = 420;
+const STREAK_WINDOW_SIZE = 5;
+const STREAK_SHIELD_COUNT = 2;
+const STREAK_DAY_FORMATTER = new Intl.DateTimeFormat("en", { weekday: "short" });
 
 function formatLogTime(timestamp: number) {
   return new Intl.DateTimeFormat("en", {
@@ -180,6 +188,219 @@ function useHydrationReveal(targetIntake: number) {
   return animatedIntake;
 }
 
+function buildTrackedDays(history: HydrationHistoryItem[], intake: number, goal: number) {
+  const today = formatDateLocal(new Date());
+  const trackedByDate = new Map(history.map((day) => [day.date, day]));
+  trackedByDate.set(today, { date: today, intake, goal });
+
+  return Array.from(trackedByDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function getStreakStats(history: HydrationHistoryItem[], intake: number, goal: number) {
+  const trackedDays = buildTrackedDays(history, intake, goal);
+  let bestStreak = 0;
+  let currentRun = 0;
+
+  trackedDays.forEach((day) => {
+    if (day.intake >= day.goal) {
+      currentRun += 1;
+      bestStreak = Math.max(bestStreak, currentRun);
+      return;
+    }
+
+    currentRun = 0;
+  });
+
+  return { bestStreak };
+}
+
+function getRecentStreakDays(history: HydrationHistoryItem[], intake: number, goal: number) {
+  const todayDate = new Date();
+  const trackedByDate = new Map(buildTrackedDays(history, intake, goal).map((day) => [day.date, day]));
+
+  return Array.from({ length: STREAK_WINDOW_SIZE }).map((_, index) => {
+    const date = new Date(todayDate);
+    date.setDate(todayDate.getDate() - (STREAK_WINDOW_SIZE - 1 - index));
+
+    const dateStr = formatDateLocal(date);
+    const trackedDay = trackedByDate.get(dateStr);
+    const dayGoal = trackedDay?.goal ?? goal;
+    const dayIntake = trackedDay?.intake ?? 0;
+
+    return {
+      date: dateStr,
+      label: STREAK_DAY_FORMATTER.format(date).slice(0, 2),
+      isToday: index === STREAK_WINDOW_SIZE - 1,
+      isGoalMet: dayIntake >= dayGoal,
+      hasIntake: dayIntake > 0,
+    };
+  });
+}
+
+function getStreakPrompt(streak: number, remaining: number, isGoalMet: boolean) {
+  if (isGoalMet) return "Today is saved. Come back tomorrow to keep the run going.";
+  if (streak > 0) return `Drink ${remaining} ml today to protect your streak.`;
+  return `Drink ${remaining} ml today to start a streak.`;
+}
+
+function getBatteryProtectionText(charges: number) {
+  if (charges >= 2) return "2 protections left";
+  if (charges === 1) return "1 protection left";
+  return "No protections left";
+}
+
+function StreakDetailsSheet({
+  isOpen,
+  streak,
+  streakShieldCharges,
+  remaining,
+  isGoalMet,
+  recentDays,
+  bestStreak,
+  onClose,
+}: {
+  isOpen: boolean;
+  streak: number;
+  streakShieldCharges: number;
+  remaining: number;
+  isGoalMet: boolean;
+  recentDays: ReturnType<typeof getRecentStreakDays>;
+  bestStreak: number;
+  onClose: () => void;
+}) {
+  useLockedViewport(isOpen);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  if (!isOpen || typeof document === "undefined") return null;
+
+  const safeStreak = Math.max(0, streak);
+  const safeShieldCharges = Math.max(0, Math.min(STREAK_SHIELD_COUNT, streakShieldCharges));
+
+  return createPortal(
+    <div className="fixed inset-0 z-[116] flex items-end justify-center bg-water-950/72 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-xl" data-swipe-ignore="true" onClick={onClose}>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="streak-sheet-title"
+        className="w-full max-w-[25.5rem] overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/94 shadow-[0_24px_70px_rgba(0,0,0,0.46)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-water-300/12 px-5 py-4">
+          <div>
+            <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">Daily streak</p>
+            <h2 id="streak-sheet-title" className="font-ui mt-1 text-2xl font-black tracking-normal text-white">
+              {isGoalMet ? "Streak saved" : safeStreak > 0 ? "Keep it alive" : "Start the run"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-water-200/80 transition-colors hover:bg-white/10 hover:text-white"
+            aria-label="Close streak details"
+          >
+            <X className="h-5 w-5" strokeWidth={2.5} />
+          </button>
+        </div>
+
+        <div className="px-5 py-5">
+          <div className="flex items-center gap-3">
+            <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[1.5px] ${safeStreak > 0 || isGoalMet ? "border-cyan-100/30 bg-cyan-200/14 text-cyan-50" : "border-water-300/14 bg-white/5 text-water-200/45"}`}>
+              <Zap className="h-8 w-8" fill={safeStreak > 0 || isGoalMet ? "currentColor" : "none"} strokeWidth={2.35} />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-2">
+                <p className="font-numeric text-5xl font-black leading-none text-white">{safeStreak}</p>
+                <p className="font-ui text-xl font-black text-water-300/70">{safeStreak === 1 ? "day" : "days"}</p>
+              </div>
+              <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-300/82">
+                {getStreakPrompt(safeStreak, remaining, isGoalMet)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-[1.15rem] border border-[1.5px] border-water-300/12 bg-white/[0.05] px-4 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-ui text-[0.72rem] font-black uppercase tracking-[0.18em] text-water-300/82">Streak batteries</p>
+                <p className="font-body mt-1 text-xs font-semibold text-water-300/68">{getBatteryProtectionText(safeShieldCharges)}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {Array.from({ length: STREAK_SHIELD_COUNT }).map((_, index) => {
+                  const isCharged = index < safeShieldCharges;
+                  const BatteryIcon = isCharged ? BatteryFull : Battery;
+
+                  return (
+                    <div
+                      key={index}
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border border-[1.5px] ${
+                        isCharged
+                          ? "border-cyan-100/34 bg-cyan-200/16 text-cyan-50 shadow-[0_0_18px_rgba(56,189,248,0.12)]"
+                          : "border-water-300/10 bg-water-950/30 text-water-300/22"
+                      }`}
+                      aria-label={isCharged ? "Charged streak battery" : "Empty streak battery"}
+                      title={isCharged ? "Charged" : "Empty"}
+                    >
+                      <BatteryIcon className="h-5 w-5" fill={isCharged ? "currentColor" : "none"} strokeWidth={2.35} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-5 gap-3">
+            {recentDays.map((day) => (
+              <div key={day.date} className="flex min-w-0 flex-col items-center gap-2">
+                <div
+                  className={`flex aspect-square w-full max-w-[3.25rem] items-center justify-center rounded-full border border-[1.5px] ${
+                    day.isGoalMet
+                      ? "border-cyan-100/34 bg-cyan-200/16 text-cyan-50 shadow-[0_0_18px_rgba(56,189,248,0.14)]"
+                      : day.hasIntake
+                        ? "border-water-300/20 bg-water-700/28 text-water-100"
+                        : "border-water-300/14 bg-white/5 text-water-200/28"
+                  } ${day.isToday ? "ring-2 ring-water-300/24 ring-offset-2 ring-offset-water-950" : ""}`}
+                  title={day.date}
+                >
+                  <Zap className="h-5 w-5" fill={day.isGoalMet ? "currentColor" : "none"} strokeWidth={2.45} />
+                </div>
+                <p className={`font-ui text-xs font-black ${day.isToday ? "text-white" : "text-water-300/68"}`}>{day.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 overflow-hidden rounded-[1.15rem] border border-[1.5px] border-water-300/12 bg-white/[0.055]">
+            <div className="border-r border-water-300/12 px-4 py-4 text-center">
+              <div className="flex justify-center text-water-300/80">
+                <Trophy className="h-4 w-4" strokeWidth={2.4} />
+              </div>
+              <p className="font-numeric mt-2 text-3xl font-black text-white">{Math.max(bestStreak, safeStreak)}</p>
+              <p className="font-body mt-1 text-xs font-semibold text-water-300/72">Best streak</p>
+            </div>
+            <div className="px-4 py-4 text-center">
+              <div className="flex justify-center text-water-300/80">
+                <Zap className="h-4 w-4" fill={safeStreak > 0 || isGoalMet ? "currentColor" : "none"} strokeWidth={2.4} />
+              </div>
+              <p className="font-numeric mt-2 text-3xl font-black text-white">{safeStreak}</p>
+              <p className="font-body mt-1 text-xs font-semibold text-water-300/72">Current streak</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>,
+    document.body
+  );
+}
+
 function ResetConfirmDialog({
   isOpen,
   onCancel,
@@ -270,6 +491,9 @@ export default function Home() {
     goal,
     drinkLog,
     quickAddAmount,
+    streak,
+    streakShieldCharges,
+    history,
     quietHours,
     addDrink,
     subtractDrink,
@@ -290,6 +514,7 @@ export default function Home() {
   const [isCustomQuickOpen, setIsCustomQuickOpen] = React.useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = React.useState(false);
   const [isDailyLogOpen, setIsDailyLogOpen] = React.useState(false);
+  const [isStreakOpen, setIsStreakOpen] = React.useState(false);
   const [onboardingGoal, setOnboardingGoal] = React.useState(goal);
   const [onboardingQuickAmount, setOnboardingQuickAmount] = React.useState(quickAddAmount);
   const [onboardingReminder, setOnboardingReminder] = React.useState(0);
@@ -321,7 +546,11 @@ export default function Home() {
     return <HydrationLoadingState />;
   }
 
-  const progressAttr = Math.min(1, Math.max(0, revealedIntake / goal));
+  const actualProgress = Math.min(1, Math.max(0, intake / goal));
+  const isGoalMet = intake >= goal;
+  const remainingForGoal = Math.max(0, goal - intake);
+  const streakStats = getStreakStats(history, intake, goal);
+  const recentStreakDays = getRecentStreakDays(history, intake, goal);
   const latestLog = drinkLog.slice(0, 3);
   const selectedNoteOption = NOTE_OPTIONS.find((item) => item.value === selectedNote) ?? NOTE_OPTIONS[0];
   const SelectedNoteIcon = selectedNoteOption.Icon;
@@ -363,11 +592,29 @@ export default function Home() {
 
   return (
     <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] min-w-0 flex-col items-center overflow-x-hidden px-3.5 pb-24 pt-5 min-[380px]:p-4 min-[380px]:pb-24 sm:p-6 sm:pb-24 md:max-w-[30rem]">
-      <WaveBackground progress={progressAttr} />
+      <WaveBackground progress={actualProgress} />
 
       <div className="z-10 flex h-full min-w-0 flex-1 flex-col gap-5 w-full">
         <header className="relative z-20 mt-1 w-full text-center">
           <h1 className="font-display text-5xl font-black text-white drop-shadow-md sm:text-6xl">Fluid.</h1>
+          <button
+            type="button"
+            onClick={() => setIsStreakOpen(true)}
+            className={`absolute right-0 top-0 flex h-12 w-12 items-center justify-center rounded-full border border-[1.5px] backdrop-blur-md transition-colors active:scale-95 ${
+              isGoalMet || streak > 0
+                ? "border-cyan-100/24 bg-water-950/24 text-water-100 hover:bg-white/10"
+                : "border-water-300/10 bg-water-950/12 text-water-200/34 hover:text-water-200/62"
+            }`}
+            aria-label="Open streak details"
+            title="Streak"
+          >
+            <Zap className="h-6 w-6" fill={isGoalMet || streak > 0 ? "currentColor" : "none"} strokeWidth={2.35} />
+            {streak > 0 && (
+              <span className="font-numeric absolute -bottom-1 -right-1 min-w-5 rounded-full border border-water-100/20 bg-water-300 px-1 text-[0.68rem] font-black leading-5 text-water-950">
+                {streak}
+              </span>
+            )}
+          </button>
         </header>
 
         <div className="mt-4 flex min-h-0 w-full flex-col items-center">
@@ -606,6 +853,17 @@ export default function Home() {
         suffix="ml"
         onChange={handleEditLog}
         onClose={() => setEditingLog(null)}
+      />
+
+      <StreakDetailsSheet
+        isOpen={isStreakOpen}
+        streak={streak}
+        streakShieldCharges={streakShieldCharges}
+        remaining={remainingForGoal}
+        isGoalMet={isGoalMet}
+        recentDays={recentStreakDays}
+        bestStreak={streakStats.bestStreak}
+        onClose={() => setIsStreakOpen(false)}
       />
 
       {isDailyLogOpen && (

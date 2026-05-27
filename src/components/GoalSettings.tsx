@@ -62,7 +62,7 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
                   aria-label={`Set daily goal to ${preset} milliliters`}
                   className={`font-numeric rounded-xl px-3 py-2 text-sm font-bold transition-all min-[380px]:rounded-2xl min-[380px]:px-3.5 ${
                     isActive
-                      ? "bg-gradient-to-br from-water-400 to-water-600 text-white border border-water-200/20 shadow-lg shadow-water-500/20"
+                      ? "border border-cyan-100/42 bg-water-800/48 text-white shadow-[0_0_0_1px_rgba(186,230,253,0.14),inset_0_1px_0_rgba(255,255,255,0.07)]"
                       : "bg-water-800/40 border border-water-300/14 text-water-100 hover:bg-water-700/55 hover:border-water-200/22"
                   }`}
                 >

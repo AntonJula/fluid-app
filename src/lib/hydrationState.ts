@@ -13,10 +13,22 @@ export interface DrinkLogItem {
   note?: HydrationNote;
 }
 
+export type HydrationStreakAlertKind = "shield-used" | "streak-lost";
+
+export interface HydrationStreakAlert {
+  id: string;
+  kind: HydrationStreakAlertKind;
+  date: string;
+  streak: number;
+  shieldCharges: number;
+}
+
 export interface HydrationState {
   intake: number;
   goal: number;
   streak: number;
+  streakShieldCharges: number;
+  streakAlert: HydrationStreakAlert | null;
   reminderInterval: number;
   quietHours: { start: string; end: string };
   hideNav: boolean;
@@ -28,6 +40,7 @@ export interface HydrationState {
 
 export const DEFAULT_GOAL = 2500;
 export const DEFAULT_QUICK_ADD_AMOUNT = 250;
+export const MAX_STREAK_SHIELD_CHARGES = 2;
 export const HYDRATION_NOTES = ["water", "coffee", "tea", "workout", "hot-day"] as const;
 export type HydrationNote = (typeof HYDRATION_NOTES)[number];
 
@@ -81,11 +94,29 @@ function normalizeHistory(history: unknown, fallbackGoal: number): HydrationHist
     .filter((item): item is HydrationHistoryItem => item !== null);
 }
 
+function normalizeStreakAlert(alert: unknown): HydrationStreakAlert | null {
+  if (!alert || typeof alert !== "object") return null;
+
+  const candidate = alert as Partial<HydrationStreakAlert>;
+  if (candidate.kind !== "shield-used" && candidate.kind !== "streak-lost") return null;
+  if (typeof candidate.id !== "string" || typeof candidate.date !== "string") return null;
+
+  return {
+    id: candidate.id,
+    kind: candidate.kind,
+    date: candidate.date,
+    streak: clampHydrationAmount(candidate.streak ?? 0, 0, 50000),
+    shieldCharges: clampHydrationAmount(candidate.shieldCharges ?? 0, 0, MAX_STREAK_SHIELD_CHARGES),
+  };
+}
+
 export function getDefaultHydrationState(): HydrationState {
   return {
     intake: 0,
     goal: DEFAULT_GOAL,
     streak: 0,
+    streakShieldCharges: MAX_STREAK_SHIELD_CHARGES,
+    streakAlert: null,
     reminderInterval: 0,
     quietHours: { start: "22:00", end: "07:00" },
     hideNav: false,
@@ -103,6 +134,8 @@ export function normalizeHydrationState(parsed: Partial<HydrationState>, today =
     intake: clampHydrationAmount(parsed.intake ?? 0, 0, 50000),
     goal,
     streak: parsed.streak ?? 0,
+    streakShieldCharges: clampHydrationAmount(parsed.streakShieldCharges ?? MAX_STREAK_SHIELD_CHARGES, 0, MAX_STREAK_SHIELD_CHARGES),
+    streakAlert: normalizeStreakAlert(parsed.streakAlert),
     reminderInterval: parsed.reminderInterval ?? 0,
     quietHours: parsed.quietHours ?? { start: "22:00", end: "07:00" },
     hideNav: parsed.hideNav ?? false,
@@ -118,39 +151,51 @@ export function rolloverHydrationState(state: HydrationState, today = getTodayDa
     return state;
   }
 
-  const [year, month, day] = today.split("-").map(Number);
-  const yesterday = new Date(year, month - 1, day);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = formatDateLocal(yesterday);
-
   let newStreak = state.streak;
-  if (state.lastUpdated === yesterdayStr && state.intake >= state.goal) {
-    newStreak += 1;
-  } else if (state.lastUpdated !== yesterdayStr) {
-    newStreak = 0;
-  }
+  let newShieldCharges = state.streakShieldCharges;
+  let streakAlert = state.streakAlert;
 
   const updatedHistory = [...state.history];
-  if (state.lastUpdated && !updatedHistory.find((item) => item.date === state.lastUpdated)) {
-    updatedHistory.push({
-      date: state.lastUpdated,
-      intake: state.intake,
-      goal: state.goal,
-    });
-  }
 
   const parts = state.lastUpdated.split("-").map(Number);
   if (parts.length === 3) {
-    const gapDate = new Date(parts[0], parts[1] - 1, parts[2]);
-    gapDate.setDate(gapDate.getDate() + 1);
-
+    const cursor = new Date(parts[0], parts[1] - 1, parts[2]);
     let safeGuard = 0;
-    while (formatDateLocal(gapDate) !== today && safeGuard < 365) {
-      const gapStr = formatDateLocal(gapDate);
-      if (!updatedHistory.find((item) => item.date === gapStr)) {
-        updatedHistory.push({ date: gapStr, intake: 0, goal: state.goal });
+    while (formatDateLocal(cursor) !== today && safeGuard < 365) {
+      const dateStr = formatDateLocal(cursor);
+      const isLastUpdatedDay = dateStr === state.lastUpdated;
+      const dayIntake = isLastUpdatedDay ? state.intake : 0;
+      const dayGoal = state.goal;
+
+      if (!updatedHistory.find((item) => item.date === dateStr)) {
+        updatedHistory.push({ date: dateStr, intake: dayIntake, goal: dayGoal });
       }
-      gapDate.setDate(gapDate.getDate() + 1);
+
+      if (dayIntake >= dayGoal) {
+        newStreak += 1;
+        newShieldCharges = MAX_STREAK_SHIELD_CHARGES;
+      } else if (newStreak > 0 && newShieldCharges > 0) {
+        newShieldCharges -= 1;
+        streakAlert = {
+          id: `${dateStr}-shield-${newShieldCharges}`,
+          kind: "shield-used",
+          date: dateStr,
+          streak: newStreak,
+          shieldCharges: newShieldCharges,
+        };
+      } else if (newStreak > 0) {
+        newStreak = 0;
+        newShieldCharges = MAX_STREAK_SHIELD_CHARGES;
+        streakAlert = {
+          id: `${dateStr}-lost`,
+          kind: "streak-lost",
+          date: dateStr,
+          streak: 0,
+          shieldCharges: newShieldCharges,
+        };
+      }
+
+      cursor.setDate(cursor.getDate() + 1);
       safeGuard++;
     }
   }
@@ -159,6 +204,8 @@ export function rolloverHydrationState(state: HydrationState, today = getTodayDa
     ...state,
     intake: 0,
     streak: newStreak,
+    streakShieldCharges: newShieldCharges,
+    streakAlert,
     lastUpdated: today,
     history: updatedHistory,
     drinkLog: [],

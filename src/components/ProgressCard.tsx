@@ -17,7 +17,7 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
   const overGoal = Math.max(0, intake - goal);
 
   return (
-    <Card className="flex w-full max-w-full min-w-0 flex-col items-center justify-center p-4 text-center shadow-2xl min-[380px]:p-5 sm:p-7">
+    <Card className="flex w-full max-w-full min-w-0 flex-col items-center justify-center p-4 text-center shadow-xl min-[380px]:p-5 sm:p-7">
       <div className="flex w-full items-start justify-between gap-3 min-[380px]:gap-4">
         <div className="min-w-0 text-left">
           <p className="font-ui text-water-300 text-sm font-bold tracking-wide">Today&apos;s Intake</p>

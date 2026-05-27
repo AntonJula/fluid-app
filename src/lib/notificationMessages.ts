@@ -20,6 +20,10 @@ export type HydrationNotificationKind =
   | "morning-start"
   | "midday-reset"
   | "evening-catchup"
+  | "streak-shield-used"
+  | "streak-lost"
+  | "streak-last-chance"
+  | "streak-protection-low"
   | "close-goal"
   | "streak-care"
   | "small-sip";
@@ -33,6 +37,8 @@ export interface HydrationNotificationContext {
   isCatchUp: boolean;
   inactiveDays?: number;
   previousKind?: string | null;
+  streak?: number;
+  streakShieldCharges?: number;
 }
 
 export interface HydrationNotificationMessage {
@@ -59,6 +65,14 @@ export interface HydrationNotificationType {
   nextDelayMinutes?: (context: HydrationNotificationContext) => number | undefined;
 }
 
+export interface HydrationStreakAlertNotification {
+  id: string;
+  kind: "shield-used" | "streak-lost";
+  date: string;
+  streak: number;
+  shieldCharges: number;
+}
+
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 22;
 const EVENING_CHECK_HOUR = DAILY_EMPTY_CHECK_HOUR;
@@ -74,6 +88,14 @@ function getProgress(context: HydrationNotificationContext) {
 
 function getRemaining(context: HydrationNotificationContext) {
   return Math.max(0, safeGoal(context.goal) - Math.max(0, context.intake));
+}
+
+function getStreak(context: HydrationNotificationContext) {
+  return Math.max(0, Math.round(context.streak ?? 0));
+}
+
+function getShieldCharges(context: HydrationNotificationContext) {
+  return Math.max(0, Math.min(2, Math.round(context.streakShieldCharges ?? 2)));
 }
 
 function formatMl(amount: number) {
@@ -200,6 +222,36 @@ export function pickHydrationLifecycleNotification(
   return null;
 }
 
+export function pickHydrationStreakAlertNotification(
+  alert: HydrationStreakAlertNotification | null | undefined
+): HydrationNotificationMessage | null {
+  if (!alert) return null;
+
+  if (alert.kind === "shield-used") {
+    const hasProtectionLeft = alert.shieldCharges > 0;
+
+    return {
+      kind: "streak-shield-used",
+      title: "Streak battery used 🔋",
+      body: hasProtectionLeft
+        ? "A protection covered yesterday. Hit today's goal to recharge both streak batteries."
+        : "A protection covered yesterday, and none are left. Hit today's goal to recharge both.",
+      actionAmount: QUICK_NOTIFICATION_LOG_AMOUNT,
+      cadence: "daily",
+      nextDelayMinutes: FOLLOW_UP_DELAY_MINUTES,
+    };
+  }
+
+  return {
+    kind: "streak-lost",
+    title: "Streak reset 💧",
+    body: "Your protections ran out. Hit today's goal to begin a fresh streak.",
+    actionAmount: QUICK_NOTIFICATION_LOG_AMOUNT,
+    cadence: "daily",
+    nextDelayMinutes: FOLLOW_UP_DELAY_MINUTES,
+  };
+}
+
 export function getNextHydrationLifecycleDueAt(
   context: HydrationNotificationContext,
   state: HydrationLifecycleNotificationState
@@ -324,6 +376,24 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
         ? `Only ${remaining} left for tonight. One calm glass could finish your goal.`
         : `Only ${remaining} left. One glass could get you to your goal.`;
     },
+  },
+  {
+    kind: "streak-last-chance",
+    label: "Streak last chance",
+    title: "Streak on the line ⚡",
+    priority: (context) =>
+      getStreak(context) > 0 && getShieldCharges(context) <= 0 && getHour(context) >= 17 && getRemaining(context) > 0 ? 108 : 0,
+    body: (context) => `No protections left. ${formatMl(getRemaining(context))} keeps your streak alive today.`,
+    nextDelayMinutes: followUpDelay,
+  },
+  {
+    kind: "streak-protection-low",
+    label: "One protection left",
+    title: "One protection left 🔋",
+    priority: (context) =>
+      getStreak(context) > 0 && getShieldCharges(context) === 1 && getHour(context) >= 17 && getRemaining(context) > 0 ? 105 : 0,
+    body: (context) => `You have one streak protection left. Finish ${formatMl(getRemaining(context))} today to recharge both.`,
+    nextDelayMinutes: followUpDelay,
   },
   {
     kind: "behind-pace",

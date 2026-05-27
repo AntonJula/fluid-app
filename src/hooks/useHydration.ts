@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import {
   DEFAULT_GOAL,
   DEFAULT_QUICK_ADD_AMOUNT,
+  MAX_STREAK_SHIELD_CHARGES,
   clampHydrationAmount,
   getDefaultHydrationState,
   normalizeHydrationState,
@@ -39,6 +40,8 @@ const SERVER_SNAPSHOT: HydrationState = {
   intake: 0,
   goal: DEFAULT_GOAL,
   streak: 0,
+  streakShieldCharges: MAX_STREAK_SHIELD_CHARGES,
+  streakAlert: null,
   reminderInterval: 0,
   quietHours: { start: "22:00", end: "07:00" },
   hideNav: false,
@@ -137,6 +140,7 @@ export function useHydration(): UseHydrationReturn {
 
   const state = useSyncExternalStore(subscribe, getSnapshot, () => SERVER_SNAPSHOT);
   const streak = state.streak + (state.intake >= state.goal ? 1 : 0);
+  const streakShieldCharges = state.intake >= state.goal ? MAX_STREAK_SHIELD_CHARGES : state.streakShieldCharges;
 
   const addDrink = (amount: number, note?: HydrationNote) => {
     const safeAmount = clampHydrationAmount(amount, 1, 5000);
@@ -277,6 +281,7 @@ export function useHydration(): UseHydrationReturn {
   const hydration: UseHydrationReturn = {
     ...state,
     streak,
+    streakShieldCharges,
     addDrink,
     subtractDrink,
     undoLastDrink,

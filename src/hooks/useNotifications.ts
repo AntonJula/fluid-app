@@ -5,7 +5,9 @@ import {
   getNextHydrationLifecycleDueAt,
   pickHydrationLifecycleNotification,
   pickHydrationNotification,
+  pickHydrationStreakAlertNotification,
   type HydrationLifecycleNotificationState,
+  type HydrationStreakAlertNotification,
 } from "@/lib/notificationMessages";
 
 const PERMISSION_EVENT = "fluid-notification-permission-changed";
@@ -16,6 +18,7 @@ const LIFECYCLE_NEXT_NOTIFICATION_KEY = "fluid-lifecycle-next-notification-due";
 const LIFECYCLE_LAST_DAILY_KEY = "fluid-lifecycle-last-daily";
 const LIFECYCLE_LAST_WEEKLY_KEY = "fluid-lifecycle-last-weekly";
 const LIFECYCLE_LAST_MONTHLY_KEY = "fluid-lifecycle-last-monthly";
+const STREAK_ALERT_NOTIFIED_KEY = "fluid-streak-alert-notified";
 const SERVICE_WORKER_PATH = "/fluid-notifications-sw.js";
 const MIN_NOTIFICATION_GAP_MS = 10 * 60 * 1000;
 const ONE_MINUTE_MS = 60 * 1000;
@@ -25,6 +28,9 @@ interface NotificationHydrationStatus {
   goal: number;
   lastDrinkAt: number | null;
   inactiveDays?: number;
+  streak?: number;
+  streakShieldCharges?: number;
+  streakAlert?: HydrationStreakAlertNotification | null;
 }
 
 type FluidNotificationOptions = NotificationOptions & {
@@ -38,6 +44,9 @@ function getSafeHydrationStatus(status?: NotificationHydrationStatus): Notificat
     goal: Math.max(1, Math.round(status?.goal ?? 2500)),
     lastDrinkAt: status?.lastDrinkAt ?? null,
     inactiveDays: Math.max(0, Math.round(status?.inactiveDays ?? 0)),
+    streak: Math.max(0, Math.round(status?.streak ?? 0)),
+    streakShieldCharges: Math.max(0, Math.min(2, Math.round(status?.streakShieldCharges ?? 2))),
+    streakAlert: status?.streakAlert ?? null,
   };
 }
 
@@ -178,6 +187,7 @@ export function useNotifications(
   const isSupported = typeof window === "undefined" || "Notification" in window;
   const timerRef = useRef<number | null>(null);
   const lifecycleTimerRef = useRef<number | null>(null);
+  const streakAlertTimerRef = useRef<number | null>(null);
   const quietHoursRef = useRef(quietHours);
   const intervalRef = useRef(intervalMinutes);
   const activeRef = useRef(active);
@@ -186,6 +196,9 @@ export function useNotifications(
   const hydrationGoal = hydrationStatus?.goal;
   const hydrationLastDrinkAt = hydrationStatus?.lastDrinkAt;
   const hydrationInactiveDays = hydrationStatus?.inactiveDays;
+  const hydrationStreak = hydrationStatus?.streak;
+  const hydrationStreakShieldCharges = hydrationStatus?.streakShieldCharges;
+  const hydrationStreakAlertId = hydrationStatus?.streakAlert?.id;
 
   useEffect(() => {
     quietHoursRef.current = quietHours;
@@ -205,8 +218,20 @@ export function useNotifications(
       goal: hydrationGoal ?? 2500,
       lastDrinkAt: hydrationLastDrinkAt ?? null,
       inactiveDays: hydrationInactiveDays ?? 0,
+      streak: hydrationStreak ?? 0,
+      streakShieldCharges: hydrationStreakShieldCharges ?? 2,
+      streakAlert: hydrationStatus?.streakAlert ?? null,
     });
-  }, [hydrationGoal, hydrationInactiveDays, hydrationIntake, hydrationLastDrinkAt]);
+  }, [
+    hydrationGoal,
+    hydrationInactiveDays,
+    hydrationIntake,
+    hydrationLastDrinkAt,
+    hydrationStreak,
+    hydrationStreakAlertId,
+    hydrationStreakShieldCharges,
+    hydrationStatus?.streakAlert,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -502,6 +527,101 @@ export function useNotifications(
     hydrationInactiveDays,
     hydrationIntake,
     hydrationLastDrinkAt,
+    intervalMinutes,
+    permission,
+    quietHours.end,
+    quietHours.start,
+  ]);
+
+  useEffect(() => {
+    if (permission === "granted" && intervalMinutes > 0 && active) {
+      let isDisposed = false;
+
+      const clearTimer = () => {
+        if (streakAlertTimerRef.current !== null) {
+          window.clearTimeout(streakAlertTimerRef.current);
+          streakAlertTimerRef.current = null;
+        }
+      };
+
+      const scheduleFor = (timestamp: number) => {
+        if (isDisposed) return;
+
+        clearTimer();
+        streakAlertTimerRef.current = window.setTimeout(() => {
+          void checkStreakAlert();
+        }, Math.max(1000, timestamp - Date.now()));
+      };
+
+      const checkStreakAlert = async () => {
+        if (isDisposed || !activeRef.current || intervalRef.current <= 0 || Notification.permission !== "granted") {
+          return;
+        }
+
+        const alert = hydrationStatusRef.current.streakAlert;
+
+        if (!alert || localStorage.getItem(STREAK_ALERT_NOTIFIED_KEY) === alert.id) {
+          return;
+        }
+
+        const now = new Date();
+        const quietEndsAt = getQuietWindowEnd(now, quietHoursRef.current);
+
+        if (quietEndsAt) {
+          scheduleFor(quietEndsAt + ONE_MINUTE_MS);
+          return;
+        }
+
+        const lastNotificationAt = getStoredTimestamp(LAST_NOTIFIED_KEY);
+        const nextAllowedAt = lastNotificationAt + MIN_NOTIFICATION_GAP_MS;
+
+        if (lastNotificationAt > 0 && Date.now() < nextAllowedAt) {
+          scheduleFor(nextAllowedAt);
+          return;
+        }
+
+        const message = pickHydrationStreakAlertNotification(alert);
+
+        if (!message) return;
+
+        await showSystemNotification({
+          title: message.title,
+          body: message.body,
+          tag: `fluid-${message.kind}-${alert.id}`,
+          actionAmount: message.actionAmount,
+        });
+
+        if (isDisposed) return;
+
+        const sentAt = Date.now();
+        localStorage.setItem(STREAK_ALERT_NOTIFIED_KEY, alert.id);
+        localStorage.setItem(LAST_NOTIFICATION_TYPE_KEY, message.kind);
+        localStorage.setItem(LAST_NOTIFIED_KEY, sentAt.toString());
+      };
+
+      scheduleFor(Date.now() + 1500);
+
+      return () => {
+        isDisposed = true;
+        clearTimer();
+      };
+    }
+
+    return () => {
+      if (streakAlertTimerRef.current !== null) {
+        window.clearTimeout(streakAlertTimerRef.current);
+        streakAlertTimerRef.current = null;
+      }
+    };
+  }, [
+    active,
+    hydrationGoal,
+    hydrationInactiveDays,
+    hydrationIntake,
+    hydrationLastDrinkAt,
+    hydrationStreak,
+    hydrationStreakAlertId,
+    hydrationStreakShieldCharges,
     intervalMinutes,
     permission,
     quietHours.end,

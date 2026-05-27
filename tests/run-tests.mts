@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { formatDateLocal } from "../src/lib/date.ts";
 import {
   getDefaultHydrationState,
+  MAX_STREAK_SHIELD_CHARGES,
   normalizeHydrationState,
   rolloverHydrationState,
 } from "../src/lib/hydrationState.ts";
@@ -10,6 +11,7 @@ import {
   getNextHydrationLifecycleDueAt,
   pickHydrationLifecycleNotification,
   pickHydrationNotification,
+  pickHydrationStreakAlertNotification,
 } from "../src/lib/notificationMessages.ts";
 
 const tests = [
@@ -28,6 +30,8 @@ const tests = [
       assert.equal(state.intake, 900);
       assert.equal(state.goal, 2500);
       assert.equal(state.quickAddAmount, 250);
+      assert.equal(state.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
+      assert.equal(state.streakAlert, null);
       assert.equal(state.lastUpdated, "2026-04-10");
       assert.deepEqual(state.quietHours, { start: "22:00", end: "07:00" });
       assert.deepEqual(state.drinkLog, []);
@@ -77,6 +81,7 @@ const tests = [
 
       assert.equal(rolled.intake, 0);
       assert.equal(rolled.streak, 3);
+      assert.equal(rolled.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
       assert.equal(rolled.lastUpdated, "2026-04-11");
       assert.deepEqual(rolled.history, [{ date: "2026-04-10", intake: 2500, goal: 2500 }]);
       assert.deepEqual(rolled.drinkLog, []);
@@ -98,6 +103,7 @@ const tests = [
       );
 
       assert.equal(rolled.streak, 0);
+      assert.equal(rolled.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
       assert.equal(rolled.history.length, 4);
       assert.deepEqual(rolled.history[0], { date: "2026-04-07", intake: 1800, goal: 2500 });
       assert.deepEqual(rolled.history[1], { date: "2026-04-08", intake: 0, goal: 2500 });
@@ -106,10 +112,71 @@ const tests = [
     },
   },
   {
+    name: "rolloverHydrationState uses streak batteries before breaking streak",
+    run: () => {
+      const base = getDefaultHydrationState();
+      const firstMiss = rolloverHydrationState(
+        {
+          ...base,
+          intake: 1200,
+          goal: 2500,
+          streak: 5,
+          streakShieldCharges: 2,
+          lastUpdated: "2026-04-10",
+        },
+        "2026-04-11"
+      );
+      const secondMiss = rolloverHydrationState(
+        {
+          ...firstMiss,
+          lastUpdated: "2026-04-11",
+        },
+        "2026-04-12"
+      );
+      const thirdMiss = rolloverHydrationState(
+        {
+          ...secondMiss,
+          lastUpdated: "2026-04-12",
+        },
+        "2026-04-13"
+      );
+
+      assert.equal(firstMiss.streak, 5);
+      assert.equal(firstMiss.streakShieldCharges, 1);
+      assert.equal(firstMiss.streakAlert?.kind, "shield-used");
+      assert.equal(secondMiss.streak, 5);
+      assert.equal(secondMiss.streakShieldCharges, 0);
+      assert.equal(secondMiss.streakAlert?.shieldCharges, 0);
+      assert.equal(thirdMiss.streak, 0);
+      assert.equal(thirdMiss.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
+      assert.equal(thirdMiss.streakAlert?.kind, "streak-lost");
+    },
+  },
+  {
+    name: "rolloverHydrationState recharges streak batteries when goal is met",
+    run: () => {
+      const base = getDefaultHydrationState();
+      const rolled = rolloverHydrationState(
+        {
+          ...base,
+          intake: 2600,
+          goal: 2500,
+          streak: 5,
+          streakShieldCharges: 0,
+          lastUpdated: "2026-04-10",
+        },
+        "2026-04-11"
+      );
+
+      assert.equal(rolled.streak, 6);
+      assert.equal(rolled.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
+    },
+  },
+  {
     name: "notification library exposes unique reminder types",
     run: () => {
-      assert.equal(HYDRATION_NOTIFICATION_TYPES.length, 14);
-      assert.equal(new Set(HYDRATION_NOTIFICATION_TYPES.map((type) => type.kind)).size, 14);
+      assert.equal(HYDRATION_NOTIFICATION_TYPES.length, 16);
+      assert.equal(new Set(HYDRATION_NOTIFICATION_TYPES.map((type) => type.kind)).size, 16);
     },
   },
   {
@@ -198,6 +265,39 @@ const tests = [
 
       assert.equal(message.kind, "close-goal");
       assert.match(message.body, /Only 250 ml left for tonight/);
+    },
+  },
+  {
+    name: "pickHydrationNotification warns when a streak has no protections left",
+    run: () => {
+      const message = pickHydrationNotification({
+        intake: 1500,
+        goal: 2500,
+        reminderInterval: 40,
+        lastDrinkAt: new Date(2026, 4, 5, 16, 0).getTime(),
+        now: new Date(2026, 4, 5, 19, 0),
+        isCatchUp: false,
+        streak: 7,
+        streakShieldCharges: 0,
+      });
+
+      assert.equal(message.kind, "streak-last-chance");
+      assert.match(message.body, /No protections left/);
+    },
+  },
+  {
+    name: "pickHydrationStreakAlertNotification explains a used battery",
+    run: () => {
+      const message = pickHydrationStreakAlertNotification({
+        id: "2026-05-04-shield-1",
+        kind: "shield-used",
+        date: "2026-05-04",
+        streak: 7,
+        shieldCharges: 1,
+      });
+
+      assert.equal(message?.kind, "streak-shield-used");
+      assert.match(message?.body ?? "", /recharge both/);
     },
   },
   {

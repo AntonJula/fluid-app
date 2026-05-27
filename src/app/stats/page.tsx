@@ -1,14 +1,74 @@
 "use client";
 
 import React from "react";
+import { createPortal } from "react-dom";
 import { useHydration } from "@/hooks/useHydration";
 import { Card } from "@/components/ui/Card";
 import { HydrationLoadingState } from "@/components/HydrationLoadingState";
-import { Flame, Calendar, Trophy, Waves, ChartColumn, Target, GlassWater } from "lucide-react";
+import { Flame, Calendar, Trophy, Waves, ChartColumn, Target, GlassWater, CalendarSearch, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { formatDateLocal } from "@/lib/date";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_FORMATTER = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
+const DAY_DETAIL_FORMATTER = new Intl.DateTimeFormat("en", { weekday: "long", month: "short", day: "numeric" });
+const EMPTY_MONTH_SELECTION = "";
+
+function parseDateLocal(dateStr: string) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function getMonthStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function shiftMonth(date: Date, offset: number) {
+  return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+}
+
+function isSameMonth(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+function getDefaultMonthSelection(monthDate: Date, todayDate: Date) {
+  return isSameMonth(monthDate, todayDate) ? formatDateLocal(todayDate) : EMPTY_MONTH_SELECTION;
+}
+
+function useLockedPageScroll(isLocked: boolean) {
+  React.useEffect(() => {
+    if (!isLocked || typeof window === "undefined") return;
+
+    const scrollY = window.scrollY;
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+
+    root.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+
+    return () => {
+      root.style.overflow = previousRootOverflow;
+      body.style.overflow = previousBodyOverflow;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isLocked]);
+}
 
 function getWeekDates(anchor: Date, offsetWeeks = 0) {
   const currentDay = anchor.getDay();
@@ -30,8 +90,7 @@ function getMonthDays(anchor: Date) {
   const firstDay = new Date(year, month, 1);
   const leadingBlankDays = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  return [
+  const visibleDays = [
     ...Array.from({ length: leadingBlankDays }).map(() => null),
     ...Array.from({ length: daysInMonth }).map((_, index) => {
       const date = new Date(year, month, index + 1);
@@ -41,10 +100,19 @@ function getMonthDays(anchor: Date) {
       };
     }),
   ];
+
+  return [
+    ...visibleDays,
+    ...Array.from({ length: Math.max(0, 42 - visibleDays.length) }).map(() => null),
+  ];
 }
 
 export default function StatsPage() {
   const { streak, history, intake, goal, mounted } = useHydration();
+  const [isMonthViewOpen, setIsMonthViewOpen] = React.useState(false);
+  const [visibleMonthDate, setVisibleMonthDate] = React.useState(() => getMonthStart(new Date()));
+  const [selectedMonthDate, setSelectedMonthDate] = React.useState(() => formatDateLocal(new Date()));
+  useLockedPageScroll(isMonthViewOpen);
 
   if (!mounted) {
     return <HydrationLoadingState />;
@@ -65,8 +133,14 @@ export default function StatsPage() {
   const previousWeekData = previousWeek.map((dateStr) => history.find((item) => item.date === dateStr) ?? { date: dateStr, intake: 0, goal });
   const allTrackedDays = [...history, { date: today, intake, goal }].sort((a, b) => a.date.localeCompare(b.date));
   const trackedByDate = new Map(allTrackedDays.map((day) => [day.date, day]));
-  const monthDays = getMonthDays(todayDate);
+  const monthDays = getMonthDays(visibleMonthDate);
   const hasAnyTrackedWater = intake > 0 || history.some((day) => day.intake > 0);
+  const hasSelectedMonthDate = selectedMonthDate !== EMPTY_MONTH_SELECTION;
+  const selectedMonthDay = hasSelectedMonthDate ? trackedByDate.get(selectedMonthDate) : undefined;
+  const selectedMonthIntake = selectedMonthDay?.intake ?? 0;
+  const selectedMonthGoal = selectedMonthDay?.goal ?? goal;
+  const selectedMonthProgress = Math.min(100, Math.round((selectedMonthIntake / Math.max(selectedMonthGoal, 1)) * 100));
+  const selectedMonthIsFuture = hasSelectedMonthDate && selectedMonthDate > today;
 
   const maxIntake = Math.max(...chartData.map((day) => day.intake), goal, 1);
   const weeklyGoalHits = chartData.filter((day) => day.intake >= day.goal).length;
@@ -87,6 +161,19 @@ export default function StatsPage() {
       : averageDelta >= 0
         ? `You're averaging ${averageDelta} ml more per day than last week. Hit ${remainingWeeklyWins} more goal days to finish the week strong.`
         : `You're averaging ${Math.abs(averageDelta)} ml less per day than last week. One glass today can close the gap.`;
+
+  const openMonthView = () => {
+    const currentMonth = getMonthStart(todayDate);
+    setVisibleMonthDate(currentMonth);
+    setSelectedMonthDate(today);
+    setIsMonthViewOpen(true);
+  };
+
+  const changeVisibleMonth = (offset: number) => {
+    const nextMonth = shiftMonth(visibleMonthDate, offset);
+    setVisibleMonthDate(nextMonth);
+    setSelectedMonthDate(getDefaultMonthSelection(nextMonth, todayDate));
+  };
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 py-4 min-[380px]:p-4 sm:p-6 md:max-w-[30rem]">
@@ -169,16 +256,22 @@ export default function StatsPage() {
       </Card>
 
       <Card className="mb-6 w-full p-4 min-[380px]:p-5 sm:p-6">
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+        <div className="mb-3 flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <Calendar className="w-5 h-5 text-water-400" strokeWidth={2.5} />
             <h2 className="font-ui min-w-0 text-base font-bold leading-tight tracking-normal text-white drop-shadow-sm min-[360px]:text-lg">
               Tracking History
             </h2>
           </div>
-          <span className="font-ui shrink-0 text-[0.62rem] font-bold uppercase tracking-[0.18em] text-water-400/70 min-[360px]:text-[11px] min-[360px]:tracking-[0.22em]">
-            This week
-          </span>
+          <button
+            type="button"
+            onClick={openMonthView}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[1.5px] border-water-300/14 bg-water-950/20 text-water-200 transition-all hover:border-water-200/24 hover:bg-white/10 hover:text-white active:scale-95"
+            aria-label="Open month view"
+            title="Month view"
+          >
+            <CalendarSearch className="h-4.5 w-4.5" strokeWidth={2.45} />
+          </button>
         </div>
 
         <p className="font-body mb-5 text-sm text-water-300/80 min-[380px]:mb-6">
@@ -230,64 +323,134 @@ export default function StatsPage() {
         </div>
       </Card>
 
-      <Card className="w-full p-4 min-[380px]:p-5 sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-3 min-[380px]:gap-4">
-          <div className="min-w-0">
-            <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
-              <Calendar className="w-4 h-4" strokeWidth={2.4} />
-              Month View
-            </div>
-            <p className="font-ui mt-2 text-xl font-black tracking-normal text-white min-[380px]:text-2xl">{MONTH_FORMATTER.format(todayDate)}</p>
-          </div>
-          <div className="rounded-2xl border border-water-300/14 bg-water-800/35 px-2.5 py-2 text-right min-[380px]:px-3">
-            <p className="font-ui text-[0.56rem] font-bold uppercase tracking-[0.16em] text-water-400/80 min-[380px]:text-[10px] min-[380px]:tracking-[0.2em]">Goal Days</p>
-            <p className="font-numeric mt-1 text-2xl font-black text-white">
-              {monthDays.filter((day) => day && (trackedByDate.get(day.date)?.intake ?? 0) >= (trackedByDate.get(day.date)?.goal ?? goal)).length}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-7 gap-1 min-[380px]:gap-1.5">
-          {DAY_NAMES.map((day) => (
-            <div key={day} className="font-ui text-center text-[0.62rem] font-black uppercase tracking-wider text-water-400/72">
-              {day.slice(0, 1)}
-            </div>
-          ))}
-          {monthDays.map((day, index) => {
-            if (!day) {
-              return <div key={`blank-${index}`} className="aspect-square" />;
-            }
-
-            const trackedDay = trackedByDate.get(day.date);
-            const dayIntake = trackedDay?.intake ?? 0;
-            const dayGoal = trackedDay?.goal ?? goal;
-            const isFuture = day.date > today;
-            const isToday = day.date === today;
-            const isGoalMet = dayIntake >= dayGoal;
-            const hasIntake = dayIntake > 0;
-
-            return (
-              <div
-                key={day.date}
-                className={`font-numeric flex aspect-square items-center justify-center rounded-xl border text-sm font-black transition-colors ${
-                  isToday
-                    ? "border-cyan-100/34 bg-cyan-200/22 text-white shadow-[0_0_18px_rgba(56,189,248,0.16)]"
-                    : isFuture
-                      ? "border-water-500/10 bg-water-950/12 text-water-500/45"
-                    : isGoalMet
-                      ? "border-emerald-100/20 bg-emerald-300/18 text-emerald-50"
-                      : hasIntake
-                        ? "border-water-300/16 bg-water-700/32 text-water-100"
-                        : "border-water-500/12 bg-water-950/18 text-water-400/60"
-                }`}
-                title={`${day.date}: ${dayIntake} ml`}
-              >
-                {day.day}
+      {isMonthViewOpen && typeof document !== "undefined"
+        ? createPortal(
+        <div
+          className="fixed inset-0 z-[112] flex touch-none items-center justify-center overflow-hidden bg-water-950/78 px-3 pb-[max(5.25rem,calc(env(safe-area-inset-bottom)+4.65rem))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl"
+          data-swipe-ignore="true"
+          onClick={() => setIsMonthViewOpen(false)}
+          onTouchMove={(event) => event.preventDefault()}
+          onWheel={(event) => event.preventDefault()}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="month-view-title"
+            className="fluid-glass-soft w-full max-w-[25.5rem] overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.46)] md:max-w-[30rem]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-water-300/12 px-4 py-3 min-[380px]:px-5">
+              <div className="flex min-w-0 flex-1 items-center gap-1.5 min-[380px]:gap-2">
+                <button
+                  type="button"
+                  onClick={() => changeVisibleMonth(-1)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[1.5px] border-water-300/14 bg-water-950/20 text-water-200 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="h-4.5 w-4.5" strokeWidth={2.6} />
+                </button>
+                <div className="min-w-0 flex-1 text-center">
+                  <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">Month view</p>
+                  <h2 id="month-view-title" className="font-ui mt-1 truncate text-[1.45rem] font-black tracking-normal text-white min-[380px]:text-2xl">
+                    {MONTH_FORMATTER.format(visibleMonthDate)}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => changeVisibleMonth(1)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[1.5px] border-water-300/14 bg-water-950/20 text-water-200 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="h-4.5 w-4.5" strokeWidth={2.6} />
+                </button>
               </div>
-            );
-          })}
-        </div>
-      </Card>
+              <div className="flex shrink-0 items-center">
+                <button
+                  type="button"
+                  onClick={() => setIsMonthViewOpen(false)}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[1.5px] border-water-300/14 bg-water-950/20 text-water-200 transition-colors hover:bg-white/10 hover:text-white"
+                  aria-label="Close month view"
+                >
+                  <X className="h-4.5 w-4.5" strokeWidth={2.6} />
+                </button>
+              </div>
+            </div>
+
+            <div className="px-4 pb-3 pt-2 min-[380px]:px-5 min-[380px]:pb-4">
+              <div className="grid grid-cols-7 gap-1 min-[380px]:gap-1.5">
+                {DAY_NAMES.map((day) => (
+                  <div key={day} className="font-ui text-center text-[0.62rem] font-black uppercase tracking-wider text-water-400/72">
+                    {day.slice(0, 1)}
+                  </div>
+                ))}
+                {monthDays.map((day, index) => {
+                  if (!day) {
+                    return <div key={`blank-${index}`} className="h-9 rounded-xl border border-transparent min-[380px]:h-10" />;
+                  }
+
+                  const trackedDay = trackedByDate.get(day.date);
+                  const dayIntake = trackedDay?.intake ?? 0;
+                  const dayGoal = trackedDay?.goal ?? goal;
+                  const isFuture = day.date > today;
+                  const isToday = day.date === today;
+                  const isSelected = day.date === selectedMonthDate;
+                  const isGoalMet = dayIntake >= dayGoal;
+                  const hasIntake = dayIntake > 0;
+
+                  return (
+                    <button
+                      key={day.date}
+                      type="button"
+                      onClick={() => setSelectedMonthDate(day.date)}
+                      className={`font-numeric flex h-9 items-center justify-center rounded-xl border text-sm font-black transition-colors active:scale-95 min-[380px]:h-10 ${
+                        isSelected
+                          ? "border-cyan-100/44 bg-cyan-200/16 text-white shadow-[0_0_0_1px_rgba(186,230,253,0.12)]"
+                          : isToday
+                            ? "border-cyan-100/28 bg-cyan-200/12 text-white"
+                            : isFuture
+                              ? "border-water-500/10 bg-water-950/12 text-water-500/45"
+                              : isGoalMet
+                                ? "border-emerald-100/20 bg-emerald-300/14 text-emerald-50"
+                                : hasIntake
+                                  ? "border-water-300/16 bg-water-700/28 text-water-100"
+                                  : "border-water-500/12 bg-water-950/18 text-water-400/60"
+                      }`}
+                      title={`${day.date}: ${dayIntake} ml`}
+                    >
+                      {day.day}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4 rounded-[1.15rem] border border-[1.5px] border-water-300/12 bg-white/[0.055] px-4 py-3 min-[380px]:py-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-ui text-[0.68rem] font-black uppercase tracking-[0.18em] text-water-300/78">
+                      {hasSelectedMonthDate ? DAY_DETAIL_FORMATTER.format(parseDateLocal(selectedMonthDate)) : "Select a day"}
+                    </p>
+                    <p className="font-body mt-1 text-xs font-semibold text-water-300/70">
+                      {!hasSelectedMonthDate
+                        ? "Tap a date to see the water logged for that day."
+                        : selectedMonthIsFuture
+                        ? "No intake yet. This day is ahead."
+                        : selectedMonthIntake > 0
+                          ? `${selectedMonthProgress}% of that day's goal.`
+                          : "No water logged for this day."}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-numeric text-3xl font-black leading-none text-white">{selectedMonthIntake}</p>
+                    <p className="font-ui mt-1 text-[0.62rem] font-black uppercase tracking-[0.18em] text-water-300/78">ml</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>,
+            document.body
+          )
+        : null}
 
     </main>
   );
