@@ -32,6 +32,9 @@ yarn-error.log*
 dev-server*.log
 dev-current*.log
 
+# generated analysis output
+graphify-out/
+
 # env files (can opt-in for committing if needed)
 .env*
 

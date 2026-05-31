@@ -52,13 +52,14 @@ export function BottomNav() {
                 className="relative flex min-w-[3.55rem] flex-col items-center justify-end rounded-2xl py-1.5 transition-transform duration-300 active:scale-95 sm:min-w-[4.25rem]"
               >
                 <div
-                  className={`flex h-8.5 w-8.5 items-center justify-center transition-all duration-300 sm:h-9 sm:w-9 ${
+                  key={`${href}-${isActive ? "active" : "idle"}`}
+                  className={`fluid-nav-icon relative flex h-8.5 w-8.5 items-center justify-center transition-[color,filter,transform] duration-300 sm:h-9 sm:w-9 ${
                     isActive
-                      ? "text-white drop-shadow-[0_5px_10px_rgba(0,0,0,0.45)]"
+                      ? "fluid-nav-icon-active text-white drop-shadow-[0_5px_10px_rgba(0,0,0,0.45)]"
                       : "text-water-100/55 drop-shadow-[0_3px_8px_rgba(0,0,0,0.4)] hover:text-water-100/85"
                   }`}
                 >
-                  <Icon className="h-5.5 w-5.5 sm:h-5.75 sm:w-5.75" strokeWidth={isActive ? 2.8 : 2.35} />
+                  <Icon className="relative z-10 h-5.5 w-5.5 sm:h-5.75 sm:w-5.75" strokeWidth={isActive ? 2.8 : 2.35} />
                 </div>
 
                 <span

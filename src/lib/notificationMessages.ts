@@ -76,6 +76,7 @@ export interface HydrationStreakAlertNotification {
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 22;
 const EVENING_CHECK_HOUR = DAILY_EMPTY_CHECK_HOUR;
+const LATE_EVENING_HOUR = 20;
 const INTERVAL_EXCLUDED_KINDS = new Set<HydrationNotificationKind>(["monthly-return", "weekly-return"]);
 
 function safeGoal(goal: number) {
@@ -88,6 +89,10 @@ function getProgress(context: HydrationNotificationContext) {
 
 function getRemaining(context: HydrationNotificationContext) {
   return Math.max(0, safeGoal(context.goal) - Math.max(0, context.intake));
+}
+
+function isLateAndFarBehind(context: HydrationNotificationContext) {
+  return getHour(context) >= LATE_EVENING_HOUR && getProgress(context) < 0.65 && getRemaining(context) > 500;
 }
 
 function getStreak(context: HydrationNotificationContext) {
@@ -141,6 +146,8 @@ function wasDrinkGapReminder(kind?: string | null) {
 }
 
 function followUpDelay(context: HydrationNotificationContext) {
+  if (isLateAndFarBehind(context)) return undefined;
+
   return context.intake < safeGoal(context.goal) ? FOLLOW_UP_DELAY_MINUTES : undefined;
 }
 
@@ -234,8 +241,8 @@ export function pickHydrationStreakAlertNotification(
       kind: "streak-shield-used",
       title: "Streak battery used 🔋",
       body: hasProtectionLeft
-        ? "A protection covered yesterday. Hit today's goal to recharge both streak batteries."
-        : "A protection covered yesterday, and none are left. Hit today's goal to recharge both.",
+        ? "A protection covered yesterday. Small, steady drinks today can recharge both batteries."
+        : "A protection covered yesterday, and none are left. Keep today gentle and steady.",
       actionAmount: QUICK_NOTIFICATION_LOG_AMOUNT,
       cadence: "daily",
       nextDelayMinutes: FOLLOW_UP_DELAY_MINUTES,
@@ -245,7 +252,7 @@ export function pickHydrationStreakAlertNotification(
   return {
     kind: "streak-lost",
     title: "Streak reset 💧",
-    body: "Your protections ran out. Hit today's goal to begin a fresh streak.",
+    body: "Your protections ran out. Start fresh with a small drink when it feels right.",
     actionAmount: QUICK_NOTIFICATION_LOG_AMOUNT,
     cadence: "daily",
     nextDelayMinutes: FOLLOW_UP_DELAY_MINUTES,
@@ -356,14 +363,16 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     body: (context) => {
       const minutes = minutesSinceLastDrink(context) ?? context.reminderInterval;
 
-      return `It has been ${formatMinutes(minutes)} since your last log. A few sips now can help.`;
+      return isLateAndFarBehind(context)
+        ? `It has been ${formatMinutes(minutes)} since your last log. A few comfortable sips are enough tonight.`
+        : `It has been ${formatMinutes(minutes)} since your last log. A few sips now can help.`;
     },
     nextDelayMinutes: followUpDelay,
   },
   {
     kind: "close-goal",
     label: "Close goal",
-    title: "Almost there 🎯",
+    title: "Close enough for a calm finish 🎯",
     priority: (context) => {
       const remaining = getRemaining(context);
 
@@ -373,17 +382,19 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
       const remaining = formatMl(getRemaining(context));
 
       return getHour(context) >= 17
-        ? `Only ${remaining} left for tonight. One calm glass could finish your goal.`
-        : `Only ${remaining} left. One glass could get you to your goal.`;
+        ? `${remaining} would complete today, but a small comfortable drink is enough if it is late.`
+        : `${remaining} left for today. One small drink can keep the rhythm going.`;
     },
   },
   {
     kind: "streak-last-chance",
     label: "Streak last chance",
-    title: "Streak on the line ⚡",
+    title: "Protect the rhythm ⚡",
     priority: (context) =>
-      getStreak(context) > 0 && getShieldCharges(context) <= 0 && getHour(context) >= 17 && getRemaining(context) > 0 ? 108 : 0,
-    body: (context) => `No protections left. ${formatMl(getRemaining(context))} keeps your streak alive today.`,
+      getStreak(context) > 0 && getShieldCharges(context) <= 0 && getHour(context) >= 17 && getRemaining(context) > 0 && !isLateAndFarBehind(context)
+        ? 108
+        : 0,
+    body: () => "No protections left, but keep it reasonable. A small drink now helps the habit without rushing.",
     nextDelayMinutes: followUpDelay,
   },
   {
@@ -391,8 +402,10 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     label: "One protection left",
     title: "One protection left 🔋",
     priority: (context) =>
-      getStreak(context) > 0 && getShieldCharges(context) === 1 && getHour(context) >= 17 && getRemaining(context) > 0 ? 105 : 0,
-    body: (context) => `You have one streak protection left. Finish ${formatMl(getRemaining(context))} today to recharge both.`,
+      getStreak(context) > 0 && getShieldCharges(context) === 1 && getHour(context) >= 17 && getRemaining(context) > 0 && !isLateAndFarBehind(context)
+        ? 105
+        : 0,
+    body: () => "One streak protection is left. Keep today steady; no need to drink a lot at once.",
     nextDelayMinutes: followUpDelay,
   },
   {
@@ -406,7 +419,9 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
       return expected - progress >= 0.18 ? 82 : 0;
     },
     body: (context) =>
-      `You are at ${formatPercent(getProgress(context))} of your goal. A small glass can bring you closer to today's rhythm.`,
+      isLateAndFarBehind(context)
+        ? `You are at ${formatPercent(getProgress(context))} today. Since it is late, choose a small comfortable drink instead of catching up all at once.`
+        : `You are at ${formatPercent(getProgress(context))} today. A small drink can bring you closer to your rhythm.`,
     nextDelayMinutes: followUpDelay,
   },
   {
@@ -434,7 +449,10 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     label: "Evening catch-up",
     title: "Easy evening 🌙",
     priority: (context) => (getHour(context) >= 17 && getRemaining(context) > 0 ? 70 : 0),
-    body: (context) => `You have ${formatMl(getRemaining(context))} left. A little now is better than a lot late.`,
+    body: (context) =>
+      isLateAndFarBehind(context)
+        ? "It is late and there is a lot left. A small drink is enough; do not rush the full target."
+        : `You have ${formatMl(getRemaining(context))} left. A little now is better than a lot late.`,
     nextDelayMinutes: followUpDelay,
   },
   {

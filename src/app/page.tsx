@@ -33,8 +33,9 @@ import { SipIcon, GlassIcon, MugIcon, BottleIcon } from "@/components/DrinkIcons
 import type { HydrationNote } from "@/lib/hydrationState";
 import { formatDateLocal } from "@/lib/date";
 
-const QUICK_AMOUNTS = [
+const SECONDARY_QUICK_AMOUNTS = [
   { label: "Sip", amount: 150, Icon: SipIcon },
+  { label: "Glass", amount: 250, Icon: GlassIcon },
   { label: "Mug", amount: 330, Icon: MugIcon },
   { label: "Bottle", amount: 500, Icon: BottleIcon },
 ];
@@ -287,7 +288,7 @@ function StreakDetailsSheet({
   const safeShieldCharges = Math.max(0, Math.min(STREAK_SHIELD_COUNT, streakShieldCharges));
 
   return createPortal(
-    <div className="fixed inset-0 z-[116] flex items-end justify-center bg-water-950/72 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-xl" data-swipe-ignore="true" onClick={onClose}>
+    <div className="fluid-modal-backdrop fixed inset-0 z-[116] flex items-end justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]" data-swipe-ignore="true" onClick={onClose}>
       <section
         role="dialog"
         aria-modal="true"
@@ -336,7 +337,7 @@ function StreakDetailsSheet({
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {Array.from({ length: STREAK_SHIELD_COUNT }).map((_, index) => {
-                  const isCharged = index < safeShieldCharges;
+                  const isCharged = index >= STREAK_SHIELD_COUNT - safeShieldCharges;
                   const BatteryIcon = isCharged ? BatteryFull : Battery;
 
                   return (
@@ -430,7 +431,7 @@ function ResetConfirmDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[115] grid place-items-center overflow-hidden bg-water-950/76 px-4 py-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-xl"
+      className="fluid-modal-backdrop fixed inset-0 z-[115] grid place-items-center overflow-hidden px-4 py-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
       data-swipe-ignore="true"
       onClick={onCancel}
       onTouchMove={(event) => event.preventDefault()}
@@ -512,6 +513,7 @@ export default function Home() {
   const [selectedNote, setSelectedNote] = React.useState<HydrationNote>("water");
   const [isNoteMenuOpen, setIsNoteMenuOpen] = React.useState(false);
   const [isCustomQuickOpen, setIsCustomQuickOpen] = React.useState(false);
+  const [customDrinkNote, setCustomDrinkNote] = React.useState<HydrationNote | null>(null);
   const [isOnboardingOpen, setIsOnboardingOpen] = React.useState(false);
   const [isDailyLogOpen, setIsDailyLogOpen] = React.useState(false);
   const [isStreakOpen, setIsStreakOpen] = React.useState(false);
@@ -520,6 +522,8 @@ export default function Home() {
   const [onboardingReminder, setOnboardingReminder] = React.useState(0);
   const [editingLog, setEditingLog] = React.useState<DrinkLogItem | null>(null);
   const handledQuickAddRef = React.useRef(false);
+  const favoriteHoldTimerRef = React.useRef<number | null>(null);
+  const favoriteHoldTriggeredRef = React.useRef(false);
 
   React.useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
@@ -542,6 +546,15 @@ export default function Home() {
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
   }, [addDrink, mounted]);
 
+  const clearFavoriteHoldTimer = React.useCallback(() => {
+    if (favoriteHoldTimerRef.current === null || typeof window === "undefined") return;
+
+    window.clearTimeout(favoriteHoldTimerRef.current);
+    favoriteHoldTimerRef.current = null;
+  }, []);
+
+  React.useEffect(() => clearFavoriteHoldTimer, [clearFavoriteHoldTimer]);
+
   if (!mounted) {
     return <HydrationLoadingState />;
   }
@@ -554,7 +567,7 @@ export default function Home() {
   const latestLog = drinkLog.slice(0, 3);
   const selectedNoteOption = NOTE_OPTIONS.find((item) => item.value === selectedNote) ?? NOTE_OPTIONS[0];
   const SelectedNoteIcon = selectedNoteOption.Icon;
-
+  const customDrinkLabel = customDrinkNote ? getNoteLabel(customDrinkNote) : "Drink";
   const handleReset = () => {
     resetDaily();
     setIsResetConfirming(false);
@@ -562,6 +575,46 @@ export default function Home() {
 
   const handleAddDrink = (amount: number) => {
     addDrink(amount, selectedNote);
+  };
+
+  const beginFavoriteHold = () => {
+    if (typeof window === "undefined") return;
+
+    favoriteHoldTriggeredRef.current = false;
+    clearFavoriteHoldTimer();
+    favoriteHoldTimerRef.current = window.setTimeout(() => {
+      favoriteHoldTriggeredRef.current = true;
+      favoriteHoldTimerRef.current = null;
+      setIsCustomQuickOpen(true);
+    }, 650);
+  };
+
+  const finishFavoriteHold = () => {
+    clearFavoriteHoldTimer();
+  };
+
+  const handleFavoriteClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (favoriteHoldTriggeredRef.current) {
+      event.preventDefault();
+      favoriteHoldTriggeredRef.current = false;
+      return;
+    }
+
+    handleAddDrink(quickAddAmount);
+  };
+
+  const handleFavoriteContextMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    clearFavoriteHoldTimer();
+    favoriteHoldTriggeredRef.current = false;
+    setIsCustomQuickOpen(true);
+  };
+
+  const handleCustomDrinkAmount = (amount: number) => {
+    if (!customDrinkNote) return;
+
+    addDrink(amount, customDrinkNote);
+    setCustomDrinkNote(null);
   };
 
   const handleEditLog = (amount: number) => {
@@ -618,7 +671,7 @@ export default function Home() {
         </header>
 
         <div className="mt-4 flex min-h-0 w-full flex-col items-center">
-          <ProgressCard intake={revealedIntake} goal={goal} />
+          <ProgressCard intake={revealedIntake} targetIntake={intake} goal={goal} />
         </div>
 
         <section className="w-full max-w-full self-center space-y-3">
@@ -654,6 +707,9 @@ export default function Home() {
                     onClick={() => {
                       setSelectedNote(value);
                       setIsNoteMenuOpen(false);
+                      if (value === "coffee" || value === "tea") {
+                        setCustomDrinkNote(value);
+                      }
                     }}
                     className={`font-ui inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[1.5px] px-3 py-2 text-xs font-extrabold transition-all ${
                       isActive
@@ -672,39 +728,67 @@ export default function Home() {
 
           <button
             type="button"
-            onClick={() => handleAddDrink(250)}
-            className="group relative flex min-h-[6rem] w-full items-center justify-between overflow-hidden rounded-[1.1rem] border border-[1.5px] border-cyan-100/24 bg-gradient-to-br from-cyan-300/26 via-water-500/18 to-emerald-300/18 px-3.5 py-4 text-left shadow-[0_18px_34px_rgba(8,47,73,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-100/34 hover:brightness-110 active:scale-[0.98] min-[380px]:rounded-[1.25rem] min-[380px]:px-4"
-            aria-label={`Add 250 milliliters as ${getNoteLabel(selectedNote)}`}
+            onClick={handleFavoriteClick}
+            onContextMenu={handleFavoriteContextMenu}
+            onPointerCancel={finishFavoriteHold}
+            onPointerDown={beginFavoriteHold}
+            onPointerLeave={finishFavoriteHold}
+            onPointerUp={finishFavoriteHold}
+            className="group relative flex min-h-[6.35rem] w-full touch-manipulation items-center justify-between overflow-hidden rounded-[1.1rem] border border-[1.5px] border-cyan-100/24 bg-gradient-to-br from-cyan-300/26 via-water-500/18 to-emerald-300/18 px-3.5 py-4 text-left shadow-[0_18px_34px_rgba(8,47,73,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-100/34 hover:brightness-110 active:scale-[0.98] min-[380px]:rounded-[1.25rem] min-[380px]:px-4"
+            aria-label={`Add favorite amount ${quickAddAmount} milliliters as ${selectedNoteOption.label}. Hold to edit.`}
+            title="Hold to edit favorite amount"
           >
             <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent" />
-            <div className="relative z-10 min-w-0 pr-3">
-              <div className="flex items-center gap-2 text-cyan-100">
-                <GlassIcon className="h-6 w-6 shrink-0 drop-shadow-md" />
-                <span className="font-ui text-[0.76rem] font-black uppercase tracking-[0.16em]">Daily glass</span>
+            <div
+              className="pointer-events-none absolute inset-y-[-14%] -left-[120%] w-[205%] rotate-[14deg] bg-[linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.14),rgba(255,255,255,0.36),rgba(255,255,255,0.14),rgba(255,255,255,0))] opacity-0 blur-[4px] animate-[quick-add-shimmer_14s_linear_infinite]"
+              style={{ animationDelay: "1.2s" }}
+            />
+            <div className="relative z-10 flex min-w-0 items-center gap-3 pr-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[1rem] border border-cyan-100/22 bg-water-950/22 text-cyan-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]">
+                {quickAddAmount <= 200 ? (
+                  <SipIcon className="h-8 w-8 drop-shadow-md" />
+                ) : quickAddAmount <= 300 ? (
+                  <GlassIcon className="h-8 w-8 drop-shadow-md" />
+                ) : quickAddAmount <= 450 ? (
+                  <MugIcon className="h-8 w-8 drop-shadow-md" />
+                ) : (
+                  <BottleIcon className="h-8 w-8 drop-shadow-md" />
+                )}
               </div>
-              <p className="font-body mt-2 max-w-[13rem] text-sm font-semibold leading-snug text-water-100/82">
-                Fast, calm, and tagged as {getNoteLabel(selectedNote).toLowerCase()}.
-              </p>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-cyan-100">
+                  <span className="font-ui text-[0.76rem] font-black uppercase tracking-[0.16em]">Favorite</span>
+                </div>
+                <div className="relative mt-1 h-5 min-w-[6.75rem] overflow-hidden [perspective:420px]">
+                  <div className="fluid-favorite-caption-track font-body text-xs font-semibold text-water-100/82">
+                    <span className="fluid-favorite-caption-row">Tap to add</span>
+                    <span className="fluid-favorite-caption-row">Hold to edit</span>
+                    <span className="fluid-favorite-caption-row" aria-hidden="true">
+                      Tap to add
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="relative z-10 shrink-0 text-right">
-              <p className="font-numeric text-4xl font-black leading-none text-white drop-shadow-xl sm:text-5xl">250</p>
+              <p className="font-numeric text-4xl font-black leading-none text-white drop-shadow-xl sm:text-5xl">{quickAddAmount}</p>
               <p className="font-ui mt-1 text-xs font-black uppercase tracking-[0.22em] text-cyan-100/75">ml</p>
             </div>
           </button>
 
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-            {QUICK_AMOUNTS.map(({ amount, label, Icon }, index) => (
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+            {SECONDARY_QUICK_AMOUNTS.map(({ amount, label, Icon }, index) => (
               <button
                 key={amount}
                 type="button"
                 onClick={() => handleAddDrink(amount)}
-                className="group relative flex min-h-[6rem] flex-col items-center justify-center gap-2 overflow-hidden rounded-[1rem] border border-[1.5px] border-water-300/15 bg-white/5 px-2 py-3 shadow-[0_8px_16px_rgba(0,0,0,0.14),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-1 hover:border-water-200/24 hover:bg-white/10 hover:shadow-[0_12px_24px_rgba(56,189,248,0.18),inset_0_1px_2px_rgba(255,255,255,0.2)] active:scale-[0.97]"
-                aria-label={`Add ${amount} milliliters as ${getNoteLabel(selectedNote)}`}
+                className="group relative flex min-h-[5.75rem] flex-col items-center justify-center gap-2 overflow-hidden rounded-[1rem] border border-[1.5px] border-water-300/15 bg-white/5 px-2 py-3 shadow-[0_8px_16px_rgba(0,0,0,0.14),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-1 hover:border-water-200/24 hover:bg-white/10 hover:shadow-[0_12px_24px_rgba(56,189,248,0.18),inset_0_1px_2px_rgba(255,255,255,0.2)] active:scale-[0.97]"
+                aria-label={`Add ${amount} milliliters as ${selectedNoteOption.label}`}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                 <div
                   className="pointer-events-none absolute inset-y-[-14%] -left-[120%] w-[205%] rotate-[14deg] bg-[linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.14),rgba(255,255,255,0.38),rgba(255,255,255,0.14),rgba(255,255,255,0))] opacity-0 blur-[4px] animate-[quick-add-shimmer_15s_linear_infinite]"
-                  style={{ animationDelay: SHIMMER_DELAYS[index] }}
+                  style={{ animationDelay: SHIMMER_DELAYS[index % SHIMMER_DELAYS.length] }}
                 />
                 <div className="relative z-10 flex items-center gap-1.5 text-water-200 transition-colors duration-300 group-hover:text-white">
                   <Icon className="h-5 w-5 drop-shadow-md" />
@@ -716,32 +800,6 @@ export default function Home() {
                 </span>
               </button>
             ))}
-          </div>
-
-          <div className="grid grid-cols-[minmax(0,1fr)_3rem] gap-2.5 min-[380px]:grid-cols-[1fr_auto]">
-            <button
-              type="button"
-              onClick={() => handleAddDrink(quickAddAmount)}
-              className="flex items-center justify-between rounded-[1rem] border border-[1.5px] border-water-300/16 bg-water-950/24 px-4 py-3 text-left shadow-inner transition-all hover:bg-water-900/32 active:scale-[0.98]"
-              aria-label={`Add custom amount ${quickAddAmount} milliliters`}
-            >
-              <span className="min-w-0">
-                <span className="font-ui block text-xs font-black uppercase tracking-[0.18em] text-water-300/85">Favorite</span>
-                <span className="font-body mt-1 block text-xs font-semibold text-water-300/70">Your usual one-tap amount</span>
-              </span>
-              <span className="font-numeric shrink-0 pl-2 text-right text-2xl font-black text-white">
-                {quickAddAmount}
-                <span className="font-ui ml-1 text-xs font-extrabold text-water-300">ml</span>
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsCustomQuickOpen(true)}
-              className="flex w-12 items-center justify-center rounded-[1rem] border border-[1.5px] border-water-300/16 bg-water-950/24 text-water-200 transition-all hover:bg-water-900/32 hover:text-white active:scale-95"
-              aria-label="Edit favorite amount"
-            >
-              <Pencil className="h-4 w-4" strokeWidth={2.5} />
-            </button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -845,6 +903,17 @@ export default function Home() {
       />
 
       <NumberPickerDialog
+        isOpen={customDrinkNote !== null}
+        value={0}
+        min={1}
+        max={5000}
+        title={`${customDrinkLabel} Amount`}
+        suffix="ml"
+        onChange={handleCustomDrinkAmount}
+        onClose={() => setCustomDrinkNote(null)}
+      />
+
+      <NumberPickerDialog
         isOpen={editingLog !== null}
         value={editingLog ? Math.abs(editingLog.amount) : 250}
         min={1}
@@ -867,7 +936,7 @@ export default function Home() {
       />
 
       {isDailyLogOpen && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-water-950/72 p-4 backdrop-blur-xl sm:p-6">
+        <div className="fluid-modal-backdrop fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6">
           <div className="flex max-h-[min(34rem,calc(100dvh-2rem))] w-full max-w-[23rem] flex-col overflow-hidden rounded-[1.35rem] border border-[1.5px] border-water-300/16 bg-water-950/90 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
             <div className="flex items-start justify-between gap-4 border-b border-water-300/12 px-5 py-4">
               <div>
@@ -935,7 +1004,7 @@ export default function Home() {
       />
 
       {isOnboardingOpen && (
-        <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-water-950/72 px-4 pb-4 pt-3 backdrop-blur-xl sm:px-6 sm:pb-6 sm:pt-8">
+        <div className="fluid-modal-backdrop fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-8">
           <div className="w-full max-w-[23rem] overflow-hidden rounded-[1.35rem] border border-[1.5px] border-water-300/16 bg-water-950/88 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
             <div className="border-b border-water-300/12 px-5 py-4">
               <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">First setup</p>

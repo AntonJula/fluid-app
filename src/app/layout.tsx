@@ -52,11 +52,11 @@ export default function RootLayout({
         <div
           className="flex-1 flex flex-col pb-24 relative z-10 w-full h-full"
           style={{
-            paddingTop: "env(safe-area-inset-top)",
+            paddingTop: "max(env(safe-area-inset-top), 0.75rem)",
             paddingLeft: "env(safe-area-inset-left)",
             paddingRight: "env(safe-area-inset-right)",
             transform: "translateX(var(--swipe-shell-offset, 0px))",
-            transition: "var(--swipe-shell-transition, transform 220ms ease-out)",
+            transition: "var(--swipe-shell-transition, transform 180ms ease-out)",
             willChange: "transform",
           }}
         >

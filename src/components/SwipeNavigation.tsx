@@ -6,14 +6,15 @@ import { saveScrollPosition } from "@/hooks/useScrollPreservation";
 import { resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
 
 const PAGES = ["/", "/stats", "/settings"] as const;
-const HORIZONTAL_LOCK_PX = 10;
-const NAV_TRIGGER_PX = 64;
-const FLICK_TRIGGER_PX = 38;
-const FLICK_VELOCITY_PX_PER_MS = 0.36;
-const DRAG_RESISTANCE = 0.58;
-const MAX_DRAG_OFFSET = 118;
-const COMMIT_OFFSET = 34;
-const COMMIT_DELAY_MS = 90;
+const HORIZONTAL_LOCK_PX = 8;
+const NAV_TRIGGER_PX = 52;
+const FLICK_TRIGGER_PX = 28;
+const FLICK_VELOCITY_PX_PER_MS = 0.26;
+const DRAG_RESISTANCE = 0.68;
+const MAX_DRAG_OFFSET = 104;
+const COMMIT_OFFSET = 26;
+const COMMIT_DELAY_MS = 40;
+const SNAP_BACK_DELAY_MS = 150;
 const VERTICAL_REJECT_RATIO = 1.08;
 
 type SwipeDirection = "left" | "right";
@@ -62,6 +63,7 @@ export function SwipeNavigation() {
   const queuedOffsetRef = useRef(0);
   const offsetRef = useRef(0);
   const isNavigatingRef = useRef(false);
+  const activePathRef = useRef(pathname);
 
   const applyOffset = useCallback((offset: number) => {
     const root = document.documentElement;
@@ -87,13 +89,13 @@ export function SwipeNavigation() {
 
     if (isDragging) {
       root.dataset.swipeDragging = "true";
-      setSwipeUiState({ isDragging: true, isTransitioning: false, frozenPathname: pathname });
+      setSwipeUiState({ isDragging: true, isTransitioning: false, frozenPathname: activePathRef.current });
       return;
     }
 
     delete root.dataset.swipeDragging;
     setSwipeUiState({ isDragging: false });
-  }, [pathname]);
+  }, []);
 
   const setTransitioning = useCallback((isTransitioning: boolean) => {
     const root = document.documentElement;
@@ -118,6 +120,7 @@ export function SwipeNavigation() {
   }, [applyOffset, setDragging, setTransitioning]);
 
   useEffect(() => {
+    activePathRef.current = pathname;
     resetVisualState();
 
     return () => {
@@ -217,16 +220,18 @@ export function SwipeNavigation() {
         queueOffset(0);
         window.setTimeout(() => {
           if (!isNavigatingRef.current) resetVisualState();
-        }, 220);
+        }, SNAP_BACK_DELAY_MS);
         return;
       }
 
       const direction: SwipeDirection = rawDistance < 0 ? "left" : "right";
-      const nextPath = getTargetPath(pathname, direction);
+      const nextPath = getTargetPath(activePathRef.current, direction);
       const commitOffset = direction === "left" ? -COMMIT_OFFSET : COMMIT_OFFSET;
 
       isNavigatingRef.current = true;
+      activePathRef.current = nextPath;
       saveScrollPosition(pathname);
+      setSwipeUiState({ frozenPathname: nextPath });
       setTransitioning(true);
       queueOffset(commitOffset);
 

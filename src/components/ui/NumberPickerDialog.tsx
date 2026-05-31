@@ -16,10 +16,6 @@ interface NumberPickerDialogProps {
   suffix?: string;
 }
 
-function getInitialValue(value: number) {
-  return value > 0 ? value.toString() : "";
-}
-
 export function NumberPickerDialog({
   isOpen,
   value,
@@ -46,7 +42,6 @@ export function NumberPickerDialog({
 }
 
 function NumberPickerDialogContent({
-  value,
   min = 1,
   max = 999,
   onChange,
@@ -54,11 +49,11 @@ function NumberPickerDialogContent({
   title = "Set Duration",
   suffix = "m",
 }: Omit<NumberPickerDialogProps, "isOpen">) {
-  const [currentVal, setCurrentVal] = useState<string>(() => getInitialValue(value));
+  const [currentVal, setCurrentVal] = useState("");
 
   const handleKeyPress = (key: string) => {
     setCurrentVal((prev) => {
-      const newVal = prev + key;
+      const newVal = prev === "" && key === "0" ? "" : `${prev}${key}`;
       if (Number(newVal) > max) return prev;
       return newVal;
     });
@@ -82,7 +77,7 @@ function NumberPickerDialogContent({
   ];
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-water-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="fluid-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div
         className="bg-water-900 border border-[1.5px] border-water-300/16 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
         role="dialog"
@@ -132,10 +127,11 @@ function NumberPickerDialogContent({
               type="button"
               onClick={handleBackspace}
               disabled={!currentVal}
-              className="h-14 w-full rounded-2xl flex items-center justify-center text-water-300 bg-water-800/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-30 disabled:hover:bg-transparent active:scale-95"
+              className="h-14 w-full rounded-2xl flex items-center justify-center bg-rose-500/12 text-rose-100 border border-rose-200/18 shadow-[0_0_16px_rgba(244,63,94,0.08)] hover:bg-rose-500/22 hover:text-white transition-all disabled:opacity-35 disabled:hover:bg-rose-500/12 active:scale-95"
               aria-label="Delete last digit"
+              title="Delete last digit"
             >
-              <Delete strokeWidth={2.5} />
+              <Delete className="h-6 w-6" strokeWidth={2.7} />
             </button>
           </div>
         </div>

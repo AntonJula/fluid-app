@@ -4,6 +4,7 @@ export interface HydrationHistoryItem {
   date: string;
   intake: number;
   goal: number;
+  breakdown?: Partial<Record<HydrationNote, number>>;
 }
 
 export interface DrinkLogItem {
@@ -75,6 +76,36 @@ function normalizeDrinkLog(log: unknown) {
     .slice(0, 50);
 }
 
+function normalizeHydrationBreakdown(breakdown: unknown): Partial<Record<HydrationNote, number>> | undefined {
+  if (!breakdown || typeof breakdown !== "object") return undefined;
+
+  const normalized = HYDRATION_NOTES.reduce<Partial<Record<HydrationNote, number>>>((items, note) => {
+    const amount = clampHydrationAmount((breakdown as Partial<Record<HydrationNote, number>>)[note] ?? 0, 0, 50000);
+    if (amount > 0) {
+      items[note] = amount;
+    }
+
+    return items;
+  }, {});
+
+  return Object.values(normalized).some((amount) => (amount ?? 0) > 0) ? normalized : undefined;
+}
+
+function buildDrinkBreakdown(log: DrinkLogItem[], expectedIntake: number): Partial<Record<HydrationNote, number>> | undefined {
+  const totals = log.reduce<Partial<Record<HydrationNote, number>>>((breakdown, item) => {
+    const note = item.note ?? "water";
+    breakdown[note] = clampHydrationAmount((breakdown[note] ?? 0) + item.amount, 0, 50000);
+    return breakdown;
+  }, {});
+  const total = Object.values(totals).reduce((sum, amount) => sum + (amount ?? 0), 0);
+
+  if (expectedIntake > 0 && total !== expectedIntake) {
+    return { water: expectedIntake };
+  }
+
+  return Object.values(totals).some((amount) => (amount ?? 0) > 0) ? totals : undefined;
+}
+
 function normalizeHistory(history: unknown, fallbackGoal: number): HydrationHistoryItem[] {
   if (!Array.isArray(history)) return [];
 
@@ -85,10 +116,15 @@ function normalizeHistory(history: unknown, fallbackGoal: number): HydrationHist
       const candidate = item as Partial<HydrationHistoryItem>;
       if (typeof candidate.date !== "string") return null;
 
+      const intake = clampHydrationAmount(candidate.intake ?? 0, 0, 50000);
+      const dayGoal = clampHydrationAmount(candidate.goal ?? fallbackGoal, 500, 10000);
+      const breakdown = normalizeHydrationBreakdown(candidate.breakdown) ?? (intake > 0 ? { water: intake } : undefined);
+
       return {
         date: candidate.date,
-        intake: clampHydrationAmount(candidate.intake ?? 0, 0, 50000),
-        goal: clampHydrationAmount(candidate.goal ?? fallbackGoal, 500, 10000),
+        intake,
+        goal: dayGoal,
+        ...(breakdown ? { breakdown } : {}),
       };
     })
     .filter((item): item is HydrationHistoryItem => item !== null);
@@ -166,9 +202,10 @@ export function rolloverHydrationState(state: HydrationState, today = getTodayDa
       const isLastUpdatedDay = dateStr === state.lastUpdated;
       const dayIntake = isLastUpdatedDay ? state.intake : 0;
       const dayGoal = state.goal;
+      const breakdown = isLastUpdatedDay ? buildDrinkBreakdown(state.drinkLog, dayIntake) : undefined;
 
       if (!updatedHistory.find((item) => item.date === dateStr)) {
-        updatedHistory.push({ date: dateStr, intake: dayIntake, goal: dayGoal });
+        updatedHistory.push({ date: dateStr, intake: dayIntake, goal: dayGoal, ...(breakdown ? { breakdown } : {}) });
       }
 
       if (dayIntake >= dayGoal) {

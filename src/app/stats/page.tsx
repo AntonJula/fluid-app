@@ -7,11 +7,44 @@ import { Card } from "@/components/ui/Card";
 import { HydrationLoadingState } from "@/components/HydrationLoadingState";
 import { Flame, Calendar, Trophy, Waves, ChartColumn, Target, GlassWater, CalendarSearch, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { formatDateLocal } from "@/lib/date";
+import type { DrinkLogItem, HydrationNote } from "@/lib/hydrationState";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_FORMATTER = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
 const DAY_DETAIL_FORMATTER = new Intl.DateTimeFormat("en", { weekday: "long", month: "short", day: "numeric" });
 const EMPTY_MONTH_SELECTION = "";
+const NOTE_ORDER: HydrationNote[] = ["water", "coffee", "tea", "workout", "hot-day"];
+const NOTE_LABELS: Record<HydrationNote, string> = {
+  water: "Water",
+  coffee: "Coffee",
+  tea: "Tea",
+  workout: "Workout",
+  "hot-day": "Hot day",
+};
+
+function buildDrinkBreakdown(log: DrinkLogItem[], expectedIntake: number): Partial<Record<HydrationNote, number>> | undefined {
+  const totals = log.reduce<Partial<Record<HydrationNote, number>>>((breakdown, item) => {
+    const note = item.note ?? "water";
+    breakdown[note] = Math.max(0, Math.round((breakdown[note] ?? 0) + item.amount));
+    return breakdown;
+  }, {});
+  const total = Object.values(totals).reduce((sum, amount) => sum + (amount ?? 0), 0);
+
+  if (expectedIntake > 0 && total !== expectedIntake) {
+    return { water: expectedIntake };
+  }
+
+  return Object.values(totals).some((amount) => (amount ?? 0) > 0) ? totals : undefined;
+}
+
+function getBreakdownEntries(breakdown: Partial<Record<HydrationNote, number>> | undefined, fallbackIntake: number) {
+  const source = breakdown ?? (fallbackIntake > 0 ? { water: fallbackIntake } : undefined);
+  if (!source) return [];
+
+  return NOTE_ORDER.map((note) => ({ note, label: NOTE_LABELS[note], amount: source[note] ?? 0 })).filter(
+    (item) => item.amount > 0
+  );
+}
 
 function parseDateLocal(dateStr: string) {
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -38,34 +71,26 @@ function useLockedPageScroll(isLocked: boolean) {
   React.useEffect(() => {
     if (!isLocked || typeof window === "undefined") return;
 
-    const scrollY = window.scrollY;
     const root = document.documentElement;
     const body = document.body;
     const previousRootOverflow = root.style.overflow;
     const previousBodyOverflow = body.style.overflow;
-    const previousBodyPosition = body.style.position;
-    const previousBodyTop = body.style.top;
-    const previousBodyLeft = body.style.left;
-    const previousBodyRight = body.style.right;
-    const previousBodyWidth = body.style.width;
+    const previousRootOverscroll = root.style.overscrollBehavior;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+    const previousBodyTouchAction = body.style.touchAction;
 
     root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
+    body.style.overscrollBehavior = "none";
+    body.style.touchAction = "none";
 
     return () => {
       root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehavior = previousRootOverscroll;
       body.style.overflow = previousBodyOverflow;
-      body.style.position = previousBodyPosition;
-      body.style.top = previousBodyTop;
-      body.style.left = previousBodyLeft;
-      body.style.right = previousBodyRight;
-      body.style.width = previousBodyWidth;
-      window.scrollTo(0, scrollY);
+      body.style.overscrollBehavior = previousBodyOverscroll;
+      body.style.touchAction = previousBodyTouchAction;
     };
   }, [isLocked]);
 }
@@ -108,7 +133,7 @@ function getMonthDays(anchor: Date) {
 }
 
 export default function StatsPage() {
-  const { streak, history, intake, goal, mounted } = useHydration();
+  const { streak, history, intake, goal, drinkLog, mounted } = useHydration();
   const [isMonthViewOpen, setIsMonthViewOpen] = React.useState(false);
   const [visibleMonthDate, setVisibleMonthDate] = React.useState(() => getMonthStart(new Date()));
   const [selectedMonthDate, setSelectedMonthDate] = React.useState(() => formatDateLocal(new Date()));
@@ -131,7 +156,11 @@ export default function StatsPage() {
     return found ?? { date: dateStr, intake: 0, goal };
   });
   const previousWeekData = previousWeek.map((dateStr) => history.find((item) => item.date === dateStr) ?? { date: dateStr, intake: 0, goal });
-  const allTrackedDays = [...history, { date: today, intake, goal }].sort((a, b) => a.date.localeCompare(b.date));
+  const todayBreakdown = buildDrinkBreakdown(drinkLog, intake);
+  const allTrackedDays = [
+    ...history,
+    { date: today, intake, goal, ...(todayBreakdown ? { breakdown: todayBreakdown } : intake > 0 ? { breakdown: { water: intake } } : {}) },
+  ].sort((a, b) => a.date.localeCompare(b.date));
   const trackedByDate = new Map(allTrackedDays.map((day) => [day.date, day]));
   const monthDays = getMonthDays(visibleMonthDate);
   const hasAnyTrackedWater = intake > 0 || history.some((day) => day.intake > 0);
@@ -141,26 +170,27 @@ export default function StatsPage() {
   const selectedMonthGoal = selectedMonthDay?.goal ?? goal;
   const selectedMonthProgress = Math.min(100, Math.round((selectedMonthIntake / Math.max(selectedMonthGoal, 1)) * 100));
   const selectedMonthIsFuture = hasSelectedMonthDate && selectedMonthDate > today;
+  const selectedMonthBreakdownEntries = getBreakdownEntries(selectedMonthDay?.breakdown, selectedMonthIntake);
 
   const maxIntake = Math.max(...chartData.map((day) => day.intake), goal, 1);
   const weeklyGoalHits = chartData.filter((day) => day.intake >= day.goal).length;
+  const daysWithWater = chartData.filter((day) => day.intake > 0).length;
   const weeklyAverage = Math.round(chartData.reduce((sum, day) => sum + day.intake, 0) / chartData.length);
   const previousAverage = Math.round(previousWeekData.reduce((sum, day) => sum + day.intake, 0) / previousWeekData.length);
   const averageDelta = weeklyAverage - previousAverage;
   const consistency = Math.round((weeklyGoalHits / chartData.length) * 100);
-  const remainingWeeklyWins = Math.max(0, 7 - weeklyGoalHits);
   const insightTitle =
-    remainingWeeklyWins === 0
-      ? "Perfect week so far"
-      : averageDelta >= 0
-        ? "You're ahead this week"
-        : "A steady glass helps";
+    daysWithWater >= 5
+      ? "A steady rhythm is forming"
+      : averageDelta >= 0 && weeklyAverage > 0
+        ? "Small sips are adding up"
+        : "A little, often, works best";
   const insightBody =
-    remainingWeeklyWins === 0
-      ? "You've hit your goal every day this week. Keep the rhythm steady."
-      : averageDelta >= 0
-        ? `You're averaging ${averageDelta} ml more per day than last week. Hit ${remainingWeeklyWins} more goal days to finish the week strong.`
-        : `You're averaging ${Math.abs(averageDelta)} ml less per day than last week. One glass today can close the gap.`;
+    daysWithWater >= 5
+      ? "Most days already have water logged. Keep it gentle and spread small drinks through the day."
+      : averageDelta >= 0 && weeklyAverage > 0
+        ? `Your average is ${averageDelta} ml higher than last week. Keep the pace comfortable, not rushed.`
+        : "One small drink at a time is enough to build the habit. No need to catch up all at once.";
 
   const openMonthView = () => {
     const currentMonth = getMonthStart(todayDate);
@@ -176,8 +206,8 @@ export default function StatsPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 py-4 min-[380px]:p-4 sm:p-6 md:max-w-[30rem]">
-      <header className="w-full text-center mt-4 mb-8">
+    <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 pb-4 pt-2 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-3 sm:p-6 md:max-w-[30rem]">
+      <header className="w-full text-center mt-2 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Your Stats.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">
           Consistency builds the habit
@@ -207,7 +237,7 @@ export default function StatsPage() {
             {Math.round((intake / goal) * 100)}
             <span className="font-ui text-xl text-water-400 ml-0.5">%</span>
           </div>
-          <span className="font-ui text-water-400/80 text-[10px] mt-2 uppercase tracking-widest font-bold">Goal completed</span>
+          <span className="font-ui text-water-400/80 text-[10px] mt-2 uppercase tracking-widest font-bold">Today progress</span>
         </Card>
       </div>
 
@@ -219,7 +249,7 @@ export default function StatsPage() {
           </div>
           <h2 className="font-ui mt-3 text-2xl font-black tracking-normal text-white">Your stats will fill in soon.</h2>
           <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-300/82">
-            Start with one glass today and Fluid will build your weekly view as you log water.
+            Start with a small drink today and Fluid will build your weekly view as you log water.
           </p>
         </Card>
       )}
@@ -240,7 +270,7 @@ export default function StatsPage() {
             Consistency
           </div>
           <p className="font-numeric mt-3 text-3xl font-black text-white">{consistency}%</p>
-          <p className="font-body mt-1 text-xs text-water-400/80">{weeklyGoalHits} of 7 days hit the goal.</p>
+          <p className="font-body mt-1 text-xs text-water-400/80">{daysWithWater} of 7 days include water.</p>
         </Card>
       </div>
 
@@ -275,7 +305,7 @@ export default function StatsPage() {
         </div>
 
         <p className="font-body mb-5 text-sm text-water-300/80 min-[380px]:mb-6">
-          Taller bars mean stronger hydration days. Bright bars are days when you hit your goal.
+          Taller bars mean more water logged. Spread drinks through the day instead of rushing late.
         </p>
 
         <div className="flex h-48 items-end justify-between gap-1.5 pt-3 min-[380px]:h-56 min-[380px]:gap-2 min-[380px]:pt-4">
@@ -326,7 +356,7 @@ export default function StatsPage() {
       {isMonthViewOpen && typeof document !== "undefined"
         ? createPortal(
         <div
-          className="fixed inset-0 z-[112] flex touch-none items-center justify-center overflow-hidden bg-water-950/78 px-3 pb-[max(5.25rem,calc(env(safe-area-inset-bottom)+4.65rem))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-xl"
+          className="fluid-modal-backdrop fixed inset-0 z-[112] flex touch-none items-end justify-center overflow-hidden px-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]"
           data-swipe-ignore="true"
           onClick={() => setIsMonthViewOpen(false)}
           onTouchMove={(event) => event.preventDefault()}
@@ -435,7 +465,7 @@ export default function StatsPage() {
                         : selectedMonthIsFuture
                         ? "No intake yet. This day is ahead."
                         : selectedMonthIntake > 0
-                          ? `${selectedMonthProgress}% of that day's goal.`
+                          ? `${selectedMonthProgress}% of that day's target.`
                           : "No water logged for this day."}
                     </p>
                   </div>
@@ -444,6 +474,25 @@ export default function StatsPage() {
                     <p className="font-ui mt-1 text-[0.62rem] font-black uppercase tracking-[0.18em] text-water-300/78">ml</p>
                   </div>
                 </div>
+                {selectedMonthBreakdownEntries.length > 0 && (
+                  <div className="mt-3 grid gap-1.5">
+                    {selectedMonthBreakdownEntries.map((item) => (
+                      <div
+                        key={item.note}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-water-300/10 bg-water-950/22 px-3 py-2"
+                      >
+                        <span className="font-ui flex min-w-0 items-center gap-2 text-xs font-bold text-water-200/86">
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-cyan-200/80 shadow-[0_0_10px_rgba(125,211,252,0.28)]" />
+                          <span className="truncate">{item.label}</span>
+                        </span>
+                        <span className="font-numeric shrink-0 text-sm font-black text-white">
+                          {item.amount}
+                          <span className="font-ui ml-1 text-[0.62rem] font-black uppercase tracking-[0.16em] text-water-300/78">ml</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </section>

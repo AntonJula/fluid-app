@@ -83,7 +83,7 @@ const tests = [
       assert.equal(rolled.streak, 3);
       assert.equal(rolled.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
       assert.equal(rolled.lastUpdated, "2026-04-11");
-      assert.deepEqual(rolled.history, [{ date: "2026-04-10", intake: 2500, goal: 2500 }]);
+      assert.deepEqual(rolled.history, [{ date: "2026-04-10", intake: 2500, goal: 2500, breakdown: { water: 2500 } }]);
       assert.deepEqual(rolled.drinkLog, []);
     },
   },
@@ -105,7 +105,7 @@ const tests = [
       assert.equal(rolled.streak, 0);
       assert.equal(rolled.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
       assert.equal(rolled.history.length, 4);
-      assert.deepEqual(rolled.history[0], { date: "2026-04-07", intake: 1800, goal: 2500 });
+      assert.deepEqual(rolled.history[0], { date: "2026-04-07", intake: 1800, goal: 2500, breakdown: { water: 1800 } });
       assert.deepEqual(rolled.history[1], { date: "2026-04-08", intake: 0, goal: 2500 });
       assert.deepEqual(rolled.history[2], { date: "2026-04-09", intake: 0, goal: 2500 });
       assert.deepEqual(rolled.history[3], { date: "2026-04-10", intake: 0, goal: 2500 });
@@ -264,7 +264,7 @@ const tests = [
       });
 
       assert.equal(message.kind, "close-goal");
-      assert.match(message.body, /Only 250 ml left for tonight/);
+      assert.match(message.body, /250 ml would complete today/);
     },
   },
   {
@@ -282,7 +282,26 @@ const tests = [
       });
 
       assert.equal(message.kind, "streak-last-chance");
-      assert.match(message.body, /No protections left/);
+      assert.match(message.body, /small drink now helps/);
+    },
+  },
+  {
+    name: "pickHydrationNotification avoids late-night pressure when far behind",
+    run: () => {
+      const message = pickHydrationNotification({
+        intake: 1200,
+        goal: 2500,
+        reminderInterval: 40,
+        lastDrinkAt: new Date(2026, 4, 5, 18, 30).getTime(),
+        now: new Date(2026, 4, 5, 21, 15),
+        isCatchUp: false,
+        streak: 7,
+        streakShieldCharges: 0,
+      });
+
+      assert.notEqual(message.kind, "streak-last-chance");
+      assert.match(message.body, /comfortable/);
+      assert.equal(message.nextDelayMinutes, undefined);
     },
   },
   {

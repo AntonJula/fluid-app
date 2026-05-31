@@ -1,20 +1,98 @@
+"use client";
+
 import React from "react";
 import { Trophy } from "lucide-react";
 import { Card } from "./ui/Card";
 
+const SECONDARY_NUMBER_ANIMATION_MS = 820;
+
 interface ProgressCardProps {
   intake: number;
+  targetIntake?: number;
   goal: number;
 }
 
-export function ProgressCard({ intake, goal }: ProgressCardProps) {
+function easeOutQuart(progress: number) {
+  return 1 - Math.pow(1 - progress, 4);
+}
+
+function useAnimatedNumber(target: number, duration = SECONDARY_NUMBER_ANIMATION_MS, initialValue = target) {
+  const [displayedValue, setDisplayedValue] = React.useState(initialValue);
+  const currentValueRef = React.useRef(initialValue);
+  const frameRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") {
+      currentValueRef.current = target;
+      setDisplayedValue(target);
+      return;
+    }
+
+    const prefersReducedMotion =
+      typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReducedMotion) {
+      currentValueRef.current = target;
+      setDisplayedValue(target);
+      return;
+    }
+
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+
+    const startValue = currentValueRef.current;
+    const change = target - startValue;
+    const startedAt = performance.now();
+
+    if (Math.abs(change) < 1) {
+      currentValueRef.current = target;
+      setDisplayedValue(target);
+      return;
+    }
+
+    const tick = (timestamp: number) => {
+      const elapsed = timestamp - startedAt;
+      const progress = Math.min(1, elapsed / duration);
+      const nextValue = startValue + change * easeOutQuart(progress);
+
+      currentValueRef.current = nextValue;
+      setDisplayedValue(nextValue);
+
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      currentValueRef.current = target;
+      setDisplayedValue(target);
+      frameRef.current = null;
+    };
+
+    frameRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
+  }, [duration, target]);
+
+  return displayedValue;
+}
+
+export function ProgressCard({ intake, targetIntake = intake, goal }: ProgressCardProps) {
   const safeGoal = Math.max(goal, 1);
   const progress = Math.min(1, intake / safeGoal);
-  const remaining = Math.max(0, goal - intake);
-  const remainingGlasses = Math.ceil(remaining / 250);
+  const remaining = Math.max(0, goal - targetIntake);
+  const animatedRemaining = useAnimatedNumber(remaining, SECONDARY_NUMBER_ANIMATION_MS, safeGoal);
+  const displayedRemaining = Math.max(0, Math.round(animatedRemaining));
+  const remainingGlasses = displayedRemaining <= 0 ? 0 : Math.ceil(animatedRemaining / 250);
   const percentage = Math.round(progress * 100);
   const isGoalMet = intake >= goal;
-  const overGoal = Math.max(0, intake - goal);
+  const overGoal = Math.max(0, targetIntake - goal);
 
   return (
     <Card className="flex w-full max-w-full min-w-0 flex-col items-center justify-center p-4 text-center shadow-xl min-[380px]:p-5 sm:p-7">
@@ -57,14 +135,14 @@ export function ProgressCard({ intake, goal }: ProgressCardProps) {
           <div className="flex flex-col justify-center rounded-xl border border-[1.5px] border-water-300/14 bg-water-900/35 px-3 py-3 min-[380px]:rounded-2xl min-[380px]:px-4">
             <p className="font-ui text-water-300 text-[0.82rem] sm:text-sm font-bold tracking-wide">Left today</p>
             <p className="font-numeric mt-1.5 flex items-baseline whitespace-nowrap text-[1.15rem] font-black text-white sm:text-[1.65rem]">
-              <span>{remaining}</span>
+              <span className="tabular-nums">{displayedRemaining}</span>
               <span className="font-ui ml-1 text-[0.82rem] sm:text-base font-bold text-water-300/80">ml</span>
             </p>
           </div>
           <div className="flex flex-col justify-center rounded-xl border border-[1.5px] border-water-300/14 bg-water-900/35 px-3 py-3 min-[380px]:rounded-2xl min-[380px]:px-4">
             <p className="font-ui text-water-300 text-[0.82rem] sm:text-sm font-bold tracking-wide">Quick target</p>
             <p className="font-numeric mt-1.5 flex flex-wrap items-baseline gap-x-1.5 text-[1.05rem] font-black text-white sm:text-[1.65rem]">
-              <span>{remainingGlasses}</span>
+              <span className="tabular-nums">{remainingGlasses}</span>
               <span className="font-ui text-[0.82rem] font-bold tracking-normal text-water-300/80 sm:text-base">
                 {remainingGlasses === 1 ? "glass" : "glasses"}
               </span>
