@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import {
   getNextHydrationLifecycleDueAt,
+  pickWorkoutHydrationNotification,
   pickHydrationLifecycleNotification,
   pickHydrationNotification,
   pickHydrationStreakAlertNotification,
+  WORKOUT_REMINDER_INTERVAL_MINUTES,
   type HydrationLifecycleNotificationState,
   type HydrationStreakAlertNotification,
 } from "@/lib/notificationMessages";
+import type { HydrationNote } from "@/lib/hydrationState";
 
 const PERMISSION_EVENT = "fluid-notification-permission-changed";
 const LAST_NOTIFIED_KEY = "fluid-last-notified";
@@ -19,6 +22,8 @@ const LIFECYCLE_LAST_DAILY_KEY = "fluid-lifecycle-last-daily";
 const LIFECYCLE_LAST_WEEKLY_KEY = "fluid-lifecycle-last-weekly";
 const LIFECYCLE_LAST_MONTHLY_KEY = "fluid-lifecycle-last-monthly";
 const STREAK_ALERT_NOTIFIED_KEY = "fluid-streak-alert-notified";
+const WORKOUT_NEXT_NOTIFICATION_KEY = "fluid-workout-next-notification-due";
+const WORKOUT_LAST_NOTIFIED_KEY = "fluid-workout-last-notified";
 const SERVICE_WORKER_PATH = "/fluid-notifications-sw.js";
 const MIN_NOTIFICATION_GAP_MS = 10 * 60 * 1000;
 const ONE_MINUTE_MS = 60 * 1000;
@@ -31,6 +36,8 @@ interface NotificationHydrationStatus {
   streak?: number;
   streakShieldCharges?: number;
   streakAlert?: HydrationStreakAlertNotification | null;
+  workoutSessionEndsAt?: number | null;
+  lastWorkoutDrinkAt?: number | null;
 }
 
 type FluidNotificationOptions = NotificationOptions & {
@@ -47,6 +54,8 @@ function getSafeHydrationStatus(status?: NotificationHydrationStatus): Notificat
     streak: Math.max(0, Math.round(status?.streak ?? 0)),
     streakShieldCharges: Math.max(0, Math.min(2, Math.round(status?.streakShieldCharges ?? 2))),
     streakAlert: status?.streakAlert ?? null,
+    workoutSessionEndsAt: status?.workoutSessionEndsAt ?? null,
+    lastWorkoutDrinkAt: status?.lastWorkoutDrinkAt ?? null,
   };
 }
 
@@ -141,24 +150,38 @@ async function showSystemNotification({
   body,
   tag,
   actionAmount,
+  actionNote,
 }: {
   title: string;
   body: string;
   tag: string;
   actionAmount?: number;
+  actionNote?: HydrationNote;
 }) {
+  const quickAddParams = new URLSearchParams();
+
+  if (actionAmount) {
+    quickAddParams.set("quickAdd", actionAmount.toString());
+  }
+
+  if (actionAmount && actionNote) {
+    quickAddParams.set("quickAddNote", actionNote);
+  }
+
   const options: FluidNotificationOptions = {
     body,
     badge: "/favicon.ico",
-    data: { url: actionAmount ? `/?quickAdd=${actionAmount}` : "/" },
+    data: { url: actionAmount ? `/?${quickAddParams.toString()}` : "/" },
     icon: "/app-icon-192.png",
     tag,
     renotify: true,
   };
 
   if (actionAmount) {
+    const actionSuffix = actionNote ? `-${actionNote}` : "";
+
     options.actions = [
-      { action: `add-${actionAmount}`, title: `+${actionAmount} ml` },
+      { action: `add-${actionAmount}${actionSuffix}`, title: `+${actionAmount} ml` },
       { action: "open", title: "Open" },
     ];
   }
@@ -188,6 +211,7 @@ export function useNotifications(
   const timerRef = useRef<number | null>(null);
   const lifecycleTimerRef = useRef<number | null>(null);
   const streakAlertTimerRef = useRef<number | null>(null);
+  const workoutTimerRef = useRef<number | null>(null);
   const quietHoursRef = useRef(quietHours);
   const intervalRef = useRef(intervalMinutes);
   const activeRef = useRef(active);
@@ -199,6 +223,8 @@ export function useNotifications(
   const hydrationStreak = hydrationStatus?.streak;
   const hydrationStreakShieldCharges = hydrationStatus?.streakShieldCharges;
   const hydrationStreakAlertId = hydrationStatus?.streakAlert?.id;
+  const hydrationWorkoutSessionEndsAt = hydrationStatus?.workoutSessionEndsAt;
+  const hydrationLastWorkoutDrinkAt = hydrationStatus?.lastWorkoutDrinkAt;
 
   useEffect(() => {
     quietHoursRef.current = quietHours;
@@ -221,6 +247,8 @@ export function useNotifications(
       streak: hydrationStreak ?? 0,
       streakShieldCharges: hydrationStreakShieldCharges ?? 2,
       streakAlert: hydrationStatus?.streakAlert ?? null,
+      workoutSessionEndsAt: hydrationWorkoutSessionEndsAt ?? null,
+      lastWorkoutDrinkAt: hydrationLastWorkoutDrinkAt ?? null,
     });
   }, [
     hydrationGoal,
@@ -230,6 +258,8 @@ export function useNotifications(
     hydrationStreak,
     hydrationStreakAlertId,
     hydrationStreakShieldCharges,
+    hydrationWorkoutSessionEndsAt,
+    hydrationLastWorkoutDrinkAt,
     hydrationStatus?.streakAlert,
   ]);
 
@@ -623,6 +653,163 @@ export function useNotifications(
     hydrationStreakAlertId,
     hydrationStreakShieldCharges,
     intervalMinutes,
+    permission,
+    quietHours.end,
+    quietHours.start,
+  ]);
+
+  useEffect(() => {
+    if (permission === "granted" && hydrationWorkoutSessionEndsAt && hydrationWorkoutSessionEndsAt > Date.now()) {
+      let isDisposed = false;
+
+      const clearTimer = () => {
+        if (workoutTimerRef.current !== null) {
+          window.clearTimeout(workoutTimerRef.current);
+          workoutTimerRef.current = null;
+        }
+      };
+
+      const scheduleFor = (timestamp: number) => {
+        if (isDisposed) return;
+
+        clearTimer();
+        workoutTimerRef.current = window.setTimeout(() => {
+          void checkWorkoutAndNotify(false);
+        }, Math.max(1000, timestamp - Date.now()));
+      };
+
+      const updateNextDue = (timestamp: number) => {
+        localStorage.setItem(WORKOUT_NEXT_NOTIFICATION_KEY, timestamp.toString());
+        scheduleFor(timestamp);
+      };
+
+      const getWorkoutContext = (isCatchUp: boolean) => ({
+        ...hydrationStatusRef.current,
+        reminderInterval: WORKOUT_REMINDER_INTERVAL_MINUTES,
+        now: new Date(),
+        isCatchUp,
+      });
+
+      const scheduleNextWorkoutCheck = () => {
+        const context = getWorkoutContext(false);
+        const sessionEndsAt = context.workoutSessionEndsAt ?? 0;
+
+        if (sessionEndsAt <= Date.now()) {
+          localStorage.removeItem(WORKOUT_NEXT_NOTIFICATION_KEY);
+          return;
+        }
+
+        const lastWorkoutDrinkAt = context.lastWorkoutDrinkAt ?? 0;
+        const nextByDrink =
+          lastWorkoutDrinkAt > 0
+            ? lastWorkoutDrinkAt + WORKOUT_REMINDER_INTERVAL_MINUTES * 60 * 1000
+            : Date.now() + WORKOUT_REMINDER_INTERVAL_MINUTES * 60 * 1000;
+        const nextDue = Math.min(sessionEndsAt, Math.max(Date.now() + 1000, nextByDrink));
+        const quietEndsAt = getQuietWindowEnd(context.now, quietHoursRef.current);
+
+        updateNextDue(quietEndsAt && nextDue <= quietEndsAt ? quietEndsAt + ONE_MINUTE_MS : nextDue);
+      };
+
+      const checkWorkoutAndNotify = async (isCatchUp = false) => {
+        if (isDisposed || Notification.permission !== "granted") {
+          return;
+        }
+
+        const context = getWorkoutContext(isCatchUp);
+        const sessionEndsAt = context.workoutSessionEndsAt ?? 0;
+
+        if (sessionEndsAt <= Date.now()) {
+          localStorage.removeItem(WORKOUT_NEXT_NOTIFICATION_KEY);
+          return;
+        }
+
+        const quietEndsAt = getQuietWindowEnd(context.now, quietHoursRef.current);
+
+        if (quietEndsAt) {
+          updateNextDue(Math.min(sessionEndsAt, quietEndsAt + ONE_MINUTE_MS));
+          return;
+        }
+
+        const lastWorkoutNotificationAt = getStoredTimestamp(WORKOUT_LAST_NOTIFIED_KEY);
+        const lastAnyNotificationAt = getStoredTimestamp(LAST_NOTIFIED_KEY);
+        const nextAllowedAt = Math.max(
+          lastWorkoutNotificationAt + WORKOUT_REMINDER_INTERVAL_MINUTES * 60 * 1000,
+          lastAnyNotificationAt + MIN_NOTIFICATION_GAP_MS
+        );
+
+        if (nextAllowedAt > Date.now()) {
+          updateNextDue(Math.min(sessionEndsAt, nextAllowedAt));
+          return;
+        }
+
+        const message = pickWorkoutHydrationNotification(context);
+
+        if (!message) {
+          scheduleNextWorkoutCheck();
+          return;
+        }
+
+        await showSystemNotification({
+          title: message.title,
+          body: message.body,
+          tag: `fluid-${message.kind}`,
+          actionAmount: message.actionAmount,
+          actionNote: message.actionNote,
+        });
+
+        if (isDisposed) return;
+
+        const sentAt = Date.now();
+        localStorage.setItem(WORKOUT_LAST_NOTIFIED_KEY, sentAt.toString());
+        localStorage.setItem(LAST_NOTIFIED_KEY, sentAt.toString());
+        updateNextDue(Math.min(sessionEndsAt, sentAt + WORKOUT_REMINDER_INTERVAL_MINUTES * 60 * 1000));
+      };
+
+      const storedNextDue = getStoredTimestamp(WORKOUT_NEXT_NOTIFICATION_KEY);
+      const initialContext = getWorkoutContext(false);
+      const sessionEndsAt = initialContext.workoutSessionEndsAt ?? 0;
+      const lastWorkoutDrinkAt = initialContext.lastWorkoutDrinkAt ?? 0;
+      const initialDue =
+        storedNextDue > Date.now() && storedNextDue < sessionEndsAt
+          ? storedNextDue
+          : lastWorkoutDrinkAt > 0
+            ? lastWorkoutDrinkAt + WORKOUT_REMINDER_INTERVAL_MINUTES * 60 * 1000
+            : Date.now() + WORKOUT_REMINDER_INTERVAL_MINUTES * 60 * 1000;
+
+      updateNextDue(Math.min(sessionEndsAt, Math.max(Date.now() + 1000, initialDue)));
+
+      const handleVisibility = () => {
+        if (document.visibilityState !== "visible") return;
+
+        const storedDue = getStoredTimestamp(WORKOUT_NEXT_NOTIFICATION_KEY);
+
+        if (storedDue > 0 && Date.now() >= storedDue) {
+          void checkWorkoutAndNotify(true);
+        }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibility);
+      window.addEventListener("focus", handleVisibility);
+
+      return () => {
+        isDisposed = true;
+        clearTimer();
+        document.removeEventListener("visibilitychange", handleVisibility);
+        window.removeEventListener("focus", handleVisibility);
+      };
+    }
+
+    return () => {
+      if (workoutTimerRef.current !== null) {
+        window.clearTimeout(workoutTimerRef.current);
+        workoutTimerRef.current = null;
+      }
+
+      localStorage.removeItem(WORKOUT_NEXT_NOTIFICATION_KEY);
+    };
+  }, [
+    hydrationLastWorkoutDrinkAt,
+    hydrationWorkoutSessionEndsAt,
     permission,
     quietHours.end,
     quietHours.start,

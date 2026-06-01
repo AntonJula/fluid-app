@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useHydration } from "@/hooks/useHydration";
 import { GoalSettings } from "@/components/GoalSettings";
@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 
 export default function SettingsPage() {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const advancedSettingsRef = useRef<HTMLDivElement>(null);
   const {
     goal,
     setGoal,
@@ -25,6 +26,18 @@ export default function SettingsPage() {
     importHydrationState,
     mounted,
   } = useHydration();
+
+  useEffect(() => {
+    if (!isAdvancedOpen) return;
+
+    const timer = window.setTimeout(() => {
+      advancedSettingsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 140);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isAdvancedOpen]);
 
   if (!mounted) {
     return <HydrationLoadingState />;
@@ -118,8 +131,9 @@ export default function SettingsPage() {
 
           {isAdvancedOpen && (
             <div
+              ref={advancedSettingsRef}
               id="advanced-settings"
-              className="space-y-3 border-t border-cyan-100/14 bg-water-950/10 px-3 pb-3 pt-3 min-[380px]:space-y-4 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-4"
+              className="scroll-mt-4 space-y-3 border-t border-cyan-100/14 bg-water-950/10 px-3 pb-3 pt-3 min-[380px]:space-y-4 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-4"
             >
               <NavSettings hideNav={hideNav} setHideNav={setHideNav} embedded />
               <DataSettings

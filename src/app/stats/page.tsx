@@ -95,6 +95,41 @@ function useLockedPageScroll(isLocked: boolean) {
   }, [isLocked]);
 }
 
+function useInView<T extends HTMLElement>() {
+  const ref = React.useRef<T | null>(null);
+  const [isInView, setIsInView] = React.useState(false);
+
+  React.useEffect(() => {
+    const element = ref.current;
+    if (!element || typeof window === "undefined") return;
+
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (prefersReducedMotion || !("IntersectionObserver" in window)) {
+      setIsInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.34, rootMargin: "0px 0px -12% 0px" }
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  return [ref, isInView] as const;
+}
+
 function getWeekDates(anchor: Date, offsetWeeks = 0) {
   const currentDay = anchor.getDay();
   const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1;
@@ -137,6 +172,7 @@ export default function StatsPage() {
   const [isMonthViewOpen, setIsMonthViewOpen] = React.useState(false);
   const [visibleMonthDate, setVisibleMonthDate] = React.useState(() => getMonthStart(new Date()));
   const [selectedMonthDate, setSelectedMonthDate] = React.useState(() => formatDateLocal(new Date()));
+  const [trackingCardRef, isTrackingInView] = useInView<HTMLDivElement>();
   useLockedPageScroll(isMonthViewOpen);
 
   if (!mounted) {
@@ -308,7 +344,7 @@ export default function StatsPage() {
           Taller bars mean more water logged. Spread drinks through the day instead of rushing late.
         </p>
 
-        <div className="flex h-48 items-end justify-between gap-1.5 pt-3 min-[380px]:h-56 min-[380px]:gap-2 min-[380px]:pt-4">
+        <div ref={trackingCardRef} className="flex h-48 items-end justify-between gap-1.5 pt-3 min-[380px]:h-56 min-[380px]:gap-2 min-[380px]:pt-4">
           {chartData.map((day, idx) => {
             const heightPercent = Math.min(100, (day.intake / maxIntake) * 100);
             const isGoalMet = day.intake > 0 && day.intake >= day.goal;
@@ -332,12 +368,15 @@ export default function StatsPage() {
                   }`}
                 >
                   <div
-                    className={`w-full rounded-[1.2rem] transition-all duration-1000 ease-out group-hover:brightness-110 ${
+                    className={`w-full rounded-[1.2rem] transition-[height,filter] duration-[720ms] ease-[cubic-bezier(0.22,0.9,0.28,1)] group-hover:brightness-110 ${
                       isGoalMet
                         ? "bg-gradient-to-t from-water-600 via-water-400 to-water-200"
                         : "bg-gradient-to-t from-water-900/80 to-water-700/70"
                     }`}
-                    style={{ height: `${Math.max(heightPercent, day.intake > 0 ? 10 : 0)}%` }}
+                    style={{
+                      height: `${isTrackingInView ? Math.max(heightPercent, day.intake > 0 ? 10 : 0) : 0}%`,
+                      transitionDelay: isTrackingInView && day.intake > 0 ? `${idx * 55}ms` : "0ms",
+                    }}
                   />
                 </div>
                 <span
@@ -356,7 +395,7 @@ export default function StatsPage() {
       {isMonthViewOpen && typeof document !== "undefined"
         ? createPortal(
         <div
-          className="fluid-modal-backdrop fixed inset-0 z-[112] flex touch-none items-end justify-center overflow-hidden px-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]"
+          className="fluid-modal-backdrop fixed inset-0 z-[112] flex touch-none items-end justify-center overflow-hidden px-3 pb-[calc(max(0.85rem,env(safe-area-inset-bottom))+5.25rem)] pt-[max(0.75rem,env(safe-area-inset-top))]"
           data-swipe-ignore="true"
           onClick={() => setIsMonthViewOpen(false)}
           onTouchMove={(event) => event.preventDefault()}

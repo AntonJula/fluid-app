@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import {
   DEFAULT_GOAL,
   DEFAULT_QUICK_ADD_AMOUNT,
+  DEFAULT_WORKOUT_SESSION_MINUTES,
   MAX_STREAK_SHIELD_CHARGES,
   clampHydrationAmount,
   getDefaultHydrationState,
@@ -27,6 +28,8 @@ export type UseHydrationReturn = HydrationState & {
   deleteDrinkLogItem: (id: string) => void;
   setGoal: (newGoal: number) => void;
   setQuickAddAmount: (amount: number) => void;
+  startWorkoutSession: (durationMinutes?: number) => void;
+  endWorkoutSession: () => void;
   setReminderInterval: (interval: number) => void;
   setQuietHours: (start: string, end: string) => void;
   setHideNav: (hide: boolean) => void;
@@ -42,6 +45,7 @@ const SERVER_SNAPSHOT: HydrationState = {
   streak: 0,
   streakShieldCharges: MAX_STREAK_SHIELD_CHARGES,
   streakAlert: null,
+  workoutSessionEndsAt: null,
   reminderInterval: 0,
   quietHours: { start: "22:00", end: "07:00" },
   hideNav: false,
@@ -144,15 +148,20 @@ export function useHydration(): UseHydrationReturn {
 
   const addDrink = (amount: number, note?: HydrationNote) => {
     const safeAmount = clampHydrationAmount(amount, 1, 5000);
+    const now = Date.now();
 
     updateState((currentState) => ({
       ...currentState,
       intake: clampHydrationAmount(currentState.intake + safeAmount),
+      workoutSessionEndsAt:
+        note === "workout"
+          ? Math.max(currentState.workoutSessionEndsAt ?? 0, now + DEFAULT_WORKOUT_SESSION_MINUTES * 60 * 1000)
+          : currentState.workoutSessionEndsAt,
       drinkLog: [
         {
-          id: `${Date.now()}-${safeAmount}-${Math.random().toString(16).slice(2)}`,
+          id: `${now}-${safeAmount}-${Math.random().toString(16).slice(2)}`,
           amount: safeAmount,
-          timestamp: Date.now(),
+          timestamp: now,
           ...(note ? { note } : {}),
         },
         ...currentState.drinkLog,
@@ -243,6 +252,22 @@ export function useHydration(): UseHydrationReturn {
     }));
   };
 
+  const startWorkoutSession = (durationMinutes = DEFAULT_WORKOUT_SESSION_MINUTES) => {
+    const safeDuration = clampHydrationAmount(durationMinutes, 15, 240);
+
+    updateState((currentState) => ({
+      ...currentState,
+      workoutSessionEndsAt: Date.now() + safeDuration * 60 * 1000,
+    }));
+  };
+
+  const endWorkoutSession = () => {
+    updateState((currentState) => ({
+      ...currentState,
+      workoutSessionEndsAt: null,
+    }));
+  };
+
   const resetDaily = () => {
     updateState((currentState) => ({
       ...currentState,
@@ -289,6 +314,8 @@ export function useHydration(): UseHydrationReturn {
     deleteDrinkLogItem,
     setGoal,
     setQuickAddAmount,
+    startWorkoutSession,
+    endWorkoutSession,
     setReminderInterval,
     setQuietHours,
     setHideNav,

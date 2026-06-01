@@ -30,6 +30,7 @@ export interface HydrationState {
   streak: number;
   streakShieldCharges: number;
   streakAlert: HydrationStreakAlert | null;
+  workoutSessionEndsAt: number | null;
   reminderInterval: number;
   quietHours: { start: string; end: string };
   hideNav: boolean;
@@ -41,6 +42,7 @@ export interface HydrationState {
 
 export const DEFAULT_GOAL = 2500;
 export const DEFAULT_QUICK_ADD_AMOUNT = 250;
+export const DEFAULT_WORKOUT_SESSION_MINUTES = 90;
 export const MAX_STREAK_SHIELD_CHARGES = 2;
 export const HYDRATION_NOTES = ["water", "coffee", "tea", "workout", "hot-day"] as const;
 export type HydrationNote = (typeof HYDRATION_NOTES)[number];
@@ -146,6 +148,12 @@ function normalizeStreakAlert(alert: unknown): HydrationStreakAlert | null {
   };
 }
 
+function normalizeOptionalTimestamp(value: unknown): number | null {
+  const timestamp = Number(value);
+
+  return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null;
+}
+
 export function getDefaultHydrationState(): HydrationState {
   return {
     intake: 0,
@@ -153,6 +161,7 @@ export function getDefaultHydrationState(): HydrationState {
     streak: 0,
     streakShieldCharges: MAX_STREAK_SHIELD_CHARGES,
     streakAlert: null,
+    workoutSessionEndsAt: null,
     reminderInterval: 0,
     quietHours: { start: "22:00", end: "07:00" },
     hideNav: false,
@@ -172,6 +181,7 @@ export function normalizeHydrationState(parsed: Partial<HydrationState>, today =
     streak: parsed.streak ?? 0,
     streakShieldCharges: clampHydrationAmount(parsed.streakShieldCharges ?? MAX_STREAK_SHIELD_CHARGES, 0, MAX_STREAK_SHIELD_CHARGES),
     streakAlert: normalizeStreakAlert(parsed.streakAlert),
+    workoutSessionEndsAt: normalizeOptionalTimestamp(parsed.workoutSessionEndsAt),
     reminderInterval: parsed.reminderInterval ?? 0,
     quietHours: parsed.quietHours ?? { start: "22:00", end: "07:00" },
     hideNav: parsed.hideNav ?? false,
@@ -243,6 +253,7 @@ export function rolloverHydrationState(state: HydrationState, today = getTodayDa
     streak: newStreak,
     streakShieldCharges: newShieldCharges,
     streakAlert,
+    workoutSessionEndsAt: state.workoutSessionEndsAt && state.workoutSessionEndsAt > Date.now() ? state.workoutSessionEndsAt : null,
     lastUpdated: today,
     history: updatedHistory,
     drinkLog: [],

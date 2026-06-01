@@ -11,8 +11,8 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "fullscreen",
     display_override: ["fullscreen", "standalone"],
     orientation: "portrait-primary",
-    background_color: "#082f49",
-    theme_color: "#082f49",
+    background_color: "#0a3b59",
+    theme_color: "#0a3b59",
     categories: ["health", "fitness", "lifestyle"],
     icons: [
       {

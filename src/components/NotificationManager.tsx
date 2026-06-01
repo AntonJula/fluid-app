@@ -24,8 +24,10 @@ function getConsecutiveDryDays(history: Array<{ date: string; intake: number }>,
 }
 
 export function NotificationManager() {
-  const { reminderInterval, quietHours, intake, goal, drinkLog, history, streak, streakShieldCharges, streakAlert } = useHydration();
+  const { reminderInterval, quietHours, intake, goal, drinkLog, history, streak, streakShieldCharges, streakAlert, workoutSessionEndsAt } =
+    useHydration();
   const lastDrinkAt = drinkLog.find((item) => item.amount > 0)?.timestamp ?? null;
+  const lastWorkoutDrinkAt = drinkLog.find((item) => item.amount > 0 && item.note === "workout")?.timestamp ?? null;
   const inactiveDays = getConsecutiveDryDays(history, intake);
 
   useNotifications(reminderInterval, quietHours, intake < goal, {
@@ -36,6 +38,8 @@ export function NotificationManager() {
     streak,
     streakShieldCharges,
     streakAlert,
+    workoutSessionEndsAt,
+    lastWorkoutDrinkAt,
   });
 
   return null;

@@ -1,5 +1,7 @@
 export const QUICK_NOTIFICATION_LOG_AMOUNT = 250;
+export const WORKOUT_NOTIFICATION_LOG_AMOUNT = 150;
 export const FOLLOW_UP_DELAY_MINUTES = 15;
+export const WORKOUT_REMINDER_INTERVAL_MINUTES = 12;
 export const DAILY_EMPTY_CHECK_HOUR = 18;
 export const WEEKLY_RETURN_DAYS = 4;
 export const MONTHLY_RETURN_DAYS = 21;
@@ -24,6 +26,7 @@ export type HydrationNotificationKind =
   | "streak-lost"
   | "streak-last-chance"
   | "streak-protection-low"
+  | "workout-set-check"
   | "close-goal"
   | "streak-care"
   | "small-sip";
@@ -39,6 +42,8 @@ export interface HydrationNotificationContext {
   previousKind?: string | null;
   streak?: number;
   streakShieldCharges?: number;
+  workoutSessionEndsAt?: number | null;
+  lastWorkoutDrinkAt?: number | null;
 }
 
 export interface HydrationNotificationMessage {
@@ -46,6 +51,7 @@ export interface HydrationNotificationMessage {
   title: string;
   body: string;
   actionAmount: number;
+  actionNote?: "water" | "coffee" | "tea" | "workout" | "hot-day";
   cadence?: "interval" | "daily" | "weekly" | "monthly";
   nextDelayMinutes?: number;
 }
@@ -77,7 +83,7 @@ const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 22;
 const EVENING_CHECK_HOUR = DAILY_EMPTY_CHECK_HOUR;
 const LATE_EVENING_HOUR = 20;
-const INTERVAL_EXCLUDED_KINDS = new Set<HydrationNotificationKind>(["monthly-return", "weekly-return"]);
+const INTERVAL_EXCLUDED_KINDS = new Set<HydrationNotificationKind>(["monthly-return", "weekly-return", "workout-set-check"]);
 
 function safeGoal(goal: number) {
   return Number.isFinite(goal) && goal > 0 ? goal : 2500;
@@ -115,6 +121,16 @@ function minutesSinceLastDrink(context: HydrationNotificationContext) {
   if (!context.lastDrinkAt) return null;
 
   return Math.max(0, Math.floor((context.now.getTime() - context.lastDrinkAt) / 60000));
+}
+
+function minutesSinceLastWorkoutDrink(context: HydrationNotificationContext) {
+  if (!context.lastWorkoutDrinkAt) return null;
+
+  return Math.max(0, Math.floor((context.now.getTime() - context.lastWorkoutDrinkAt) / 60000));
+}
+
+function isWorkoutSessionActive(context: HydrationNotificationContext) {
+  return Boolean(context.workoutSessionEndsAt && context.workoutSessionEndsAt > context.now.getTime());
 }
 
 function formatMinutes(minutes: number) {
@@ -259,6 +275,29 @@ export function pickHydrationStreakAlertNotification(
   };
 }
 
+export function pickWorkoutHydrationNotification(context: HydrationNotificationContext): HydrationNotificationMessage | null {
+  if (!isWorkoutSessionActive(context)) return null;
+
+  const minutes = minutesSinceLastWorkoutDrink(context);
+
+  if (minutes !== null && minutes < WORKOUT_REMINDER_INTERVAL_MINUTES) {
+    return null;
+  }
+
+  return {
+    kind: "workout-set-check",
+    title: "Set water check 💧",
+    body:
+      minutes === null
+        ? "Workout mode is on. Take a few easy sips before the next set, then log it when you can."
+        : `${formatMinutes(minutes)} since your last workout log. A few sips before the next set is enough.`,
+    actionAmount: WORKOUT_NOTIFICATION_LOG_AMOUNT,
+    actionNote: "workout",
+    cadence: "interval",
+    nextDelayMinutes: WORKOUT_REMINDER_INTERVAL_MINUTES,
+  };
+}
+
 export function getNextHydrationLifecycleDueAt(
   context: HydrationNotificationContext,
   state: HydrationLifecycleNotificationState
@@ -368,6 +407,14 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
         : `It has been ${formatMinutes(minutes)} since your last log. A few sips now can help.`;
     },
     nextDelayMinutes: followUpDelay,
+  },
+  {
+    kind: "workout-set-check",
+    label: "Workout set check",
+    title: "Set water check 💧",
+    priority: (context) => (isWorkoutSessionActive(context) ? 112 : 0),
+    body: () => "A few easy sips before the next set are enough. Log them when you can.",
+    nextDelayMinutes: () => WORKOUT_REMINDER_INTERVAL_MINUTES,
   },
   {
     kind: "close-goal",

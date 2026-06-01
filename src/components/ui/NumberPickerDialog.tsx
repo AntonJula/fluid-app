@@ -14,6 +14,7 @@ interface NumberPickerDialogProps {
   onClose: () => void;
   title?: string;
   suffix?: string;
+  startWithValue?: boolean;
 }
 
 export function NumberPickerDialog({
@@ -25,6 +26,7 @@ export function NumberPickerDialog({
   max = 999,
   title = "Set Duration",
   suffix = "m",
+  startWithValue = false,
 }: NumberPickerDialogProps) {
   if (!isOpen || typeof document === "undefined") return null;
 
@@ -37,6 +39,7 @@ export function NumberPickerDialog({
       onClose={onClose}
       title={title}
       suffix={suffix}
+      startWithValue={startWithValue}
     />
   );
 }
@@ -46,10 +49,12 @@ function NumberPickerDialogContent({
   max = 999,
   onChange,
   onClose,
+  value,
   title = "Set Duration",
   suffix = "m",
+  startWithValue = false,
 }: Omit<NumberPickerDialogProps, "isOpen">) {
-  const [currentVal, setCurrentVal] = useState("");
+  const [currentVal, setCurrentVal] = useState(() => (startWithValue && value > 0 ? String(value) : ""));
 
   const handleKeyPress = (key: string) => {
     setCurrentVal((prev) => {

@@ -1,8 +1,13 @@
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const addActionMatch = typeof event.action === "string" ? event.action.match(/^add-(\d+)$/) : null;
-  const actionPath = addActionMatch ? `/?quickAdd=${encodeURIComponent(addActionMatch[1])}` : "/";
+  const addActionMatch = typeof event.action === "string" ? event.action.match(/^add-(\d+)(?:-([a-z-]+))?$/) : null;
+  const fallbackPath = typeof event.notification.data?.url === "string" ? event.notification.data.url : "/";
+  const actionPath = addActionMatch
+    ? `/?quickAdd=${encodeURIComponent(addActionMatch[1])}${
+        addActionMatch[2] ? `&quickAddNote=${encodeURIComponent(addActionMatch[2])}` : ""
+      }`
+    : fallbackPath;
   const actionUrl = new URL(actionPath, self.registration.scope).href;
 
   event.waitUntil(

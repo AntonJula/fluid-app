@@ -30,14 +30,46 @@ import { HydrationLoadingState } from "@/components/HydrationLoadingState";
 import { NumberPickerDialog } from "@/components/ui/NumberPickerDialog";
 import { Button } from "@/components/ui/Button";
 import { SipIcon, GlassIcon, MugIcon, BottleIcon } from "@/components/DrinkIcons";
-import type { HydrationNote } from "@/lib/hydrationState";
+import { HYDRATION_NOTES, type HydrationNote } from "@/lib/hydrationState";
 import { formatDateLocal } from "@/lib/date";
 
 const SECONDARY_QUICK_AMOUNTS = [
-  { label: "Sip", amount: 150, Icon: SipIcon },
-  { label: "Glass", amount: 250, Icon: GlassIcon },
-  { label: "Mug", amount: 330, Icon: MugIcon },
-  { label: "Bottle", amount: 500, Icon: BottleIcon },
+  {
+    label: "Sip",
+    amount: 150,
+    Icon: SipIcon,
+    surface: "border-sky-100/18 bg-sky-300/8 hover:border-sky-100/30 hover:bg-sky-300/12",
+    iconSurface: "border-sky-100/22 bg-sky-200/10 text-sky-100",
+    glow: "bg-sky-300/18",
+    halo: "shadow-[0_0_0_2px_rgba(125,211,252,0.08),0_0_16px_rgba(56,189,248,0.16),inset_0_1px_0_rgba(255,255,255,0.14)]",
+  },
+  {
+    label: "Glass",
+    amount: 250,
+    Icon: GlassIcon,
+    surface: "border-cyan-100/20 bg-cyan-300/9 hover:border-cyan-100/34 hover:bg-cyan-300/14",
+    iconSurface: "border-cyan-100/24 bg-cyan-200/12 text-cyan-50",
+    glow: "bg-cyan-300/20",
+    halo: "shadow-[0_0_0_3px_rgba(103,232,249,0.10),0_0_20px_rgba(34,211,238,0.20),inset_0_1px_0_rgba(255,255,255,0.16)]",
+  },
+  {
+    label: "Mug",
+    amount: 330,
+    Icon: MugIcon,
+    surface: "border-teal-100/18 bg-teal-300/8 hover:border-teal-100/30 hover:bg-teal-300/13",
+    iconSurface: "border-teal-100/22 bg-teal-200/10 text-teal-50",
+    glow: "bg-teal-300/18",
+    halo: "shadow-[0_0_0_4px_rgba(94,234,212,0.11),0_0_24px_rgba(45,212,191,0.22),inset_0_1px_0_rgba(255,255,255,0.17)]",
+  },
+  {
+    label: "Bottle",
+    amount: 500,
+    Icon: BottleIcon,
+    surface: "border-emerald-100/18 bg-emerald-300/9 hover:border-emerald-100/30 hover:bg-emerald-300/14",
+    iconSurface: "border-emerald-100/22 bg-emerald-200/10 text-emerald-50",
+    glow: "bg-emerald-300/18",
+    halo: "shadow-[0_0_0_5px_rgba(110,231,183,0.12),0_0_28px_rgba(52,211,153,0.24),inset_0_1px_0_rgba(255,255,255,0.18)]",
+  },
 ];
 
 const NOTE_OPTIONS: Array<{ value: HydrationNote; label: string; Icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }> = [
@@ -65,6 +97,7 @@ const HYDRATION_REVEAL_DURATION_MS = 420;
 const STREAK_WINDOW_SIZE = 5;
 const STREAK_SHIELD_COUNT = 2;
 const STREAK_DAY_FORMATTER = new Intl.DateTimeFormat("en", { weekday: "short" });
+const HYDRATION_NOTE_VALUES = new Set<string>(HYDRATION_NOTES);
 
 function formatLogTime(timestamp: number) {
   return new Intl.DateTimeFormat("en", {
@@ -120,6 +153,48 @@ function useLockedViewport(isLocked: boolean) {
       body.style.right = previousBodyRight;
       body.style.width = previousBodyWidth;
       body.style.touchAction = previousBodyTouchAction;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isLocked]);
+}
+
+function useLockedPageScroll(isLocked: boolean) {
+  React.useEffect(() => {
+    if (!isLocked || typeof window === "undefined") return;
+
+    const scrollY = window.scrollY;
+    const root = document.documentElement;
+    const body = document.body;
+    const previousRootOverflow = root.style.overflow;
+    const previousRootOverscroll = root.style.overscrollBehavior;
+    const previousBodyOverflow = body.style.overflow;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
+    const previousBodyPosition = body.style.position;
+    const previousBodyTop = body.style.top;
+    const previousBodyLeft = body.style.left;
+    const previousBodyRight = body.style.right;
+    const previousBodyWidth = body.style.width;
+
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
+    body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+
+    return () => {
+      root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehavior = previousRootOverscroll;
+      body.style.overflow = previousBodyOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
+      body.style.position = previousBodyPosition;
+      body.style.top = previousBodyTop;
+      body.style.left = previousBodyLeft;
+      body.style.right = previousBodyRight;
+      body.style.width = previousBodyWidth;
       window.scrollTo(0, scrollY);
     };
   }, [isLocked]);
@@ -496,6 +571,7 @@ export default function Home() {
     streakShieldCharges,
     history,
     quietHours,
+    workoutSessionEndsAt,
     addDrink,
     subtractDrink,
     undoLastDrink,
@@ -503,6 +579,8 @@ export default function Home() {
     deleteDrinkLogItem,
     setGoal,
     setQuickAddAmount,
+    startWorkoutSession,
+    endWorkoutSession,
     setReminderInterval,
     resetDaily,
     mounted,
@@ -521,9 +599,12 @@ export default function Home() {
   const [onboardingQuickAmount, setOnboardingQuickAmount] = React.useState(quickAddAmount);
   const [onboardingReminder, setOnboardingReminder] = React.useState(0);
   const [editingLog, setEditingLog] = React.useState<DrinkLogItem | null>(null);
+  const [workoutClock, setWorkoutClock] = React.useState(0);
   const handledQuickAddRef = React.useRef(false);
   const favoriteHoldTimerRef = React.useRef<number | null>(null);
   const favoriteHoldTriggeredRef = React.useRef(false);
+
+  useLockedPageScroll(isDailyLogOpen);
 
   React.useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
@@ -538,13 +619,19 @@ export default function Home() {
 
     handledQuickAddRef.current = true;
 
-    const quickAdd = Number(new URLSearchParams(window.location.search).get("quickAdd"));
+    const searchParams = new URLSearchParams(window.location.search);
+    const quickAdd = Number(searchParams.get("quickAdd"));
+    const quickAddNote = searchParams.get("quickAddNote");
+    const note = quickAddNote && HYDRATION_NOTE_VALUES.has(quickAddNote) ? (quickAddNote as HydrationNote) : "water";
 
     if (!Number.isFinite(quickAdd) || quickAdd <= 0) return;
 
-    addDrink(Math.min(5000, Math.round(quickAdd)), "water");
+    addDrink(Math.min(5000, Math.round(quickAdd)), note);
+    if (note === "workout") {
+      startWorkoutSession();
+    }
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
-  }, [addDrink, mounted]);
+  }, [addDrink, mounted, startWorkoutSession]);
 
   const clearFavoriteHoldTimer = React.useCallback(() => {
     if (favoriteHoldTimerRef.current === null || typeof window === "undefined") return;
@@ -554,6 +641,22 @@ export default function Home() {
   }, []);
 
   React.useEffect(() => clearFavoriteHoldTimer, [clearFavoriteHoldTimer]);
+
+  React.useEffect(() => {
+    if (!workoutSessionEndsAt || typeof window === "undefined") {
+      setWorkoutClock(0);
+      return;
+    }
+
+    setWorkoutClock(Date.now());
+    const intervalId = window.setInterval(() => {
+      setWorkoutClock(Date.now());
+    }, 30 * 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [workoutSessionEndsAt]);
 
   if (!mounted) {
     return <HydrationLoadingState />;
@@ -568,9 +671,31 @@ export default function Home() {
   const selectedNoteOption = NOTE_OPTIONS.find((item) => item.value === selectedNote) ?? NOTE_OPTIONS[0];
   const SelectedNoteIcon = selectedNoteOption.Icon;
   const customDrinkLabel = customDrinkNote ? getNoteLabel(customDrinkNote) : "Drink";
+  const isWorkoutSessionActive = Boolean(workoutSessionEndsAt && workoutClock > 0 && workoutSessionEndsAt > workoutClock);
+  const workoutMinutesLeft = isWorkoutSessionActive
+    ? Math.max(1, Math.ceil(((workoutSessionEndsAt ?? 0) - workoutClock) / 60000))
+    : 0;
   const handleReset = () => {
     resetDaily();
     setIsResetConfirming(false);
+  };
+
+  const handleSelectNote = async (value: HydrationNote) => {
+    setSelectedNote(value);
+    setIsNoteMenuOpen(false);
+    setCustomDrinkNote(null);
+
+    if (value === "workout") {
+      startWorkoutSession();
+      if (notificationsSupported && typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+        await requestPermission();
+      }
+      return;
+    }
+
+    if (value === "coffee" || value === "tea") {
+      setCustomDrinkNote(value);
+    }
   };
 
   const handleAddDrink = (amount: number) => {
@@ -705,11 +830,7 @@ export default function Home() {
                     key={value}
                     type="button"
                     onClick={() => {
-                      setSelectedNote(value);
-                      setIsNoteMenuOpen(false);
-                      if (value === "coffee" || value === "tea") {
-                        setCustomDrinkNote(value);
-                      }
+                      void handleSelectNote(value);
                     }}
                     className={`font-ui inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[1.5px] px-3 py-2 text-xs font-extrabold transition-all ${
                       isActive
@@ -723,6 +844,27 @@ export default function Home() {
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {isWorkoutSessionActive && (
+            <div className="flex items-center gap-3 rounded-[1rem] border border-emerald-100/16 bg-emerald-300/10 px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-100/18 bg-emerald-200/10 text-emerald-50">
+                <Dumbbell className="h-4 w-4" strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-ui text-[0.72rem] font-black uppercase tracking-[0.15em] text-emerald-100/88">Workout mode</p>
+                <p className="font-body mt-0.5 text-xs font-semibold leading-snug text-water-200/78">
+                  Gentle checks every 12 min. {workoutMinutesLeft} min left.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={endWorkoutSession}
+                className="font-ui shrink-0 rounded-full border border-emerald-100/16 bg-water-950/22 px-3 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.14em] text-water-100 transition-colors hover:bg-white/10"
+              >
+                End
+              </button>
             </div>
           )}
 
@@ -777,27 +919,35 @@ export default function Home() {
           </button>
 
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            {SECONDARY_QUICK_AMOUNTS.map(({ amount, label, Icon }, index) => (
+            {SECONDARY_QUICK_AMOUNTS.map(({ amount, label, Icon, surface, iconSurface, glow, halo }, index) => (
               <button
                 key={amount}
                 type="button"
                 onClick={() => handleAddDrink(amount)}
-                className="group relative flex min-h-[5.75rem] flex-col items-center justify-center gap-2 overflow-hidden rounded-[1rem] border border-[1.5px] border-water-300/15 bg-white/5 px-2 py-3 shadow-[0_8px_16px_rgba(0,0,0,0.14),inset_0_1px_1px_rgba(255,255,255,0.1)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-1 hover:border-water-200/24 hover:bg-white/10 hover:shadow-[0_12px_24px_rgba(56,189,248,0.18),inset_0_1px_2px_rgba(255,255,255,0.2)] active:scale-[0.97]"
+                className={`group relative flex min-h-[5.9rem] overflow-hidden rounded-[1.1rem] border border-[1.5px] px-3 py-3 text-left shadow-[0_10px_22px_rgba(0,0,0,0.14),inset_0_1px_1px_rgba(255,255,255,0.12)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(56,189,248,0.14),inset_0_1px_2px_rgba(255,255,255,0.18)] active:scale-[0.97] ${surface}`}
                 aria-label={`Add ${amount} milliliters as ${selectedNoteOption.label}`}
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className={`absolute -right-9 -top-10 h-24 w-24 rounded-full ${glow} blur-2xl transition-opacity duration-300 group-hover:opacity-90`} />
+                <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-br from-white/7 via-transparent to-water-950/12 opacity-85 transition-opacity duration-300 group-hover:opacity-100" />
                 <div
                   className="pointer-events-none absolute inset-y-[-14%] -left-[120%] w-[205%] rotate-[14deg] bg-[linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.14),rgba(255,255,255,0.38),rgba(255,255,255,0.14),rgba(255,255,255,0))] opacity-0 blur-[4px] animate-[quick-add-shimmer_15s_linear_infinite]"
                   style={{ animationDelay: SHIMMER_DELAYS[index % SHIMMER_DELAYS.length] }}
                 />
-                <div className="relative z-10 flex items-center gap-1.5 text-water-200 transition-colors duration-300 group-hover:text-white">
-                  <Icon className="h-5 w-5 drop-shadow-md" />
-                  <span className="font-ui text-[10px] font-extrabold uppercase tracking-[0.14em]">{label}</span>
+                <div className="relative z-10 flex w-full items-center gap-3">
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[0.95rem] border border-[1.5px] transition-transform duration-300 group-hover:scale-105 ${iconSurface} ${halo}`}>
+                    <Icon className="h-6 w-6 drop-shadow-md" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="font-ui block truncate text-[0.68rem] font-black uppercase tracking-[0.14em] text-water-200/82 transition-colors duration-300 group-hover:text-white">
+                      {label}
+                    </span>
+                    <span className="font-numeric mt-1 block whitespace-nowrap text-[1.42rem] font-black leading-none text-white drop-shadow-lg">
+                      {amount}
+                      <span className="font-ui ml-1 text-[0.66rem] font-extrabold tracking-normal text-water-300/82">ml</span>
+                    </span>
+                  </div>
                 </div>
-                <span className="font-numeric relative z-10 mt-1 text-[1.35rem] font-black text-white drop-shadow-lg transition-transform duration-300 group-hover:scale-105">
-                  {amount}
-                  <span className="font-ui ml-0.5 text-[10px] font-extrabold tracking-normal text-water-300">ml</span>
-                </span>
               </button>
             ))}
           </div>
@@ -918,8 +1068,9 @@ export default function Home() {
         value={editingLog ? Math.abs(editingLog.amount) : 250}
         min={1}
         max={5000}
-        title="Edit Log"
+        title={editingLog ? `Edit ${Math.abs(editingLog.amount)} ml` : "Edit Log"}
         suffix="ml"
+        startWithValue
         onChange={handleEditLog}
         onClose={() => setEditingLog(null)}
       />
@@ -935,13 +1086,26 @@ export default function Home() {
         onClose={() => setIsStreakOpen(false)}
       />
 
-      {isDailyLogOpen && (
-        <div className="fluid-modal-backdrop fixed inset-0 z-[110] flex items-center justify-center p-4 sm:p-6">
-          <div className="flex max-h-[min(34rem,calc(100dvh-2rem))] w-full max-w-[23rem] flex-col overflow-hidden rounded-[1.35rem] border border-[1.5px] border-water-300/16 bg-water-950/90 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
+      {isDailyLogOpen && typeof document !== "undefined"
+        ? createPortal(
+        <div
+          className="fluid-modal-backdrop fixed inset-0 z-[110] flex items-end justify-center overflow-hidden px-3 pb-[calc(max(0.85rem,env(safe-area-inset-bottom))+5.25rem)] pt-[max(0.75rem,env(safe-area-inset-top))]"
+          data-swipe-ignore="true"
+          onClick={() => setIsDailyLogOpen(false)}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="daily-log-title"
+            className="fluid-glass-soft flex max-h-[min(31rem,calc(100dvh-10.5rem))] w-full max-w-[25.5rem] flex-col overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.46)] md:max-w-[30rem]"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="flex items-start justify-between gap-4 border-b border-water-300/12 px-5 py-4">
               <div>
                 <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">Today</p>
-                <h2 className="font-ui mt-1 text-2xl font-black tracking-normal text-white">Drink log</h2>
+                <h2 id="daily-log-title" className="font-ui mt-1 text-2xl font-black tracking-normal text-white">
+                  Drink log
+                </h2>
                 <p className="font-body mt-1 text-sm font-semibold text-water-300/78">{drinkLog.length} actions recorded</p>
               </div>
               <button
@@ -954,7 +1118,7 @@ export default function Home() {
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+            <div className="fluid-scroll-panel min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-4 py-4 [-webkit-overflow-scrolling:touch]">
               <div className="space-y-2">
                 {drinkLog.map((item) => (
                   <div key={item.id} className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-2xl border border-[1.5px] border-water-300/14 bg-water-900/22 px-3 py-3">
@@ -993,9 +1157,11 @@ export default function Home() {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </section>
+        </div>,
+            document.body
+          )
+        : null}
 
       <ResetConfirmDialog
         isOpen={isResetConfirming}

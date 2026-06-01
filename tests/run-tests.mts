@@ -8,10 +8,12 @@ import {
 } from "../src/lib/hydrationState.ts";
 import {
   HYDRATION_NOTIFICATION_TYPES,
+  WORKOUT_NOTIFICATION_LOG_AMOUNT,
   getNextHydrationLifecycleDueAt,
   pickHydrationLifecycleNotification,
   pickHydrationNotification,
   pickHydrationStreakAlertNotification,
+  pickWorkoutHydrationNotification,
 } from "../src/lib/notificationMessages.ts";
 
 const tests = [
@@ -32,6 +34,7 @@ const tests = [
       assert.equal(state.quickAddAmount, 250);
       assert.equal(state.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
       assert.equal(state.streakAlert, null);
+      assert.equal(state.workoutSessionEndsAt, null);
       assert.equal(state.lastUpdated, "2026-04-10");
       assert.deepEqual(state.quietHours, { start: "22:00", end: "07:00" });
       assert.deepEqual(state.drinkLog, []);
@@ -175,8 +178,47 @@ const tests = [
   {
     name: "notification library exposes unique reminder types",
     run: () => {
-      assert.equal(HYDRATION_NOTIFICATION_TYPES.length, 16);
-      assert.equal(new Set(HYDRATION_NOTIFICATION_TYPES.map((type) => type.kind)).size, 16);
+      assert.equal(HYDRATION_NOTIFICATION_TYPES.length, 17);
+      assert.equal(new Set(HYDRATION_NOTIFICATION_TYPES.map((type) => type.kind)).size, 17);
+    },
+  },
+  {
+    name: "pickWorkoutHydrationNotification sends gentle set checks",
+    run: () => {
+      const now = new Date(2026, 4, 5, 18, 0);
+      const message = pickWorkoutHydrationNotification({
+        intake: 1200,
+        goal: 2500,
+        reminderInterval: 40,
+        lastDrinkAt: new Date(2026, 4, 5, 17, 10).getTime(),
+        lastWorkoutDrinkAt: new Date(2026, 4, 5, 17, 45).getTime(),
+        workoutSessionEndsAt: new Date(2026, 4, 5, 19, 0).getTime(),
+        now,
+        isCatchUp: false,
+      });
+
+      assert.equal(message?.kind, "workout-set-check");
+      assert.equal(message?.actionAmount, WORKOUT_NOTIFICATION_LOG_AMOUNT);
+      assert.equal(message?.actionNote, "workout");
+      assert.match(message?.body ?? "", /few sips/);
+    },
+  },
+  {
+    name: "pickWorkoutHydrationNotification waits after a recent workout log",
+    run: () => {
+      const now = new Date(2026, 4, 5, 18, 0);
+      const message = pickWorkoutHydrationNotification({
+        intake: 1200,
+        goal: 2500,
+        reminderInterval: 40,
+        lastDrinkAt: new Date(2026, 4, 5, 17, 55).getTime(),
+        lastWorkoutDrinkAt: new Date(2026, 4, 5, 17, 55).getTime(),
+        workoutSessionEndsAt: new Date(2026, 4, 5, 19, 0).getTime(),
+        now,
+        isCatchUp: false,
+      });
+
+      assert.equal(message, null);
     },
   },
   {

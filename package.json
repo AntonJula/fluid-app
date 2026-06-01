@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev:background": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-dev-background.ps1",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
