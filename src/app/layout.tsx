@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { BottomNav } from "@/components/BottomNav";
 import { NotificationManager } from "@/components/NotificationManager";
+import { ServiceWorkerManager } from "@/components/ServiceWorkerManager";
 import { SwipeNavigation } from "@/components/SwipeNavigation";
 import { ScrollPreserver } from "@/hooks/useScrollPreservation";
 import "./globals.css";
@@ -48,6 +49,7 @@ export default function RootLayout({
       <body className="font-sans antialiased min-h-[100dvh] flex flex-col selection:bg-water-300 selection:text-water-900 bg-background text-foreground">
         <ScrollPreserver />
         <SwipeNavigation />
+        <ServiceWorkerManager />
         <NotificationManager />
         <div
           className="flex-1 flex flex-col pb-24 relative z-10 w-full h-full"

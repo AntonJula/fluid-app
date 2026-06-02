@@ -44,10 +44,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
   - Raised both Recent `View all` and Stats Month View above the bottom navbar area, even when nav is hidden.
   - Made Recent edit number picker show the current amount (`Edit 250 ml`) and prefill the current value.
   - Animated Stats Tracking History bars when the bar area enters the viewport, without moving the card position.
+  - Added Android notification status badge asset (`fluid-status-wordmark.png`) and kept app icons as the `Fluid.` wordmark.
+  - Added automatic service worker registration for the PWA/install flow without requesting notifications.
+  - Polished Stats language from goal pressure toward rhythm/consistency and added a Week/Month X/Y rhythm graph.
+  - Polished Settings copy and compacted the first-run onboarding bottom sheet.
+  - Reworked first-run onboarding into a 3-step setup flow for daily rhythm, favorite tap, and reminders, with a custom daily goal keypad.
+  - Completed a security dependency pass: updated Next.js to 16.2.7, added a PostCSS override, and reached `npm audit` clean.
 - Keep the app installable from the browser/PWA flow.
 - When the user asks for the final handoff, include a phone testing checklist with all implemented changes and open requests.
-- Skipped for later research: weekly/monthly progress diagram.
-- Still open: security pass before launch, later subscription/monetization planning, and any follow-up visual tuning after phone testing.
+- Still open: phone testing for PWA install, Android/iPhone notifications, service worker behavior after deploy, later subscription/monetization planning, and any follow-up visual tuning after phone testing.
+- Phone testing checklist should include: install from browser, app icon, fullscreen/safe-area, Android status notification badge, iPhone notification presentation, quick add from notification, normal reminder, workout reminder, streak battery used, streak lost, backup export/import, swipe navigation, hidden navbar, bottom sheets/month view, recent view all, onboarding, and Stats rhythm graph.
 - Current drink tracking direction: keep ml real by drink type for now instead of hydration percentages. Month view shows a type breakdown.
 
 ## Collaboration Notes

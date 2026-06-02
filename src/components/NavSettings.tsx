@@ -16,9 +16,7 @@ export function NavSettings({ hideNav, setHideNav, embedded = false }: NavSettin
       <div className="flex items-center gap-4">
         <div>
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Navigation</h3>
-          <p className="font-body mt-1 text-sm text-water-300/80">
-            Keep the screen completely clean.
-          </p>
+          <p className="font-body mt-1 text-sm text-water-300/80">Use swipe navigation when you want a cleaner screen.</p>
         </div>
       </div>
 
@@ -26,7 +24,7 @@ export function NavSettings({ hideNav, setHideNav, embedded = false }: NavSettin
         <div className="mr-3 min-w-0 min-[380px]:mr-4">
           <div className="font-ui flex items-center gap-2 text-water-200">
             <Navigation className="w-4 h-4" strokeWidth={2.5} />
-            <span className="text-sm font-bold">Hide Nav Bar</span>
+            <span className="text-sm font-bold">Hide nav bar</span>
           </div>
           <p className="font-body mt-1 text-xs text-water-400/80">
             If hidden, you can still navigate by swiping left or right anywhere on the screen.

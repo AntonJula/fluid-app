@@ -13,6 +13,9 @@ const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_FORMATTER = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
 const DAY_DETAIL_FORMATTER = new Intl.DateTimeFormat("en", { weekday: "long", month: "short", day: "numeric" });
 const EMPTY_MONTH_SELECTION = "";
+const RHYTHM_CHART_WIDTH = 320;
+const RHYTHM_CHART_HEIGHT = 156;
+const RHYTHM_CHART_PADDING = { left: 38, right: 12, top: 14, bottom: 30 };
 const NOTE_ORDER: HydrationNote[] = ["water", "coffee", "tea", "workout", "hot-day"];
 const NOTE_LABELS: Record<HydrationNote, string> = {
   water: "Water",
@@ -167,9 +170,15 @@ function getMonthDays(anchor: Date) {
   ];
 }
 
+function getRoundedChartMax(value: number) {
+  if (value <= 1000) return 1000;
+  return Math.ceil(value / 500) * 500;
+}
+
 export default function StatsPage() {
   const { streak, history, intake, goal, drinkLog, mounted } = useHydration();
   const [isMonthViewOpen, setIsMonthViewOpen] = React.useState(false);
+  const [rhythmMode, setRhythmMode] = React.useState<"week" | "month">("week");
   const [visibleMonthDate, setVisibleMonthDate] = React.useState(() => getMonthStart(new Date()));
   const [selectedMonthDate, setSelectedMonthDate] = React.useState(() => formatDateLocal(new Date()));
   const [trackingCardRef, isTrackingInView] = useInView<HTMLDivElement>();
@@ -209,12 +218,11 @@ export default function StatsPage() {
   const selectedMonthBreakdownEntries = getBreakdownEntries(selectedMonthDay?.breakdown, selectedMonthIntake);
 
   const maxIntake = Math.max(...chartData.map((day) => day.intake), goal, 1);
-  const weeklyGoalHits = chartData.filter((day) => day.intake >= day.goal).length;
   const daysWithWater = chartData.filter((day) => day.intake > 0).length;
   const weeklyAverage = Math.round(chartData.reduce((sum, day) => sum + day.intake, 0) / chartData.length);
   const previousAverage = Math.round(previousWeekData.reduce((sum, day) => sum + day.intake, 0) / previousWeekData.length);
   const averageDelta = weeklyAverage - previousAverage;
-  const consistency = Math.round((weeklyGoalHits / chartData.length) * 100);
+  const consistency = Math.round((daysWithWater / chartData.length) * 100);
   const insightTitle =
     daysWithWater >= 5
       ? "A steady rhythm is forming"
@@ -227,6 +235,65 @@ export default function StatsPage() {
       : averageDelta >= 0 && weeklyAverage > 0
         ? `Your average is ${averageDelta} ml higher than last week. Keep the pace comfortable, not rushed.`
         : "One small drink at a time is enough to build the habit. No need to catch up all at once.";
+  const currentMonthGraphDays = getMonthDays(todayDate).filter(
+    (day): day is { date: string; day: number } => day !== null && day.date <= today
+  );
+  const weekRhythmData = chartData.map((day, index) => ({
+    date: day.date,
+    label: DAY_NAMES[index],
+    intake: day.intake,
+    goal: day.goal,
+    isToday: day.date === today,
+  }));
+  const monthRhythmData = currentMonthGraphDays.map((day) => {
+    const trackedDay = trackedByDate.get(day.date);
+
+    return {
+      date: day.date,
+      label: String(day.day),
+      intake: trackedDay?.intake ?? 0,
+      goal: trackedDay?.goal ?? goal,
+      isToday: day.date === today,
+    };
+  });
+  const selectedRhythmData = rhythmMode === "week" ? weekRhythmData : monthRhythmData;
+  const safeRhythmData =
+    selectedRhythmData.length > 0 ? selectedRhythmData : [{ date: today, label: "Today", intake: 0, goal, isToday: true }];
+  const rhythmChartMax = getRoundedChartMax(Math.max(goal, ...safeRhythmData.map((day) => day.intake), 1));
+  const rhythmChartLeft = RHYTHM_CHART_PADDING.left;
+  const rhythmChartRight = RHYTHM_CHART_WIDTH - RHYTHM_CHART_PADDING.right;
+  const rhythmChartTop = RHYTHM_CHART_PADDING.top;
+  const rhythmChartBottom = RHYTHM_CHART_HEIGHT - RHYTHM_CHART_PADDING.bottom;
+  const rhythmChartInnerWidth = rhythmChartRight - rhythmChartLeft;
+  const rhythmChartInnerHeight = rhythmChartBottom - rhythmChartTop;
+  const rhythmPoints = safeRhythmData.map((day, index) => {
+    const ratio = safeRhythmData.length > 1 ? index / (safeRhythmData.length - 1) : 0.5;
+    const progress = Math.min(1, Math.max(0, day.intake / rhythmChartMax));
+
+    return {
+      ...day,
+      x: rhythmChartLeft + ratio * rhythmChartInnerWidth,
+      y: rhythmChartTop + (1 - progress) * rhythmChartInnerHeight,
+    };
+  });
+  const rhythmPath = rhythmPoints.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
+  const rhythmAreaPath =
+    rhythmPoints.length > 0
+      ? `${rhythmPath} L ${rhythmPoints[rhythmPoints.length - 1].x.toFixed(1)} ${rhythmChartBottom} L ${rhythmPoints[0].x.toFixed(1)} ${rhythmChartBottom} Z`
+      : "";
+  const rhythmGoalY =
+    rhythmChartTop + (1 - Math.min(1, Math.max(0, goal / rhythmChartMax))) * rhythmChartInnerHeight;
+  const rhythmAverage = Math.round(safeRhythmData.reduce((sum, day) => sum + day.intake, 0) / safeRhythmData.length);
+  const rhythmLoggedDays = safeRhythmData.filter((day) => day.intake > 0).length;
+  const rhythmAxisLabels = [
+    { label: `${rhythmChartMax}`, y: rhythmChartTop },
+    { label: `${Math.round(rhythmChartMax / 2)}`, y: rhythmChartTop + rhythmChartInnerHeight / 2 },
+    { label: "0", y: rhythmChartBottom },
+  ];
+  const rhythmLabelPoints =
+    rhythmMode === "week"
+      ? rhythmPoints
+      : rhythmPoints.filter((_, index) => index === 0 || index === rhythmPoints.length - 1 || rhythmPoints[index].isToday);
 
   const openMonthView = () => {
     const currentMonth = getMonthStart(todayDate);
@@ -249,7 +316,7 @@ export default function StatsPage() {
           Consistency builds the habit
         </p>
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-water-900/40 backdrop-blur-md rounded-2xl text-water-100 font-semibold text-sm shadow-inner border border-water-300/14">
-          <span className="font-body opacity-80">Daily Goal:</span>
+          <span className="font-body opacity-80">Daily rhythm:</span>
           <span className="font-numeric text-water-300 font-bold tracking-wide">{goal} ml</span>
         </div>
       </header>
@@ -273,7 +340,7 @@ export default function StatsPage() {
             {Math.round((intake / goal) * 100)}
             <span className="font-ui text-xl text-water-400 ml-0.5">%</span>
           </div>
-          <span className="font-ui text-water-400/80 text-[10px] mt-2 uppercase tracking-widest font-bold">Today progress</span>
+          <span className="font-ui text-water-400/80 text-[10px] mt-2 uppercase tracking-widest font-bold">Today&apos;s rhythm</span>
         </Card>
       </div>
 
@@ -297,13 +364,13 @@ export default function StatsPage() {
             Weekly Average
           </div>
           <p className="font-numeric mt-3 text-3xl font-black text-white">{weeklyAverage} ml</p>
-          <p className="font-body mt-1 text-xs text-water-400/80">Average intake across this week.</p>
+          <p className="font-body mt-1 text-xs text-water-400/80">Average logged each day this week.</p>
         </Card>
 
         <Card className="p-4">
           <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
             <ChartColumn className="w-4 h-4" strokeWidth={2.4} />
-            Consistency
+            Logged days
           </div>
           <p className="font-numeric mt-3 text-3xl font-black text-white">{consistency}%</p>
           <p className="font-body mt-1 text-xs text-water-400/80">{daysWithWater} of 7 days include water.</p>
@@ -318,6 +385,120 @@ export default function StatsPage() {
           </div>
           <h2 className="font-ui mt-2 text-2xl font-black tracking-normal text-white">{insightTitle}</h2>
           <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-100/86">{insightBody}</p>
+        </div>
+      </Card>
+
+      <Card className="mb-6 w-full overflow-hidden p-4 min-[380px]:p-5 sm:p-6">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-ui flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-water-300/80">
+              <ChartColumn className="h-4 w-4" strokeWidth={2.5} />
+              Rhythm graph
+            </div>
+            <h2 className="font-ui mt-2 text-xl font-black tracking-normal text-white">Week and month flow</h2>
+          </div>
+          <div className="grid shrink-0 grid-cols-2 rounded-full border border-water-300/12 bg-water-950/22 p-1">
+            {(["week", "month"] as const).map((mode) => {
+              const isActive = rhythmMode === mode;
+
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setRhythmMode(mode)}
+                  className={`font-ui rounded-full px-2.5 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.12em] transition-all ${
+                    isActive ? "bg-cyan-100/18 text-white shadow-[0_0_18px_rgba(125,211,252,0.12)]" : "text-water-300/74 hover:text-white"
+                  }`}
+                  aria-pressed={isActive}
+                >
+                  {mode}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mb-3 grid grid-cols-2 gap-2.5">
+          <div className="rounded-[0.95rem] border border-water-300/12 bg-water-950/18 px-3 py-2">
+            <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.16em] text-water-300/72">Average</p>
+            <p className="font-numeric mt-1 text-xl font-black text-white">
+              {rhythmAverage}
+              <span className="font-ui ml-1 text-[0.68rem] font-black uppercase tracking-normal text-water-300/78">ml</span>
+            </p>
+          </div>
+          <div className="rounded-[0.95rem] border border-water-300/12 bg-water-950/18 px-3 py-2">
+            <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.16em] text-water-300/72">Logged</p>
+            <p className="font-numeric mt-1 text-xl font-black text-white">
+              {rhythmLoggedDays}
+              <span className="font-ui ml-1 text-[0.68rem] font-black tracking-normal text-water-300/78">
+                /{safeRhythmData.length}
+              </span>
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-[1.1rem] border border-[1.5px] border-water-300/12 bg-water-950/20 px-2 py-3 shadow-inner">
+          <svg className="h-auto w-full overflow-visible" viewBox={`0 0 ${RHYTHM_CHART_WIDTH} ${RHYTHM_CHART_HEIGHT}`} role="img" aria-label={`${rhythmMode} hydration rhythm graph`}>
+            <defs>
+              <linearGradient id="rhythm-line" x1="0" x2="1" y1="0" y2="0">
+                <stop offset="0" stopColor="#38bdf8" />
+                <stop offset="0.55" stopColor="#67e8f9" />
+                <stop offset="1" stopColor="#5eead4" />
+              </linearGradient>
+              <linearGradient id="rhythm-area" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stopColor="#67e8f9" stopOpacity="0.28" />
+                <stop offset="1" stopColor="#0c4a6e" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+
+            {rhythmAxisLabels.map((item) => (
+              <g key={item.label}>
+                <line x1={rhythmChartLeft} x2={rhythmChartRight} y1={item.y} y2={item.y} stroke="rgba(125, 211, 252, 0.12)" strokeDasharray="4 7" />
+                <text x={rhythmChartLeft - 8} y={item.y + 3} textAnchor="end" className="fill-water-300/62 font-numeric text-[9px] font-black">
+                  {item.label}
+                </text>
+              </g>
+            ))}
+
+            <line x1={rhythmChartLeft} x2={rhythmChartRight} y1={rhythmGoalY} y2={rhythmGoalY} stroke="rgba(186, 230, 253, 0.32)" strokeDasharray="6 6" />
+            <text x={rhythmChartRight} y={Math.max(10, rhythmGoalY - 5)} textAnchor="end" className="fill-water-200/72 font-ui text-[9px] font-black uppercase tracking-wider">
+              rhythm
+            </text>
+
+            {rhythmAreaPath && <path d={rhythmAreaPath} fill="url(#rhythm-area)" />}
+            {rhythmPath && (
+              <path
+                d={rhythmPath}
+                fill="none"
+                stroke="url(#rhythm-line)"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="4"
+                filter="drop-shadow(0 6px 10px rgba(34, 211, 238, 0.18))"
+              />
+            )}
+
+            {rhythmPoints.map((point) => (
+              <g key={point.date}>
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={point.isToday ? 5.2 : 4}
+                  fill={point.intake > 0 ? "#e0f2fe" : "#0c4a6e"}
+                  stroke={point.isToday ? "#ffffff" : "#67e8f9"}
+                  strokeOpacity={point.intake > 0 ? 0.96 : 0.34}
+                  strokeWidth="2"
+                />
+              </g>
+            ))}
+
+            <line x1={rhythmChartLeft} x2={rhythmChartRight} y1={rhythmChartBottom} y2={rhythmChartBottom} stroke="rgba(125, 211, 252, 0.18)" />
+            {rhythmLabelPoints.map((point) => (
+              <text key={`${point.date}-label`} x={point.x} y={RHYTHM_CHART_HEIGHT - 8} textAnchor="middle" className="fill-water-300/74 font-ui text-[9px] font-black uppercase tracking-wide">
+                {point.label}
+              </text>
+            ))}
+          </svg>
         </div>
       </Card>
 
@@ -395,7 +576,11 @@ export default function StatsPage() {
       {isMonthViewOpen && typeof document !== "undefined"
         ? createPortal(
         <div
-          className="fluid-modal-backdrop fixed inset-0 z-[112] flex touch-none items-end justify-center overflow-hidden px-3 pb-[calc(max(0.85rem,env(safe-area-inset-bottom))+5.25rem)] pt-[max(0.75rem,env(safe-area-inset-top))]"
+          className="fluid-modal-backdrop fixed inset-0 z-[112] flex touch-none items-start justify-center overflow-hidden px-3 pb-[calc(max(0.85rem,env(safe-area-inset-bottom))+5.25rem)]"
+          style={{
+            paddingTop:
+              "clamp(max(0.75rem, env(safe-area-inset-top)), calc(100dvh - 39rem - max(0.85rem, env(safe-area-inset-bottom)) - 5.25rem), 11rem)",
+          }}
           data-swipe-ignore="true"
           onClick={() => setIsMonthViewOpen(false)}
           onTouchMove={(event) => event.preventDefault()}
@@ -504,7 +689,7 @@ export default function StatsPage() {
                         : selectedMonthIsFuture
                         ? "No intake yet. This day is ahead."
                         : selectedMonthIntake > 0
-                          ? `${selectedMonthProgress}% of that day's target.`
+                          ? `${selectedMonthProgress}% of that day's plan.`
                           : "No water logged for this day."}
                     </p>
                   </div>

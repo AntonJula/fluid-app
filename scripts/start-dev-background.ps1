@@ -11,7 +11,7 @@ $Url = "http://localhost:$Port/"
 function Test-FluidDevServer {
   try {
     $response = Invoke-WebRequest -UseBasicParsing $Url -TimeoutSec 3
-    return $response.StatusCode -ge 200 -and $response.StatusCode -lt 500
+    return $response.StatusCode -ge 200 -and $response.StatusCode -lt 400
   } catch {
     return $false
   }
@@ -29,7 +29,7 @@ $pathValue = cmd.exe /d /c echo %Path%
 [Environment]::SetEnvironmentVariable("Path", $pathValue, "Process")
 
 $cmdPath = if ($env:ComSpec) { $env:ComSpec } else { "C:\Windows\System32\cmd.exe" }
-$cmdArgs = "/d /k cd /d `"$ProjectRoot`" && npm.cmd run dev"
+$cmdArgs = "/d /k cd /d `"$ProjectRoot`" && npm.cmd run dev -- -p $Port"
 $process = Start-Process -FilePath $cmdPath -ArgumentList $cmdArgs -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru
 
 $deadline = (Get-Date).AddSeconds($TimeoutSeconds)

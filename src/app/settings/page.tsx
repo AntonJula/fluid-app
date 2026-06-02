@@ -47,14 +47,14 @@ export default function SettingsPage() {
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 py-4 min-[380px]:p-4 sm:p-6 md:max-w-[30rem]">
       <header className="w-full text-center mt-4 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Settings.</h1>
-        <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">Customize Fluid</p>
+        <p className="font-ui text-xs font-semibold mt-2 tracking-widest text-water-200 uppercase mb-6">Customize Fluid</p>
       </header>
 
       <Card className="mb-6 w-full p-4 min-[380px]:p-5">
         <p className="font-ui text-[11px] uppercase tracking-[0.22em] font-bold text-water-300/80">Habit setup</p>
         <p className="font-ui mt-2 text-xl font-black text-white">Keep it easy to win every day.</p>
         <p className="font-body mt-2 text-sm text-water-300/80">
-          A realistic goal and gentle reminders will do more for retention than aggressive settings ever will.
+          Choose a realistic rhythm, then let Fluid stay quiet and helpful in the background.
         </p>
       </Card>
 
@@ -73,7 +73,7 @@ export default function SettingsPage() {
         <Card
           className={`mx-auto mt-4 w-full max-w-sm overflow-hidden p-0 shadow-lg md:max-w-[28rem] ${
             isAdvancedOpen
-              ? "border-cyan-100/24 bg-gradient-to-br from-water-900/38 via-water-900/20 to-emerald-500/10 shadow-cyan-950/24"
+              ? "border-cyan-100/20 bg-water-900/24 shadow-cyan-950/18"
               : "hover:border-water-200/18 hover:bg-water-900/22"
           }`}
         >
@@ -106,7 +106,7 @@ export default function SettingsPage() {
                     isAdvancedOpen ? "text-cyan-100/84" : "text-water-300/80"
                   }`}
                 >
-                  Less common display controls.
+                  Display and local backup controls.
                 </span>
               </span>
             </span>

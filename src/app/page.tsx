@@ -38,37 +38,37 @@ const SECONDARY_QUICK_AMOUNTS = [
     label: "Sip",
     amount: 150,
     Icon: SipIcon,
-    surface: "border-sky-100/18 bg-sky-300/8 hover:border-sky-100/30 hover:bg-sky-300/12",
-    iconSurface: "border-sky-100/22 bg-sky-200/10 text-sky-100",
-    glow: "bg-sky-300/18",
-    halo: "shadow-[0_0_0_2px_rgba(125,211,252,0.08),0_0_16px_rgba(56,189,248,0.16),inset_0_1px_0_rgba(255,255,255,0.14)]",
+    surface: "border-sky-100/14 bg-white/[0.055] hover:border-sky-100/24 hover:bg-white/[0.08]",
+    iconSurface: "border-sky-100/18 bg-sky-200/8 text-sky-100/92",
+    glow: "bg-sky-300/10",
+    halo: "shadow-[0_0_0_1px_rgba(125,211,252,0.06),0_0_12px_rgba(56,189,248,0.10),inset_0_1px_0_rgba(255,255,255,0.12)]",
   },
   {
     label: "Glass",
     amount: 250,
     Icon: GlassIcon,
-    surface: "border-cyan-100/20 bg-cyan-300/9 hover:border-cyan-100/34 hover:bg-cyan-300/14",
-    iconSurface: "border-cyan-100/24 bg-cyan-200/12 text-cyan-50",
-    glow: "bg-cyan-300/20",
-    halo: "shadow-[0_0_0_3px_rgba(103,232,249,0.10),0_0_20px_rgba(34,211,238,0.20),inset_0_1px_0_rgba(255,255,255,0.16)]",
+    surface: "border-cyan-100/16 bg-white/[0.06] hover:border-cyan-100/26 hover:bg-white/[0.09]",
+    iconSurface: "border-cyan-100/20 bg-cyan-200/9 text-cyan-50/94",
+    glow: "bg-cyan-300/12",
+    halo: "shadow-[0_0_0_1px_rgba(103,232,249,0.07),0_0_14px_rgba(34,211,238,0.12),inset_0_1px_0_rgba(255,255,255,0.13)]",
   },
   {
     label: "Mug",
     amount: 330,
     Icon: MugIcon,
-    surface: "border-teal-100/18 bg-teal-300/8 hover:border-teal-100/30 hover:bg-teal-300/13",
-    iconSurface: "border-teal-100/22 bg-teal-200/10 text-teal-50",
-    glow: "bg-teal-300/18",
-    halo: "shadow-[0_0_0_4px_rgba(94,234,212,0.11),0_0_24px_rgba(45,212,191,0.22),inset_0_1px_0_rgba(255,255,255,0.17)]",
+    surface: "border-teal-100/14 bg-white/[0.055] hover:border-teal-100/24 hover:bg-white/[0.08]",
+    iconSurface: "border-teal-100/18 bg-teal-200/8 text-teal-50/92",
+    glow: "bg-teal-300/10",
+    halo: "shadow-[0_0_0_1px_rgba(94,234,212,0.06),0_0_12px_rgba(45,212,191,0.11),inset_0_1px_0_rgba(255,255,255,0.12)]",
   },
   {
     label: "Bottle",
     amount: 500,
     Icon: BottleIcon,
-    surface: "border-emerald-100/18 bg-emerald-300/9 hover:border-emerald-100/30 hover:bg-emerald-300/14",
-    iconSurface: "border-emerald-100/22 bg-emerald-200/10 text-emerald-50",
-    glow: "bg-emerald-300/18",
-    halo: "shadow-[0_0_0_5px_rgba(110,231,183,0.12),0_0_28px_rgba(52,211,153,0.24),inset_0_1px_0_rgba(255,255,255,0.18)]",
+    surface: "border-emerald-100/14 bg-white/[0.055] hover:border-emerald-100/24 hover:bg-white/[0.08]",
+    iconSurface: "border-emerald-100/18 bg-emerald-200/8 text-emerald-50/92",
+    glow: "bg-emerald-300/10",
+    halo: "shadow-[0_0_0_1px_rgba(110,231,183,0.06),0_0_12px_rgba(52,211,153,0.11),inset_0_1px_0_rgba(255,255,255,0.12)]",
   },
 ];
 
@@ -93,6 +93,25 @@ const ONBOARDING_REMINDERS = [
   { label: "40m", value: 40 },
   { label: "60m", value: 60 },
 ];
+const ONBOARDING_STEPS = ["goal", "favorite", "reminders"] as const;
+type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
+const ONBOARDING_STEP_COPY: Record<OnboardingStep, { eyebrow: string; title: string; copy: string }> = {
+  goal: {
+    eyebrow: "Step 1",
+    title: "Set your daily rhythm.",
+    copy: "Pick a realistic amount for a steady day.",
+  },
+  favorite: {
+    eyebrow: "Step 2",
+    title: "Choose your favorite tap.",
+    copy: "This is the big quick-add button on Home.",
+  },
+  reminders: {
+    eyebrow: "Step 3",
+    title: "Add gentle reminders.",
+    copy: "Quiet nudges, only when you want them.",
+  },
+};
 const HYDRATION_REVEAL_DURATION_MS = 420;
 const STREAK_WINDOW_SIZE = 5;
 const STREAK_SHIELD_COUNT = 2;
@@ -593,8 +612,10 @@ export default function Home() {
   const [isCustomQuickOpen, setIsCustomQuickOpen] = React.useState(false);
   const [customDrinkNote, setCustomDrinkNote] = React.useState<HydrationNote | null>(null);
   const [isOnboardingOpen, setIsOnboardingOpen] = React.useState(false);
+  const [isOnboardingGoalPickerOpen, setIsOnboardingGoalPickerOpen] = React.useState(false);
   const [isDailyLogOpen, setIsDailyLogOpen] = React.useState(false);
   const [isStreakOpen, setIsStreakOpen] = React.useState(false);
+  const [onboardingStep, setOnboardingStep] = React.useState<OnboardingStep>("goal");
   const [onboardingGoal, setOnboardingGoal] = React.useState(goal);
   const [onboardingQuickAmount, setOnboardingQuickAmount] = React.useState(quickAddAmount);
   const [onboardingReminder, setOnboardingReminder] = React.useState(0);
@@ -604,14 +625,18 @@ export default function Home() {
   const favoriteHoldTimerRef = React.useRef<number | null>(null);
   const favoriteHoldTriggeredRef = React.useRef(false);
 
-  useLockedPageScroll(isDailyLogOpen);
+  useLockedPageScroll(isDailyLogOpen || isOnboardingOpen);
 
   React.useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
 
     setOnboardingGoal(goal);
     setOnboardingQuickAmount(quickAddAmount);
-    setIsOnboardingOpen(localStorage.getItem(ONBOARDING_STORAGE_KEY) !== "true");
+    const shouldOpenOnboarding = localStorage.getItem(ONBOARDING_STORAGE_KEY) !== "true";
+    setIsOnboardingOpen(shouldOpenOnboarding);
+    if (shouldOpenOnboarding) {
+      setOnboardingStep("goal");
+    }
   }, [goal, mounted, quickAddAmount]);
 
   React.useEffect(() => {
@@ -761,12 +786,38 @@ export default function Home() {
 
     localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
     setIsOnboardingOpen(false);
+    setIsOnboardingGoalPickerOpen(false);
   };
 
   const skipOnboarding = () => {
     localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
     setIsOnboardingOpen(false);
+    setIsOnboardingGoalPickerOpen(false);
   };
+
+  const goToPreviousOnboardingStep = () => {
+    const currentIndex = ONBOARDING_STEPS.indexOf(onboardingStep);
+    if (currentIndex <= 0) return;
+
+    setOnboardingStep(ONBOARDING_STEPS[currentIndex - 1]);
+  };
+
+  const goToNextOnboardingStep = () => {
+    const currentIndex = ONBOARDING_STEPS.indexOf(onboardingStep);
+
+    if (currentIndex < ONBOARDING_STEPS.length - 1) {
+      setOnboardingStep(ONBOARDING_STEPS[currentIndex + 1]);
+      return;
+    }
+
+    void completeOnboarding();
+  };
+
+  const onboardingStepIndex = ONBOARDING_STEPS.indexOf(onboardingStep);
+  const onboardingCopy = ONBOARDING_STEP_COPY[onboardingStep];
+  const onboardingGoalIsCustom = !ONBOARDING_GOALS.includes(onboardingGoal);
+  const onboardingReminderLabel = onboardingReminder > 0 ? `${onboardingReminder}m` : "Off";
+  const onboardingPrimaryLabel = onboardingStepIndex === ONBOARDING_STEPS.length - 1 ? "Start Fluid" : "Next";
 
   return (
     <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] min-w-0 flex-col items-center overflow-x-hidden px-3.5 pb-24 pt-5 min-[380px]:p-4 min-[380px]:pb-24 sm:p-6 sm:pb-24 md:max-w-[30rem]">
@@ -924,25 +975,25 @@ export default function Home() {
                 key={amount}
                 type="button"
                 onClick={() => handleAddDrink(amount)}
-                className={`group relative flex min-h-[5.9rem] overflow-hidden rounded-[1.1rem] border border-[1.5px] px-3 py-3 text-left shadow-[0_10px_22px_rgba(0,0,0,0.14),inset_0_1px_1px_rgba(255,255,255,0.12)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(56,189,248,0.14),inset_0_1px_2px_rgba(255,255,255,0.18)] active:scale-[0.97] ${surface}`}
+                className={`group relative flex min-h-[4.95rem] overflow-hidden rounded-[1rem] border border-[1.5px] px-3 py-2.5 text-left shadow-[0_8px_18px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.10)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(56,189,248,0.10),inset_0_1px_2px_rgba(255,255,255,0.14)] active:scale-[0.97] min-[380px]:min-h-[5.35rem] min-[380px]:rounded-[1.05rem] ${surface}`}
                 aria-label={`Add ${amount} milliliters as ${selectedNoteOption.label}`}
               >
-                <div className={`absolute -right-9 -top-10 h-24 w-24 rounded-full ${glow} blur-2xl transition-opacity duration-300 group-hover:opacity-90`} />
+                <div className={`absolute -right-10 -top-11 h-24 w-24 rounded-full ${glow} blur-2xl transition-opacity duration-300 group-hover:opacity-80`} />
                 <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-br from-white/7 via-transparent to-water-950/12 opacity-85 transition-opacity duration-300 group-hover:opacity-100" />
+                <div className="absolute inset-0 bg-gradient-to-br from-white/[0.045] via-transparent to-water-950/14 opacity-80 transition-opacity duration-300 group-hover:opacity-100" />
                 <div
                   className="pointer-events-none absolute inset-y-[-14%] -left-[120%] w-[205%] rotate-[14deg] bg-[linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.14),rgba(255,255,255,0.38),rgba(255,255,255,0.14),rgba(255,255,255,0))] opacity-0 blur-[4px] animate-[quick-add-shimmer_15s_linear_infinite]"
                   style={{ animationDelay: SHIMMER_DELAYS[index % SHIMMER_DELAYS.length] }}
                 />
                 <div className="relative z-10 flex w-full items-center gap-3">
-                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[0.95rem] border border-[1.5px] transition-transform duration-300 group-hover:scale-105 ${iconSurface} ${halo}`}>
-                    <Icon className="h-6 w-6 drop-shadow-md" />
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.9rem] border border-[1.5px] transition-transform duration-300 group-hover:scale-105 min-[380px]:h-11 min-[380px]:w-11 ${iconSurface} ${halo}`}>
+                    <Icon className="h-5.5 w-5.5 drop-shadow-md min-[380px]:h-6 min-[380px]:w-6" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="font-ui block truncate text-[0.68rem] font-black uppercase tracking-[0.14em] text-water-200/82 transition-colors duration-300 group-hover:text-white">
                       {label}
                     </span>
-                    <span className="font-numeric mt-1 block whitespace-nowrap text-[1.42rem] font-black leading-none text-white drop-shadow-lg">
+                    <span className="font-numeric mt-1 block whitespace-nowrap text-[1.25rem] font-black leading-none text-white drop-shadow-lg min-[380px]:text-[1.42rem]">
                       {amount}
                       <span className="font-ui ml-1 text-[0.66rem] font-extrabold tracking-normal text-water-300/82">ml</span>
                     </span>
@@ -1050,6 +1101,18 @@ export default function Home() {
         suffix="ml"
         onChange={setQuickAddAmount}
         onClose={() => setIsCustomQuickOpen(false)}
+      />
+
+      <NumberPickerDialog
+        isOpen={isOnboardingGoalPickerOpen}
+        value={onboardingGoal}
+        min={500}
+        max={6000}
+        title="Daily Rhythm"
+        suffix="ml"
+        startWithValue
+        onChange={setOnboardingGoal}
+        onClose={() => setIsOnboardingGoalPickerOpen(false)}
       />
 
       <NumberPickerDialog
@@ -1170,119 +1233,219 @@ export default function Home() {
       />
 
       {isOnboardingOpen && (
-        <div className="fluid-modal-backdrop fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-8">
-          <div className="w-full max-w-[23rem] overflow-hidden rounded-[1.35rem] border border-[1.5px] border-water-300/16 bg-water-950/88 shadow-[0_24px_70px_rgba(0,0,0,0.42)]">
-            <div className="border-b border-water-300/12 px-5 py-4">
-              <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">First setup</p>
-              <h2 className="font-ui mt-2 text-2xl font-black tracking-normal text-white">Make Fluid fit your day.</h2>
-              <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-300/82">
-                Pick the defaults you will actually use. You can change them anytime.
-              </p>
+        <div className="fluid-modal-backdrop fixed inset-0 z-[120] flex items-end justify-center overflow-hidden px-3 pb-[calc(max(0.85rem,env(safe-area-inset-bottom))+0.5rem)] pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:pb-6">
+          <div
+            className="flex max-h-[calc(100dvh-1.25rem)] w-full max-w-[24rem] flex-col overflow-hidden rounded-[1.45rem] border border-[1.5px] border-water-300/16 bg-water-950/92 shadow-[0_24px_70px_rgba(0,0,0,0.42)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Fluid quick setup"
+          >
+            <div className="relative overflow-hidden border-b border-water-300/12 px-5 pb-4 pt-5">
+              <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/55 to-transparent" />
+              <div className="relative flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">
+                    {onboardingCopy.eyebrow}
+                  </p>
+                  <h2 className="font-ui mt-1.5 text-[1.7rem] font-black leading-tight tracking-normal text-white">
+                    {onboardingCopy.title}
+                  </h2>
+                  <p className="font-body mt-1.5 text-sm font-semibold leading-relaxed text-water-300/82">
+                    {onboardingCopy.copy}
+                  </p>
+                </div>
+                <div className="font-numeric shrink-0 rounded-full border border-water-300/16 bg-white/[0.055] px-3 py-1.5 text-sm font-black text-water-100">
+                  {onboardingStepIndex + 1}/{ONBOARDING_STEPS.length}
+                </div>
+              </div>
+
+              <div className="relative mt-4 grid grid-cols-3 gap-2">
+                {ONBOARDING_STEPS.map((step, index) => {
+                  const isActive = step === onboardingStep;
+                  const isDone = index < onboardingStepIndex;
+                  const label = step === "goal" ? "Goal" : step === "favorite" ? "Favorite" : "Reminders";
+
+                  return (
+                    <button
+                      key={step}
+                      type="button"
+                      onClick={() => setOnboardingStep(step)}
+                      className={`h-9 rounded-full border border-[1.5px] px-2 text-[0.68rem] font-ui font-black uppercase tracking-[0.12em] transition-all ${
+                        isActive
+                          ? "border-cyan-100/32 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
+                          : isDone
+                            ? "border-water-200/20 bg-water-400/12 text-water-100/84"
+                            : "border-water-300/12 bg-water-950/18 text-water-300/66"
+                      }`}
+                      aria-current={isActive ? "step" : undefined}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="relative mt-4 grid grid-cols-3 gap-2 rounded-[1rem] border border-water-300/12 bg-water-950/20 p-2">
+                <div className="min-w-0 rounded-xl bg-white/[0.045] px-2.5 py-2">
+                  <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.12em] text-water-300/68">Daily</p>
+                  <p className="font-numeric mt-0.5 truncate text-sm font-black text-white">{formatLiters(onboardingGoal)}</p>
+                </div>
+                <div className="min-w-0 rounded-xl bg-white/[0.045] px-2.5 py-2">
+                  <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.12em] text-water-300/68">Favorite</p>
+                  <p className="font-numeric mt-0.5 truncate text-sm font-black text-white">{onboardingQuickAmount} ml</p>
+                </div>
+                <div className="min-w-0 rounded-xl bg-white/[0.045] px-2.5 py-2">
+                  <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.12em] text-water-300/68">Nudge</p>
+                  <p className="font-numeric mt-0.5 truncate text-sm font-black text-white">{onboardingReminderLabel}</p>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-5 px-5 py-5">
-              <section>
-                <div className="mb-2 flex items-center gap-2 text-water-200">
-                  <Target className="h-4 w-4" strokeWidth={2.5} />
-                  <p className="font-ui text-sm font-bold">Daily goal</p>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {ONBOARDING_GOALS.map((preset) => {
-                    const isActive = onboardingGoal === preset;
+            <div className="fluid-scroll-panel min-h-0 flex-1 overflow-y-auto px-4 py-4 [-webkit-overflow-scrolling:touch]">
+              {onboardingStep === "goal" && (
+                <section className="space-y-3" aria-label="Choose daily rhythm">
+                  <div className="rounded-[1rem] border border-water-300/12 bg-water-950/18 p-3.5">
+                    <div className="flex items-center gap-2 text-water-200">
+                      <Target className="h-4 w-4" strokeWidth={2.5} />
+                      <p className="font-ui text-sm font-bold">Daily rhythm</p>
+                    </div>
+                    <p className="font-body mt-2 text-xs font-semibold leading-relaxed text-water-300/78">
+                      Start with something comfortable. You can change it later.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {ONBOARDING_GOALS.map((preset) => {
+                      const isActive = onboardingGoal === preset;
 
-                    return (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => setOnboardingGoal(preset)}
-                        className={`font-numeric rounded-xl border border-[1.5px] px-3 py-3 text-sm font-black transition-all ${
-                          isActive
-                            ? "border-water-200/35 bg-water-400/22 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
-                            : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
-                        }`}
-                        aria-pressed={isActive}
-                      >
-                        {formatLiters(preset)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
+                      return (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => setOnboardingGoal(preset)}
+                          className={`font-numeric min-h-[4rem] rounded-xl border border-[1.5px] px-3 py-3 text-lg font-black transition-all ${
+                            isActive
+                              ? "border-water-200/36 bg-water-400/22 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
+                              : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
+                          }`}
+                          aria-pressed={isActive}
+                        >
+                          {formatLiters(preset)}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setIsOnboardingGoalPickerOpen(true)}
+                      className={`min-h-[4rem] rounded-xl border border-[1.5px] px-3 py-3 text-left transition-all ${
+                        onboardingGoalIsCustom
+                          ? "border-cyan-100/36 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
+                          : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
+                      }`}
+                      aria-pressed={onboardingGoalIsCustom}
+                    >
+                      <span className="font-ui block text-[0.68rem] font-black uppercase tracking-[0.12em] text-water-300/84">
+                        Custom
+                      </span>
+                      <span className="font-numeric mt-1 block text-lg font-black">{formatLiters(onboardingGoal)}</span>
+                    </button>
+                  </div>
+                </section>
+              )}
 
-              <section>
-                <div className="mb-2 flex items-center gap-2 text-water-200">
-                  <GlassIcon className="h-4 w-4" />
-                  <p className="font-ui text-sm font-bold">Favorite amount</p>
-                </div>
-                <p className="font-body mb-2 text-xs font-semibold leading-relaxed text-water-300/78">
-                  This becomes your saved one-tap amount on the Home screen.
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {ONBOARDING_FAVORITE_AMOUNTS.map(({ label, amount }) => {
-                    const isActive = onboardingQuickAmount === amount;
+              {onboardingStep === "favorite" && (
+                <section className="space-y-3" aria-label="Choose favorite quick add">
+                  <div className="rounded-[1rem] border border-water-300/12 bg-water-950/18 p-3.5">
+                    <div className="flex items-center gap-2 text-water-200">
+                      <GlassIcon className="h-4 w-4" />
+                      <p className="font-ui text-sm font-bold">Favorite tap</p>
+                    </div>
+                    <p className="font-body mt-2 text-xs font-semibold leading-relaxed text-water-300/78">
+                      One tap from the main screen. Hold it later to edit.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ONBOARDING_FAVORITE_AMOUNTS.map(({ label, amount }) => {
+                      const isActive = onboardingQuickAmount === amount;
+                      const FavoriteIcon = amount <= 200 ? SipIcon : amount <= 300 ? GlassIcon : BottleIcon;
 
-                    return (
-                      <button
-                        key={amount}
-                        type="button"
-                        onClick={() => setOnboardingQuickAmount(amount)}
-                        className={`font-numeric rounded-xl border border-[1.5px] px-3 py-3 text-sm font-black transition-all ${
-                          isActive
-                            ? "border-cyan-100/35 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
-                            : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
-                        }`}
-                        aria-pressed={isActive}
-                      >
-                        <span className="font-ui block text-[0.68rem] font-black uppercase tracking-[0.12em] text-water-300/88">
+                      return (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() => setOnboardingQuickAmount(amount)}
+                          className={`rounded-xl border border-[1.5px] px-2.5 py-3 text-center transition-all ${
+                            isActive
+                              ? "border-cyan-100/35 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
+                              : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
+                          }`}
+                          aria-pressed={isActive}
+                        >
+                          <FavoriteIcon className="mx-auto h-7 w-7 drop-shadow-md" />
+                          <span className="font-ui mt-2 block text-[0.66rem] font-black uppercase tracking-[0.12em] text-water-300/88">
+                            {label}
+                          </span>
+                          <span className="font-numeric mt-1 block text-sm font-black">{amount} ml</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {onboardingStep === "reminders" && (
+                <section className="space-y-3" aria-label="Choose reminder rhythm">
+                  <div className="rounded-[1rem] border border-water-300/12 bg-water-950/18 p-3.5">
+                    <div className="flex items-center gap-2 text-water-200">
+                      <BellRing className="h-4 w-4" strokeWidth={2.5} />
+                      <p className="font-ui text-sm font-bold">Gentle reminders</p>
+                    </div>
+                    <p className="font-body mt-2 text-xs font-semibold leading-relaxed text-water-300/78">
+                      You control this. Fluid can stay quiet if you prefer.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ONBOARDING_REMINDERS.map(({ label, value }) => {
+                      const isActive = onboardingReminder === value;
+
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => setOnboardingReminder(value)}
+                          className={`font-ui min-h-[4rem] rounded-xl border border-[1.5px] px-3 py-3 text-sm font-black transition-all ${
+                            isActive
+                              ? "border-emerald-100/32 bg-emerald-300/14 text-white shadow-[0_8px_18px_rgba(45,212,191,0.12)]"
+                              : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
+                          }`}
+                          aria-pressed={isActive}
+                        >
                           {label}
-                        </span>
-                        <span className="mt-1 block">{amount} ml</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section>
-                <div className="mb-2 flex items-center gap-2 text-water-200">
-                  <BellRing className="h-4 w-4" strokeWidth={2.5} />
-                  <p className="font-ui text-sm font-bold">Reminders</p>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {ONBOARDING_REMINDERS.map(({ label, value }) => {
-                    const isActive = onboardingReminder === value;
-
-                    return (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => setOnboardingReminder(value)}
-                        className={`font-ui rounded-xl border border-[1.5px] px-3 py-3 text-sm font-black transition-all ${
-                          isActive
-                            ? "border-emerald-100/32 bg-emerald-300/14 text-white shadow-[0_8px_18px_rgba(45,212,191,0.12)]"
-                            : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
-                        }`}
-                        aria-pressed={isActive}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {onboardingReminder > 0 && !notificationsSupported && (
-                  <p className="font-body mt-2 rounded-xl border border-rose-200/18 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-50/86">
-                    Notifications are not available on this device yet.
-                  </p>
-                )}
-              </section>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {onboardingReminder > 0 && !notificationsSupported && (
+                    <p className="font-body rounded-xl border border-rose-200/18 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-50/86">
+                      Notifications are not available on this device yet.
+                    </p>
+                  )}
+                </section>
+              )}
             </div>
 
             <div className="grid grid-cols-[auto_1fr] gap-3 border-t border-water-300/12 px-5 py-4">
-              <Button type="button" variant="ghost" size="sm" onClick={skipOnboarding} className="rounded-xl px-3">
-                Skip
-              </Button>
-              <Button type="button" variant="primary" size="sm" onClick={completeOnboarding} className="rounded-xl">
-                Start Fluid
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" size="sm" onClick={skipOnboarding} className="rounded-xl px-3">
+                  Skip
+                </Button>
+                {onboardingStepIndex > 0 && (
+                  <Button type="button" variant="secondary" size="sm" onClick={goToPreviousOnboardingStep} className="rounded-xl px-3">
+                    Back
+                  </Button>
+                )}
+              </div>
+              <Button type="button" variant="primary" size="sm" onClick={goToNextOnboardingStep} className="rounded-xl">
+                {onboardingPrimaryLabel}
               </Button>
             </div>
           </div>

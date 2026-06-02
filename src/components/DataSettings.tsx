@@ -73,14 +73,14 @@ export function DataSettings({ exportHydrationState, importHydrationState, embed
           ? "Reading backup..."
         : status === "error"
           ? "Import failed."
-          : "Local backup";
+          : "Stored on this device";
 
   const content = (
     <>
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Data</h3>
-          <p className="font-body mt-1 text-sm text-water-300/80">Keep a portable copy of your progress.</p>
+          <p className="font-body mt-1 text-sm text-water-300/80">Your progress stays local. Export a copy whenever you want.</p>
         </div>
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/14 bg-water-800/35 text-water-200">
           <ShieldCheck className="h-5 w-5" strokeWidth={2.5} />

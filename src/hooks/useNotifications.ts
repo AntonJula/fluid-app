@@ -137,7 +137,7 @@ async function getServiceWorkerRegistration() {
   }
 
   try {
-    await navigator.serviceWorker.register(SERVICE_WORKER_PATH);
+    await navigator.serviceWorker.register(SERVICE_WORKER_PATH, { scope: "/" });
     return await navigator.serviceWorker.ready;
   } catch (error) {
     console.error("Failed to register notification service worker", error);
@@ -170,7 +170,7 @@ async function showSystemNotification({
 
   const options: FluidNotificationOptions = {
     body,
-    badge: "/favicon.ico",
+    badge: "/fluid-status-wordmark.png",
     data: { url: actionAmount ? `/?${quickAddParams.toString()}` : "/" },
     icon: "/app-icon-192.png",
     tag,
