@@ -39,6 +39,7 @@ export function BottomNav() {
         data-bottom-nav="true"
         className="pointer-events-auto relative w-full overflow-hidden bg-transparent"
       >
+        <div className="pointer-events-none absolute inset-x-8 top-0 mx-auto h-px max-w-[19rem] bg-gradient-to-r from-transparent via-water-100/24 to-transparent shadow-[0_0_10px_rgba(125,211,252,0.12)]" />
         <div className="mx-auto flex w-full max-w-[20rem] items-end justify-between px-5 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-3 sm:max-w-md sm:px-8">
           {NAV_ITEMS.map(({ href, label, Icon }) => {
             const isActive = activePathname === href;
