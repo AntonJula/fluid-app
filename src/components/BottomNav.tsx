@@ -29,11 +29,11 @@ export function BottomNav() {
       }`}
       style={{
         transform: hideNav ? "translateY(8rem)" : "translateY(0px)",
-        transition: `opacity 700ms ease-out, transform 700ms ease-out`,
+        transition: "opacity 700ms ease-out, transform 700ms ease-out",
         willChange: "transform",
       }}
     >
-      <div className="pointer-events-none absolute inset-x-0 -bottom-4 h-24 bg-gradient-to-t from-black/76 via-black/38 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 -bottom-4 h-24 bg-gradient-to-t from-black/90 via-black/38 to-transparent" />
 
       <nav
         data-bottom-nav="true"
@@ -56,7 +56,7 @@ export function BottomNav() {
                   className={`fluid-nav-icon relative flex h-8.5 w-8.5 items-center justify-center transition-[color,filter,transform] duration-300 sm:h-9 sm:w-9 ${
                     isActive
                       ? "fluid-nav-icon-active text-white drop-shadow-[0_5px_10px_rgba(0,0,0,0.45)]"
-                      : "text-water-100/55 drop-shadow-[0_3px_8px_rgba(0,0,0,0.4)] hover:text-water-100/85"
+                      : "text-water-100/72 drop-shadow-[0_3px_8px_rgba(0,0,0,0.48)] hover:text-water-100/90"
                   }`}
                 >
                   <Icon className="relative z-10 h-5.5 w-5.5 sm:h-5.75 sm:w-5.75" strokeWidth={isActive ? 2.8 : 2.35} />
@@ -64,7 +64,7 @@ export function BottomNav() {
 
                 <span
                   className={`font-ui mt-1 text-[0.66rem] font-bold tracking-normal transition-colors duration-300 sm:text-[0.69rem] ${
-                    isActive ? "text-white drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" : "text-water-100/58"
+                    isActive ? "text-white drop-shadow-[0_3px_8px_rgba(0,0,0,0.55)]" : "text-water-100/72 drop-shadow-[0_2px_6px_rgba(0,0,0,0.38)]"
                   }`}
                 >
                   {label}

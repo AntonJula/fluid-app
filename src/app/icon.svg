@@ -1,21 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="92" y1="48" x2="420" y2="464" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0c4a6e" />
-      <stop offset="0.58" stop-color="#075985" />
+    <linearGradient id="bg" x1="76" y1="52" x2="426" y2="466" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f75a2" />
+      <stop offset="0.55" stop-color="#075985" />
       <stop offset="1" stop-color="#082f49" />
     </linearGradient>
-    <filter id="titleShadow" x="-12%" y="-20%" width="124%" height="140%">
-      <feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#082f49" flood-opacity="0.46" />
+    <radialGradient id="glow" cx="38%" cy="24%" r="70%">
+      <stop offset="0" stop-color="#67e8f9" stop-opacity="0.24" />
+      <stop offset="0.52" stop-color="#38bdf8" stop-opacity="0.08" />
+      <stop offset="1" stop-color="#082f49" stop-opacity="0" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-18%" width="120%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#04283f" flood-opacity="0.5" />
     </filter>
   </defs>
   <rect width="512" height="512" rx="128" fill="url(#bg)" />
-  <g transform="translate(38.708 325.04) scale(0.16 -0.16)" fill="#ffffff" filter="url(#titleShadow)">
-    <path transform="translate(0 0)" d="M550 708L550 532L272 532L272 434L472 434L472 267L272 267L272 0L50 0L50 708Z" />
-    <path transform="translate(535 0)" d="M272 740L272 0L50 0L50 740Z" />
-    <path transform="translate(817 0)" d="M647 564L647 0L425 0L425 86Q399 46 355.5 21Q312 -4 252 -4Q155 -4 100.5 61Q46 126 46 237L46 564L267 564L267 265Q267 225 288.5 201.5Q310 178 346 178Q383 178 404 201.5Q425 225 425 265L425 564Z" />
-    <path transform="translate(1474 0)" d="M162 609Q104 609 69 640Q34 671 34 718Q34 766 69 797.5Q104 829 162 829Q219 829 254 797.5Q289 766 289 718Q289 671 254 640Q219 609 162 609ZM272 564L272 0L50 0L50 564Z" />
-    <path transform="translate(1756 0)" d="M20 282Q20 371 50.5 436.5Q81 502 134 536.5Q187 571 253 571Q308 571 347.5 548.5Q387 526 408 487L408 740L630 740L630 0L408 0L408 77Q387 38 347.5 15.5Q308 -7 253 -7Q187 -7 134 27.5Q81 62 50.5 127.5Q20 193 20 282ZM409 282Q409 327 386 352Q363 377 327 377Q291 377 268 352Q245 327 245 282Q245 237 268 212Q291 187 327 187Q363 187 386 212Q409 237 409 282Z" />
-    <path transform="translate(2396 0)" d="M160 -8Q102 -8 67 23Q32 54 32 101Q32 149 67 180.5Q102 212 160 212Q217 212 252 180.5Q287 149 287 101Q287 54 252 23Q217 -8 160 -8Z" />
-  </g>
+  <rect width="512" height="512" rx="128" fill="url(#glow)" />
+  <text
+    x="256"
+    y="292"
+    fill="#ffffff"
+    filter="url(#shadow)"
+    font-family="Poppins, Outfit, Arial, sans-serif"
+    font-size="132"
+    font-weight="900"
+    letter-spacing="-5"
+    text-anchor="middle"
+  >Fluid.</text>
 </svg>

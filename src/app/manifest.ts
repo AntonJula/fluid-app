@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Fluid Hydration Tracker",
-    short_name: "Fluid",
+    name: "Fluid.",
+    short_name: "Fluid.",
     description: "A calm hydration tracker with reminders, streaks, and local backups.",
     start_url: "/",
     scope: "/",
@@ -16,19 +16,19 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["health", "fitness", "lifestyle"],
     icons: [
       {
-        src: "/app-icon-192.png",
+        src: "/app-icon-v2-192.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/app-icon-512.png",
+        src: "/app-icon-v2-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/app-icon-512.png",
+        src: "/app-icon-v2-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
@@ -48,7 +48,7 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/?quickAdd=250",
         icons: [
           {
-            src: "/app-icon-192.png",
+            src: "/app-icon-v2-192.png",
             sizes: "192x192",
             type: "image/png",
           },
@@ -61,7 +61,7 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/stats",
         icons: [
           {
-            src: "/app-icon-192.png",
+            src: "/app-icon-v2-192.png",
             sizes: "192x192",
             type: "image/png",
           },

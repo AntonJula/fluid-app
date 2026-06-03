@@ -6,16 +6,16 @@ import { saveScrollPosition } from "@/hooks/useScrollPreservation";
 import { resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
 
 const PAGES = ["/", "/stats", "/settings"] as const;
-const HORIZONTAL_LOCK_PX = 8;
-const NAV_TRIGGER_PX = 52;
-const FLICK_TRIGGER_PX = 28;
-const FLICK_VELOCITY_PX_PER_MS = 0.26;
-const DRAG_RESISTANCE = 0.68;
-const MAX_DRAG_OFFSET = 104;
-const COMMIT_OFFSET = 26;
-const COMMIT_DELAY_MS = 40;
-const SNAP_BACK_DELAY_MS = 150;
-const VERTICAL_REJECT_RATIO = 1.08;
+const HORIZONTAL_LOCK_PX = 6;
+const NAV_TRIGGER_PX = 40;
+const FLICK_TRIGGER_PX = 20;
+const FLICK_VELOCITY_PX_PER_MS = 0.18;
+const DRAG_RESISTANCE = 0.82;
+const MAX_DRAG_OFFSET = 132;
+const COMMIT_OFFSET = 34;
+const COMMIT_DELAY_MS = 18;
+const SNAP_BACK_DELAY_MS = 110;
+const VERTICAL_REJECT_RATIO = 1.22;
 
 type SwipeDirection = "left" | "right";
 
@@ -67,7 +67,17 @@ export function SwipeNavigation() {
 
   const applyOffset = useCallback((offset: number) => {
     const root = document.documentElement;
+    const progress = Math.min(1, Math.abs(offset) / MAX_DRAG_OFFSET);
+    const scale = 1 - progress * 0.018;
+    const dim = progress * 0.16;
+    const leftEdge = offset > 0 ? progress : 0;
+    const rightEdge = offset < 0 ? progress : 0;
+
     root.style.setProperty("--swipe-shell-offset", `${offset}px`);
+    root.style.setProperty("--swipe-shell-scale", scale.toFixed(4));
+    root.style.setProperty("--swipe-shell-dim", dim.toFixed(4));
+    root.style.setProperty("--swipe-edge-left", leftEdge.toFixed(4));
+    root.style.setProperty("--swipe-edge-right", rightEdge.toFixed(4));
   }, []);
 
   const queueOffset = useCallback(
@@ -135,6 +145,10 @@ export function SwipeNavigation() {
       delete document.documentElement.dataset.swipeDragging;
       delete document.documentElement.dataset.swipeTransitioning;
       document.documentElement.style.setProperty("--swipe-shell-offset", "0px");
+      document.documentElement.style.setProperty("--swipe-shell-scale", "1");
+      document.documentElement.style.setProperty("--swipe-shell-dim", "0");
+      document.documentElement.style.setProperty("--swipe-edge-left", "0");
+      document.documentElement.style.setProperty("--swipe-edge-right", "0");
       resetSwipeUiState();
     };
   }, [pathname, resetVisualState]);

@@ -98,7 +98,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
     return `${h12.toString().padStart(2, "0")}:${m} ${ampm}`;
   };
 
-  const toggleReminders = () => {
+  const toggleReminders = async () => {
     if (remindersEnabled) {
       setInterval(0);
       setIsCustom(false);
@@ -106,6 +106,10 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
     }
 
     setInterval(lastEnabledIntervalRef.current || 40);
+
+    if (isSupported && permission === "default") {
+      await requestPermission();
+    }
   };
 
   return (
@@ -123,7 +127,9 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
           role="switch"
           aria-checked={remindersEnabled}
           aria-label={remindersEnabled ? "Turn reminders off" : "Turn reminders on"}
-          onClick={toggleReminders}
+          onClick={() => {
+            void toggleReminders();
+          }}
           className={`relative mt-1 inline-flex h-8 w-14 shrink-0 rounded-full border border-water-300/14 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-water-300/55 focus:ring-offset-2 focus:ring-offset-background ${
             remindersEnabled ? "bg-water-300" : "bg-water-950/55"
           }`}

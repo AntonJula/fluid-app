@@ -172,7 +172,7 @@ async function showSystemNotification({
     body,
     badge: "/fluid-status-wordmark.png",
     data: { url: actionAmount ? `/?${quickAddParams.toString()}` : "/" },
-    icon: "/app-icon-192.png",
+    icon: "/app-icon-v2-192.png",
     tag,
     renotify: true,
   };
