@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { useHydration } from "@/hooks/useHydration";
 import { GoalSettings } from "@/components/GoalSettings";
@@ -9,8 +10,10 @@ import { NavSettings } from "@/components/NavSettings";
 import { DataSettings } from "@/components/DataSettings";
 import { HydrationLoadingState } from "@/components/HydrationLoadingState";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const advancedSettingsRef = useRef<HTMLDivElement>(null);
   const {
@@ -56,6 +59,15 @@ export default function SettingsPage() {
         <p className="font-body mt-2 text-sm text-water-300/80">
           Choose a realistic rhythm, then let Fluid stay quiet and helpful in the background.
         </p>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => router.push("/?setup=true")}
+          className="mt-4 rounded-xl px-4 text-xs"
+        >
+          Setup again
+        </Button>
       </Card>
 
       <div className="w-full space-y-6 flex-1">

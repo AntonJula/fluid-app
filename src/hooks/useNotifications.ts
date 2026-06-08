@@ -170,9 +170,9 @@ async function showSystemNotification({
 
   const options: FluidNotificationOptions = {
     body,
-    badge: "/fluid-status-wordmark.png",
     data: { url: actionAmount ? `/?${quickAddParams.toString()}` : "/" },
-    icon: "/app-icon-v2-192.png",
+    icon: "/app-icon-192.png",
+    badge: "/app-icon-192.png",
     tag,
     renotify: true,
   };
@@ -277,6 +277,13 @@ export function useNotifications(
       window.removeEventListener(PERMISSION_EVENT, syncPermission);
     };
   }, []);
+
+  const refreshPermission = () => {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+
+    setPermission(Notification.permission);
+    window.dispatchEvent(new Event(PERMISSION_EVENT));
+  };
 
   const requestPermission = async () => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
@@ -815,5 +822,5 @@ export function useNotifications(
     quietHours.start,
   ]);
 
-  return { permission, requestPermission, isSupported };
+  return { permission, refreshPermission, requestPermission, isSupported };
 }

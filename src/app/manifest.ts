@@ -11,33 +11,27 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "fullscreen",
     display_override: ["fullscreen", "standalone"],
     orientation: "portrait-primary",
-    background_color: "#0a3b59",
-    theme_color: "#0a3b59",
+    background_color: "#0b4261",
+    theme_color: "#0b4261",
     categories: ["health", "fitness", "lifestyle"],
     icons: [
       {
-        src: "/app-icon-v2-192.png",
+        src: "/app-icon-192.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/app-icon-v2-512.png",
+        src: "/app-icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/app-icon-v2-512.png",
+        src: "/app-icon-maskable-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
-      },
-      {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
-        purpose: "any",
       },
     ],
     shortcuts: [
@@ -48,7 +42,7 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/?quickAdd=250",
         icons: [
           {
-            src: "/app-icon-v2-192.png",
+            src: "/app-icon-192.png",
             sizes: "192x192",
             type: "image/png",
           },
@@ -61,7 +55,7 @@ export default function manifest(): MetadataRoute.Manifest {
         url: "/stats",
         icons: [
           {
-            src: "/app-icon-v2-192.png",
+            src: "/app-icon-192.png",
             sizes: "192x192",
             type: "image/png",
           },

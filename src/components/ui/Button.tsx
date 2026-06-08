@@ -32,7 +32,7 @@ export function Button({
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
-      <span className="pointer-events-none">{children}</span>
+      <span className="pointer-events-none inline-flex items-center justify-center">{children}</span>
     </button>
   );
 }

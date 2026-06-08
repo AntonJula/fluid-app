@@ -31,6 +31,7 @@ import { NumberPickerDialog } from "@/components/ui/NumberPickerDialog";
 import { Button } from "@/components/ui/Button";
 import { SipIcon, GlassIcon, MugIcon, BottleIcon } from "@/components/DrinkIcons";
 import { HYDRATION_NOTES, type HydrationNote } from "@/lib/hydrationState";
+import { WORKOUT_REMINDER_INTERVAL_MINUTES } from "@/lib/notificationMessages";
 import { formatDateLocal } from "@/lib/date";
 
 const SECONDARY_QUICK_AMOUNTS = [
@@ -82,34 +83,35 @@ const NOTE_OPTIONS: Array<{ value: HydrationNote; label: string; Icon: React.Com
 
 const SHIMMER_DELAYS = ["4.8s", "7.9s", "2.6s"];
 const ONBOARDING_STORAGE_KEY = "fluid-onboarding-complete";
-const ONBOARDING_GOALS = [2000, 2500, 3000];
-const ONBOARDING_FAVORITE_AMOUNTS = [
-  { label: "Small", amount: 150 },
-  { label: "Glass", amount: 250 },
-  { label: "Bottle", amount: 500 },
-];
+const ONBOARDING_GOALS = [1500, 2000, 2500, 3000];
 const ONBOARDING_REMINDERS = [
   { label: "Off", value: 0 },
+  { label: "20m", value: 20 },
   { label: "40m", value: 40 },
   { label: "60m", value: 60 },
 ];
-const ONBOARDING_STEPS = ["goal", "favorite", "reminders"] as const;
+const ONBOARDING_STEPS = ["welcome", "goal", "reminders", "notifications"] as const;
 type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 const ONBOARDING_STEP_COPY: Record<OnboardingStep, { eyebrow: string; title: string; copy: string }> = {
+  welcome: {
+    eyebrow: "Welcome",
+    title: "Fluid.",
+    copy: "Build a calm hydration rhythm without pressure.",
+  },
   goal: {
     eyebrow: "Step 1",
-    title: "Set your daily rhythm.",
-    copy: "Pick a realistic amount for a steady day.",
-  },
-  favorite: {
-    eyebrow: "Step 2",
-    title: "Choose your favorite tap.",
-    copy: "This is the big quick-add button on Home.",
+    title: "Set your daily goal.",
+    copy: "Pick a target that feels realistic and sustainable.",
   },
   reminders: {
+    eyebrow: "Step 2",
+    title: "Choose your reminder rhythm.",
+    copy: "Keep Fluid quiet, or let it nudge you gently.",
+  },
+  notifications: {
     eyebrow: "Step 3",
-    title: "Add gentle reminders.",
-    copy: "Quiet nudges, only when you want them.",
+    title: "Let Fluid remind you.",
+    copy: "Allow notifications only if you want reminders outside the app.",
   },
 };
 const HYDRATION_REVEAL_DURATION_MS = 420;
@@ -604,7 +606,7 @@ export default function Home() {
     resetDaily,
     mounted,
   } = useHydration();
-  const { requestPermission, isSupported: notificationsSupported } = useNotifications(0, quietHours, false);
+  const { permission: notificationPermission, requestPermission, isSupported: notificationsSupported } = useNotifications(0, quietHours, false);
   const revealedIntake = useHydrationReveal(intake);
   const [isResetConfirming, setIsResetConfirming] = React.useState(false);
   const [selectedNote, setSelectedNote] = React.useState<HydrationNote>("water");
@@ -613,31 +615,68 @@ export default function Home() {
   const [customDrinkNote, setCustomDrinkNote] = React.useState<HydrationNote | null>(null);
   const [isOnboardingOpen, setIsOnboardingOpen] = React.useState(false);
   const [isOnboardingGoalPickerOpen, setIsOnboardingGoalPickerOpen] = React.useState(false);
+  const [isOnboardingReminderPickerOpen, setIsOnboardingReminderPickerOpen] = React.useState(false);
   const [isDailyLogOpen, setIsDailyLogOpen] = React.useState(false);
   const [isStreakOpen, setIsStreakOpen] = React.useState(false);
-  const [onboardingStep, setOnboardingStep] = React.useState<OnboardingStep>("goal");
+  const [onboardingStep, setOnboardingStep] = React.useState<OnboardingStep>("welcome");
   const [onboardingGoal, setOnboardingGoal] = React.useState(goal);
-  const [onboardingQuickAmount, setOnboardingQuickAmount] = React.useState(quickAddAmount);
   const [onboardingReminder, setOnboardingReminder] = React.useState(0);
   const [editingLog, setEditingLog] = React.useState<DrinkLogItem | null>(null);
   const [workoutClock, setWorkoutClock] = React.useState(0);
   const handledQuickAddRef = React.useRef(false);
+  const forcedOnboardingRef = React.useRef(false);
   const favoriteHoldTimerRef = React.useRef<number | null>(null);
   const favoriteHoldTriggeredRef = React.useRef(false);
 
   useLockedPageScroll(isDailyLogOpen || isOnboardingOpen);
 
   React.useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    if (isOnboardingOpen) {
+      document.documentElement.dataset.fluidSetupOpen = "true";
+      return;
+    }
+
+    delete document.documentElement.dataset.fluidSetupOpen;
+  }, [isOnboardingOpen]);
+
+  React.useEffect(() => {
+    return () => {
+      if (typeof document !== "undefined") {
+        delete document.documentElement.dataset.fluidSetupOpen;
+      }
+    };
+  }, []);
+
+  React.useEffect(() => {
     if (!mounted || typeof window === "undefined") return;
 
     setOnboardingGoal(goal);
-    setOnboardingQuickAmount(quickAddAmount);
-    const shouldOpenOnboarding = localStorage.getItem(ONBOARDING_STORAGE_KEY) !== "true";
+    const searchParams = new URLSearchParams(window.location.search);
+    const hasSetupParam = searchParams.get("setup") === "true";
+
+    if (hasSetupParam) {
+      forcedOnboardingRef.current = true;
+    }
+
+    const forceOnboarding = forcedOnboardingRef.current;
+    const hasExistingHydrationData = intake > 0 || drinkLog.length > 0 || history.length > 0;
+    const hasCompletedOnboarding = localStorage.getItem(ONBOARDING_STORAGE_KEY) === "true";
+    const shouldOpenOnboarding = forceOnboarding || (!hasCompletedOnboarding && !hasExistingHydrationData);
+
+    if (!forceOnboarding && !hasCompletedOnboarding && hasExistingHydrationData) {
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
+    }
+
     setIsOnboardingOpen(shouldOpenOnboarding);
     if (shouldOpenOnboarding) {
-      setOnboardingStep("goal");
+      setOnboardingStep("welcome");
+      if (hasSetupParam) {
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
+      }
     }
-  }, [goal, mounted, quickAddAmount]);
+  }, [drinkLog.length, goal, history.length, intake, mounted]);
 
   React.useEffect(() => {
     if (!mounted || handledQuickAddRef.current || typeof window === "undefined") return;
@@ -700,6 +739,14 @@ export default function Home() {
   const workoutMinutesLeft = isWorkoutSessionActive
     ? Math.max(1, Math.ceil(((workoutSessionEndsAt ?? 0) - workoutClock) / 60000))
     : 0;
+  const workoutReminderCopy = !notificationsSupported
+    ? `Workout mode is active. This device cannot send app checks yet. ${workoutMinutesLeft} min left.`
+    : notificationPermission === "granted"
+      ? `Set checks every ${WORKOUT_REMINDER_INTERVAL_MINUTES} min. ${workoutMinutesLeft} min left.`
+      : notificationPermission === "denied"
+        ? `Workout mode is active. Enable notifications in Settings for set checks. ${workoutMinutesLeft} min left.`
+        : `Allow app notifications for set checks every ${WORKOUT_REMINDER_INTERVAL_MINUTES} min. ${workoutMinutesLeft} min left.`;
+  const canAskWorkoutNotifications = isWorkoutSessionActive && notificationsSupported && notificationPermission === "default";
   const handleReset = () => {
     resetDaily();
     setIsResetConfirming(false);
@@ -775,24 +822,27 @@ export default function Home() {
     setEditingLog(null);
   };
 
-  const completeOnboarding = async () => {
+  const completeOnboarding = async (shouldRequestNotifications = false) => {
     setGoal(onboardingGoal);
-    setQuickAddAmount(onboardingQuickAmount);
     setReminderInterval(onboardingReminder);
 
-    if (onboardingReminder > 0 && notificationsSupported) {
+    if (shouldRequestNotifications && onboardingReminder > 0 && notificationsSupported) {
       await requestPermission();
     }
 
     localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
+    forcedOnboardingRef.current = false;
     setIsOnboardingOpen(false);
     setIsOnboardingGoalPickerOpen(false);
+    setIsOnboardingReminderPickerOpen(false);
   };
 
   const skipOnboarding = () => {
     localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
+    forcedOnboardingRef.current = false;
     setIsOnboardingOpen(false);
     setIsOnboardingGoalPickerOpen(false);
+    setIsOnboardingReminderPickerOpen(false);
   };
 
   const goToPreviousOnboardingStep = () => {
@@ -810,20 +860,38 @@ export default function Home() {
       return;
     }
 
-    void completeOnboarding();
+    void completeOnboarding(onboardingReminder > 0 && notificationsSupported && notificationPermission === "default");
   };
 
   const onboardingStepIndex = ONBOARDING_STEPS.indexOf(onboardingStep);
   const onboardingCopy = ONBOARDING_STEP_COPY[onboardingStep];
   const onboardingGoalIsCustom = !ONBOARDING_GOALS.includes(onboardingGoal);
+  const onboardingReminderIsCustom = !ONBOARDING_REMINDERS.some((option) => option.value === onboardingReminder);
   const onboardingReminderLabel = onboardingReminder > 0 ? `${onboardingReminder}m` : "Off";
-  const onboardingPrimaryLabel = onboardingStepIndex === ONBOARDING_STEPS.length - 1 ? "Start Fluid" : "Next";
+  const onboardingWillAskPermission =
+    onboardingStep === "notifications" &&
+    onboardingReminder > 0 &&
+    notificationsSupported &&
+    notificationPermission === "default";
+  const onboardingPrimaryLabel =
+    onboardingWillAskPermission
+      ? "Allow & Start"
+      : onboardingStepIndex === ONBOARDING_STEPS.length - 1
+        ? "Start Fluid"
+        : "Next";
+
+  const shouldHideMainChrome = isOnboardingOpen;
 
   return (
     <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] min-w-0 flex-col items-center overflow-x-hidden px-3.5 pb-24 pt-5 min-[380px]:p-4 min-[380px]:pb-24 sm:p-6 sm:pb-24 md:max-w-[30rem]">
       <WaveBackground progress={actualProgress} />
 
-      <div className="z-10 flex h-full min-w-0 flex-1 flex-col gap-5 w-full">
+      <div
+        className={`z-10 flex h-full min-w-0 flex-1 flex-col gap-5 w-full transition-opacity duration-200 ${
+          shouldHideMainChrome ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
+        aria-hidden={shouldHideMainChrome}
+      >
         <header className="relative z-20 mt-1 w-full text-center">
           <h1 className="font-display text-5xl font-black text-white drop-shadow-md sm:text-6xl">Fluid.</h1>
           <button
@@ -904,18 +972,31 @@ export default function Home() {
                 <Dumbbell className="h-4 w-4" strokeWidth={2.5} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-ui text-[0.72rem] font-black uppercase tracking-[0.15em] text-emerald-100/88">Workout mode</p>
+                <p className="font-ui text-[0.72rem] font-black uppercase tracking-[0.15em] text-emerald-100/88">Workout hydration</p>
                 <p className="font-body mt-0.5 text-xs font-semibold leading-snug text-water-200/78">
-                  Gentle checks every 12 min. {workoutMinutesLeft} min left.
+                  {workoutReminderCopy}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={endWorkoutSession}
-                className="font-ui shrink-0 rounded-full border border-emerald-100/16 bg-water-950/22 px-3 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.14em] text-water-100 transition-colors hover:bg-white/10"
-              >
-                End
-              </button>
+              <div className="flex shrink-0 flex-col items-end gap-1.5">
+                {canAskWorkoutNotifications && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void requestPermission();
+                    }}
+                    className="font-ui rounded-full border border-cyan-100/20 bg-cyan-100/14 px-3 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.14em] text-cyan-50 transition-colors hover:bg-cyan-100/20"
+                  >
+                    Allow
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={endWorkoutSession}
+                  className="font-ui rounded-full border border-emerald-100/16 bg-water-950/22 px-3 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.14em] text-water-100 transition-colors hover:bg-white/10"
+                >
+                  End
+                </button>
+              </div>
             </div>
           )}
 
@@ -1105,14 +1186,24 @@ export default function Home() {
 
       <NumberPickerDialog
         isOpen={isOnboardingGoalPickerOpen}
-        value={onboardingGoal}
+        value={0}
         min={500}
         max={6000}
         title="Daily Rhythm"
         suffix="ml"
-        startWithValue
         onChange={setOnboardingGoal}
         onClose={() => setIsOnboardingGoalPickerOpen(false)}
+      />
+
+      <NumberPickerDialog
+        isOpen={isOnboardingReminderPickerOpen}
+        value={0}
+        min={5}
+        max={240}
+        title="Reminder Rhythm"
+        suffix="m"
+        onChange={setOnboardingReminder}
+        onClose={() => setIsOnboardingReminderPickerOpen(false)}
       />
 
       <NumberPickerDialog
@@ -1232,10 +1323,12 @@ export default function Home() {
         onConfirm={handleReset}
       />
 
-      {isOnboardingOpen && (
-        <div className="fluid-modal-backdrop fixed inset-0 z-[120] flex items-end justify-center overflow-hidden px-3 pb-[calc(max(0.85rem,env(safe-area-inset-bottom))+0.5rem)] pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:pb-6">
+      {isOnboardingOpen && typeof document !== "undefined"
+        ? createPortal(
+        <div className="fixed inset-0 z-[120] grid place-items-center overflow-hidden bg-water-950 px-3 py-[max(1rem,env(safe-area-inset-top),env(safe-area-inset-bottom))] sm:px-6 sm:py-6" data-swipe-ignore="true">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.16),transparent_42%),linear-gradient(180deg,rgba(10,59,89,0.96),rgba(8,47,73,1))]" />
           <div
-            className="flex max-h-[calc(100dvh-1.25rem)] w-full max-w-[24rem] flex-col overflow-hidden rounded-[1.45rem] border border-[1.5px] border-water-300/16 bg-water-950/92 shadow-[0_24px_70px_rgba(0,0,0,0.42)]"
+            className="relative flex max-h-[calc(100dvh-(max(1rem,env(safe-area-inset-top),env(safe-area-inset-bottom))*2))] w-full max-w-[24rem] flex-col overflow-hidden rounded-[1.55rem] border border-[1.5px] border-water-300/16 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.42)] sm:max-h-[calc(100dvh-3rem)]"
             role="dialog"
             aria-modal="true"
             aria-label="Fluid quick setup"
@@ -1259,18 +1352,19 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="relative mt-4 grid grid-cols-3 gap-2">
+              <div className="relative mt-4 grid grid-cols-4 gap-2">
                 {ONBOARDING_STEPS.map((step, index) => {
                   const isActive = step === onboardingStep;
                   const isDone = index < onboardingStepIndex;
-                  const label = step === "goal" ? "Goal" : step === "favorite" ? "Favorite" : "Reminders";
+                  const label =
+                    step === "welcome" ? "Start" : step === "goal" ? "Goal" : step === "reminders" ? "Rhythm" : "Notify";
 
                   return (
                     <button
                       key={step}
                       type="button"
                       onClick={() => setOnboardingStep(step)}
-                      className={`h-9 rounded-full border border-[1.5px] px-2 text-[0.68rem] font-ui font-black uppercase tracking-[0.12em] transition-all ${
+                      className={`h-9 rounded-full border border-[1.5px] px-1.5 text-[0.58rem] font-ui font-black uppercase tracking-[0.1em] transition-all min-[380px]:text-[0.63rem] ${
                         isActive
                           ? "border-cyan-100/32 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
                           : isDone
@@ -1285,23 +1379,46 @@ export default function Home() {
                 })}
               </div>
 
-              <div className="relative mt-4 grid grid-cols-3 gap-2 rounded-[1rem] border border-water-300/12 bg-water-950/20 p-2">
+              <div className="relative mt-4 grid grid-cols-2 gap-2 rounded-[1rem] border border-water-300/12 bg-water-950/20 p-2">
                 <div className="min-w-0 rounded-xl bg-white/[0.045] px-2.5 py-2">
                   <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.12em] text-water-300/68">Daily</p>
                   <p className="font-numeric mt-0.5 truncate text-sm font-black text-white">{formatLiters(onboardingGoal)}</p>
                 </div>
                 <div className="min-w-0 rounded-xl bg-white/[0.045] px-2.5 py-2">
-                  <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.12em] text-water-300/68">Favorite</p>
-                  <p className="font-numeric mt-0.5 truncate text-sm font-black text-white">{onboardingQuickAmount} ml</p>
-                </div>
-                <div className="min-w-0 rounded-xl bg-white/[0.045] px-2.5 py-2">
-                  <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.12em] text-water-300/68">Nudge</p>
+                  <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.12em] text-water-300/68">Reminder</p>
                   <p className="font-numeric mt-0.5 truncate text-sm font-black text-white">{onboardingReminderLabel}</p>
                 </div>
               </div>
             </div>
 
             <div className="fluid-scroll-panel min-h-0 flex-1 overflow-y-auto px-4 py-4 [-webkit-overflow-scrolling:touch]">
+              {onboardingStep === "welcome" && (
+                <section className="space-y-3" aria-label="Welcome to Fluid">
+                  <div className="rounded-[1.2rem] border border-cyan-100/18 bg-gradient-to-br from-cyan-100/14 via-white/[0.055] to-water-950/22 px-4 py-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-cyan-100/22 bg-cyan-100/12 text-cyan-50 shadow-[0_0_26px_rgba(56,189,248,0.13)]">
+                      <Droplets className="h-8 w-8" strokeWidth={2.45} />
+                    </div>
+                    <p className="font-display mt-4 text-4xl font-black leading-none text-white">Fluid.</p>
+                    <p className="font-body mx-auto mt-3 max-w-[18rem] text-sm font-semibold leading-relaxed text-water-200/82">
+                      Set a goal, choose a calm reminder rhythm, and start tracking without noise.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: "Calm", value: "No pressure" },
+                      { label: "Local", value: "Your data" },
+                      { label: "Fast", value: "One tap" },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-xl border border-water-300/12 bg-water-900/22 px-2.5 py-3 text-center">
+                        <p className="font-ui text-[0.64rem] font-black uppercase tracking-[0.12em] text-water-300/70">{item.label}</p>
+                        <p className="font-body mt-1 text-xs font-bold leading-tight text-white/88">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               {onboardingStep === "goal" && (
                 <section className="space-y-3" aria-label="Choose daily rhythm">
                   <div className="rounded-[1rem] border border-water-300/12 bg-water-950/18 p-3.5">
@@ -1336,7 +1453,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={() => setIsOnboardingGoalPickerOpen(true)}
-                      className={`min-h-[4rem] rounded-xl border border-[1.5px] px-3 py-3 text-left transition-all ${
+                      className={`min-h-[4rem] rounded-xl border border-[1.5px] px-3 py-3 text-left transition-all sm:col-span-2 ${
                         onboardingGoalIsCustom
                           ? "border-cyan-100/36 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
                           : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
@@ -1352,46 +1469,6 @@ export default function Home() {
                 </section>
               )}
 
-              {onboardingStep === "favorite" && (
-                <section className="space-y-3" aria-label="Choose favorite quick add">
-                  <div className="rounded-[1rem] border border-water-300/12 bg-water-950/18 p-3.5">
-                    <div className="flex items-center gap-2 text-water-200">
-                      <GlassIcon className="h-4 w-4" />
-                      <p className="font-ui text-sm font-bold">Favorite tap</p>
-                    </div>
-                    <p className="font-body mt-2 text-xs font-semibold leading-relaxed text-water-300/78">
-                      One tap from the main screen. Hold it later to edit.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {ONBOARDING_FAVORITE_AMOUNTS.map(({ label, amount }) => {
-                      const isActive = onboardingQuickAmount === amount;
-                      const FavoriteIcon = amount <= 200 ? SipIcon : amount <= 300 ? GlassIcon : BottleIcon;
-
-                      return (
-                        <button
-                          key={amount}
-                          type="button"
-                          onClick={() => setOnboardingQuickAmount(amount)}
-                          className={`rounded-xl border border-[1.5px] px-2.5 py-3 text-center transition-all ${
-                            isActive
-                              ? "border-cyan-100/35 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.14)]"
-                              : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
-                          }`}
-                          aria-pressed={isActive}
-                        >
-                          <FavoriteIcon className="mx-auto h-7 w-7 drop-shadow-md" />
-                          <span className="font-ui mt-2 block text-[0.66rem] font-black uppercase tracking-[0.12em] text-water-300/88">
-                            {label}
-                          </span>
-                          <span className="font-numeric mt-1 block text-sm font-black">{amount} ml</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              )}
-
               {onboardingStep === "reminders" && (
                 <section className="space-y-3" aria-label="Choose reminder rhythm">
                   <div className="rounded-[1rem] border border-water-300/12 bg-water-950/18 p-3.5">
@@ -1403,7 +1480,7 @@ export default function Home() {
                       You control this. Fluid can stay quiet if you prefer.
                     </p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2 min-[380px]:grid-cols-4">
                     {ONBOARDING_REMINDERS.map(({ label, value }) => {
                       const isActive = onboardingReminder === value;
 
@@ -1423,7 +1500,113 @@ export default function Home() {
                         </button>
                       );
                     })}
+                    <button
+                      type="button"
+                      onClick={() => setIsOnboardingReminderPickerOpen(true)}
+                      className={`font-ui min-h-[4rem] rounded-xl border border-[1.5px] px-3 py-3 text-sm font-black transition-all min-[380px]:col-span-4 ${
+                        onboardingReminderIsCustom
+                          ? "border-emerald-100/32 bg-emerald-300/14 text-white shadow-[0_8px_18px_rgba(45,212,191,0.12)]"
+                          : "border-water-300/14 bg-water-900/28 text-water-200 hover:bg-white/10"
+                      }`}
+                      aria-pressed={onboardingReminderIsCustom}
+                    >
+                      Custom {onboardingReminderIsCustom ? `- ${onboardingReminderLabel}` : ""}
+                    </button>
                   </div>
+                  {onboardingReminder > 0 && !notificationsSupported && (
+                    <p className="font-body rounded-xl border border-rose-200/18 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-50/86">
+                      Notifications are not available on this device yet.
+                    </p>
+                  )}
+                </section>
+              )}
+
+              {onboardingStep === "notifications" && (
+                <section className="space-y-3" aria-label="Allow notifications">
+                  <div
+                    className={`rounded-[1.2rem] border p-4 ${
+                      onboardingReminder <= 0
+                        ? "border-water-300/12 bg-water-950/18"
+                        : !notificationsSupported
+                          ? "border-rose-200/18 bg-rose-500/10"
+                          : notificationPermission === "granted"
+                            ? "border-emerald-100/18 bg-emerald-300/10"
+                            : notificationPermission === "denied"
+                              ? "border-rose-200/18 bg-rose-500/10"
+                              : "border-cyan-100/18 bg-cyan-300/10"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border ${
+                          onboardingReminder <= 0
+                            ? "border-water-300/14 bg-water-900/24 text-water-200"
+                            : notificationPermission === "granted"
+                              ? "border-emerald-100/22 bg-emerald-300/12 text-emerald-50"
+                              : notificationPermission === "denied" || !notificationsSupported
+                                ? "border-rose-100/20 bg-rose-500/12 text-rose-50"
+                                : "border-cyan-100/18 bg-cyan-100/10 text-cyan-50"
+                        }`}
+                      >
+                        <BellRing className="h-5.5 w-5.5" strokeWidth={2.45} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-ui text-sm font-black text-white">
+                          {onboardingReminder <= 0
+                            ? "Fluid will stay quiet."
+                            : !notificationsSupported
+                              ? "Notifications are not available here."
+                              : notificationPermission === "granted"
+                                ? "Notifications are already allowed."
+                                : notificationPermission === "denied"
+                                  ? "Phone settings are needed."
+                                  : "Your phone can ask now."}
+                        </p>
+                        <p className="font-body mt-1 text-xs font-semibold leading-relaxed text-water-300/78">
+                          {onboardingReminder <= 0
+                            ? "You can enable reminders later from Settings whenever you want."
+                            : !notificationsSupported
+                              ? "You can still track water inside Fluid without reminders."
+                              : notificationPermission === "granted"
+                                ? `Your ${onboardingReminderLabel} rhythm can run with app notifications.`
+                                : notificationPermission === "denied"
+                                  ? "Fluid cannot turn them back on by itself. Finish setup now, then open Settings to allow them."
+                                  : `Fluid can ask once for permission. If you allow it, your ${onboardingReminderLabel} rhythm can run outside the app.`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1rem] border border-water-300/12 bg-white/[0.045] px-3.5 py-3">
+                    <p className="font-ui text-[0.7rem] font-black uppercase tracking-[0.16em] text-water-300/74">
+                      What Fluid sends
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {[
+                        "Gentle reminders at your chosen rhythm.",
+                        "Small follow-ups if nothing was logged.",
+                        "Quick add actions when your phone supports them.",
+                      ].map((item) => (
+                        <div key={item} className="flex items-start gap-2">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-water-300/80" />
+                          <p className="font-body text-xs font-semibold leading-relaxed text-water-100/82">{item}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {onboardingReminder > 0 && notificationsSupported && notificationPermission === "granted" && (
+                    <p className="font-body rounded-xl border border-emerald-100/18 bg-emerald-300/10 px-3 py-2 text-xs font-semibold text-emerald-50/88">
+                      Nothing else needed. Start Fluid and reminders are ready.
+                    </p>
+                  )}
+
+                  {onboardingReminder > 0 && notificationsSupported && notificationPermission === "denied" && (
+                    <p className="font-body rounded-xl border border-rose-200/18 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-50/86">
+                      After setup, go to Settings / Reminders. Fluid will show the phone settings steps there.
+                    </p>
+                  )}
+
                   {onboardingReminder > 0 && !notificationsSupported && (
                     <p className="font-body rounded-xl border border-rose-200/18 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-50/86">
                       Notifications are not available on this device yet.
@@ -1449,8 +1632,10 @@ export default function Home() {
               </Button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+            document.body
+          )
+        : null}
     </main>
   );
 }

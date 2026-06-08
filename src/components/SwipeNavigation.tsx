@@ -7,14 +7,14 @@ import { resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
 
 const PAGES = ["/", "/stats", "/settings"] as const;
 const HORIZONTAL_LOCK_PX = 6;
-const NAV_TRIGGER_PX = 40;
-const FLICK_TRIGGER_PX = 20;
-const FLICK_VELOCITY_PX_PER_MS = 0.18;
-const DRAG_RESISTANCE = 0.82;
-const MAX_DRAG_OFFSET = 132;
-const COMMIT_OFFSET = 34;
+const NAV_TRIGGER_PX = 38;
+const FLICK_TRIGGER_PX = 18;
+const FLICK_VELOCITY_PX_PER_MS = 0.16;
+const DRAG_RESISTANCE = 0.92;
+const MAX_DRAG_OFFSET = 156;
+const COMMIT_OFFSET = 42;
 const COMMIT_DELAY_MS = 18;
-const SNAP_BACK_DELAY_MS = 110;
+const SNAP_BACK_DELAY_MS = 95;
 const VERTICAL_REJECT_RATIO = 1.22;
 
 type SwipeDirection = "left" | "right";
@@ -68,8 +68,8 @@ export function SwipeNavigation() {
   const applyOffset = useCallback((offset: number) => {
     const root = document.documentElement;
     const progress = Math.min(1, Math.abs(offset) / MAX_DRAG_OFFSET);
-    const scale = 1 - progress * 0.018;
-    const dim = progress * 0.16;
+    const scale = 1 - progress * 0.014;
+    const dim = progress * 0.13;
     const leftEdge = offset > 0 ? progress : 0;
     const rightEdge = offset < 0 ? progress : 0;
 

@@ -88,7 +88,7 @@
 }
 
 :root {
-  --background: #0a3b59; /* deep ocean blue background */
+  --background: #0b4261; /* deep ocean blue background */
   --foreground: #f0f9ff; /* light sea foreground */
   --app-safe-top: env(safe-area-inset-top, 0px);
   --app-safe-right: env(safe-area-inset-right, 0px);
@@ -115,14 +115,18 @@
 html {
   min-height: 100%;
   min-height: 100dvh;
-  background: var(--background);
+  background:
+    radial-gradient(circle at 50% -12%, rgba(56, 189, 248, 0.1), transparent 34%),
+    linear-gradient(180deg, #0b4261 0%, #073550 100%);
   overflow-x: hidden;
   overscroll-behavior-x: none;
   scrollbar-width: none;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 50% -12%, rgba(56, 189, 248, 0.1), transparent 34%),
+    linear-gradient(180deg, #0b4261 0%, #073550 100%);
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
   min-height: 100%;
@@ -185,6 +189,12 @@ html[data-swipe-transitioning="true"] [data-bottom-nav="true"] * {
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+}
+
+html[data-fluid-setup-open="true"] [data-bottom-nav-shell="true"] {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(8rem) !important;
 }
 
 .fluid-nav-icon {

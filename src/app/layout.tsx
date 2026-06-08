@@ -14,11 +14,11 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/app-icon-v2-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/app-icon-v2-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/app-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/app-icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: "/icon.svg",
-    apple: "/apple-touch-icon-v2.png",
+    shortcut: "/app-icon-192.png",
+    apple: "/apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,
@@ -41,7 +41,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
-  themeColor: "#082f49",
+  themeColor: "#0b4261",
   colorScheme: "dark",
 };
 

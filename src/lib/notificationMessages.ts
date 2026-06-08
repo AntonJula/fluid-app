@@ -286,11 +286,11 @@ export function pickWorkoutHydrationNotification(context: HydrationNotificationC
 
   return {
     kind: "workout-set-check",
-    title: "Set water check 💧",
+    title: "Workout sip check 💧",
     body:
       minutes === null
-        ? "Workout mode is on. Take a few easy sips before the next set, then log it when you can."
-        : `${formatMinutes(minutes)} since your last workout log. A few sips before the next set is enough.`,
+        ? "Workout mode is on. A few easy sips before the next set are enough."
+        : `${formatMinutes(minutes)} since your last workout drink. A few sips before the next set are enough.`,
     actionAmount: WORKOUT_NOTIFICATION_LOG_AMOUNT,
     actionNote: "workout",
     cadence: "interval",
@@ -411,9 +411,9 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
   {
     kind: "workout-set-check",
     label: "Workout set check",
-    title: "Set water check 💧",
+    title: "Workout sip check 💧",
     priority: (context) => (isWorkoutSessionActive(context) ? 112 : 0),
-    body: () => "A few easy sips before the next set are enough. Log them when you can.",
+    body: () => "A few easy sips before the next set are enough.",
     nextDelayMinutes: () => WORKOUT_REMINDER_INTERVAL_MINUTES,
   },
   {

@@ -6,7 +6,7 @@ import { TimePickerDialog } from "./ui/TimePickerDialog";
 import { NumberPickerDialog } from "./ui/NumberPickerDialog";
 import { Button } from "./ui/Button";
 import { useNotifications } from "@/hooks/useNotifications";
-import { BellOff, BellRing, Clock, ShieldCheck, ShieldX } from "lucide-react";
+import { BellOff, BellRing, CheckCircle2, Clock, ExternalLink, RotateCw, ShieldCheck, ShieldX, Smartphone } from "lucide-react";
 
 interface ReminderSettingsProps {
   interval: number;
@@ -14,6 +14,8 @@ interface ReminderSettingsProps {
   quietHours: { start: string; end: string };
   setQuietHours: (start: string, end: string) => void;
 }
+
+type NotificationPlatform = "android" | "ios" | "desktop";
 
 function getNotificationStatus({
   interval,
@@ -68,8 +70,61 @@ function getNotificationStatus({
   };
 }
 
+function getNotificationPlatform(): NotificationPlatform {
+  if (typeof navigator === "undefined") return "desktop";
+
+  const userAgent = navigator.userAgent.toLowerCase();
+  const platform = navigator.platform.toLowerCase();
+
+  if (userAgent.includes("android")) return "android";
+  if (/iphone|ipad|ipod/.test(userAgent) || (platform.includes("mac") && navigator.maxTouchPoints > 1)) return "ios";
+
+  return "desktop";
+}
+
+function getSettingsSteps(platform: NotificationPlatform) {
+  if (platform === "ios") {
+    return [
+      "Open iPhone Settings.",
+      "Go to Notifications, then Fluid.",
+      "Turn Allow Notifications on.",
+      "Keep Lock Screen, Notification Center, and Banners on.",
+      "Return to Fluid and tap Check again.",
+    ];
+  }
+
+  if (platform === "android") {
+    return [
+      "Long-press the Fluid icon and tap App info.",
+      "Go to Notifications.",
+      "Turn Allow notifications on.",
+      "Keep Fluid reminders enabled if categories appear.",
+      "Return to Fluid and tap Check again.",
+    ];
+  }
+
+  return [
+    "Open your device notification settings.",
+    "Find Fluid.",
+    "Change notifications from blocked to allowed.",
+    "Return to Fluid and tap Check again.",
+  ];
+}
+
+function getSettingsHint(platform: NotificationPlatform) {
+  if (platform === "ios") {
+    return "Fluid cannot turn notifications back on by itself after they were blocked. Open iPhone Settings and allow them once.";
+  }
+
+  if (platform === "android") {
+    return "Fluid cannot turn notifications back on by itself after they were blocked. Open Android settings and allow them once.";
+  }
+
+  return "Notifications are blocked for Fluid. Change this once in your device settings, then come back to the app.";
+}
+
 export function ReminderSettings({ interval, setInterval, quietHours, setQuietHours }: ReminderSettingsProps) {
-  const { permission, requestPermission, isSupported } = useNotifications(interval, quietHours, false);
+  const { permission, refreshPermission, requestPermission, isSupported } = useNotifications(interval, quietHours, false);
   const intervals = [20, 40, 60];
   const remindersEnabled = interval > 0;
   const notificationStatus = getNotificationStatus({ interval, isSupported, permission });
@@ -79,8 +134,14 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   const [isCustom, setIsCustom] = React.useState(false);
   const [customVal, setCustomVal] = React.useState(interval > 0 ? interval : 40);
   const isPredefined = intervals.includes(interval);
+  const [platform, setPlatform] = React.useState<NotificationPlatform>("desktop");
+  const [settingsAttempted, setSettingsAttempted] = React.useState(false);
 
   const [activePicker, setActivePicker] = React.useState<"start" | "end" | null>(null);
+
+  React.useEffect(() => {
+    setPlatform(getNotificationPlatform());
+  }, []);
 
   React.useEffect(() => {
     if (interval > 0) {
@@ -111,6 +172,25 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       await requestPermission();
     }
   };
+
+  const openNotificationSettings = () => {
+    setSettingsAttempted(true);
+
+    if (typeof window === "undefined") return;
+
+    if (platform === "android") {
+      const fallbackUrl = encodeURIComponent(window.location.href);
+      window.location.href =
+        `intent://notification-settings/#Intent;action=android.settings.APP_NOTIFICATION_SETTINGS;S.browser_fallback_url=${fallbackUrl};end`;
+      return;
+    }
+
+    if (platform === "ios") {
+      window.location.href = "App-Prefs:NOTIFICATIONS_ID";
+    }
+  };
+
+  const settingsSteps = getSettingsSteps(platform);
 
   return (
     <Card className="mx-auto mt-4 w-full max-w-sm space-y-4 p-4 shadow-lg min-[380px]:space-y-5 min-[380px]:p-5 md:max-w-[28rem]">
@@ -179,6 +259,61 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
             </p>
             <Button variant="primary" size="sm" onClick={requestPermission} className="shrink-0 rounded-xl px-3 text-xs">
               Enable
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {remindersEnabled && isSupported && permission === "denied" && (
+        <div className="rounded-[1.15rem] border border-rose-100/18 bg-gradient-to-br from-rose-500/13 via-water-900/34 to-water-950/42 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] min-[380px]:rounded-[1.35rem] min-[380px]:p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-100/18 bg-rose-100/10 text-rose-100">
+              <Smartphone className="h-5 w-5" strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0">
+              <p className="font-ui text-sm font-extrabold text-white">Notifications need one phone setting</p>
+              <p className="font-body mt-1 text-xs leading-relaxed text-water-100/72">{getSettingsHint(platform)}</p>
+            </div>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {settingsSteps.map((step, index) => (
+              <div key={step} className="flex items-start gap-2.5 rounded-xl border border-water-200/10 bg-water-950/24 px-3 py-2.5">
+                <span className="font-numeric mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-water-300/16 text-[0.68rem] font-black text-water-100">
+                  {index + 1}
+                </span>
+                <span className="font-body text-xs font-semibold leading-relaxed text-water-100/84">{step}</span>
+              </div>
+            ))}
+          </div>
+
+          {settingsAttempted && (
+            <div className="mt-3 flex items-start gap-2 rounded-xl border border-cyan-100/14 bg-cyan-300/10 px-3 py-2.5 text-water-100/80">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-water-200" strokeWidth={2.5} />
+              <p className="font-body text-xs leading-relaxed">
+                If settings opened, enable notifications there. If nothing opened, use the steps above manually.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={openNotificationSettings}
+              className="rounded-xl px-3 text-xs"
+            >
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
+              Open phone settings
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={refreshPermission}
+              className="rounded-xl px-3 text-xs"
+            >
+              <RotateCw className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
+              Check again
             </Button>
           </div>
         </div>
