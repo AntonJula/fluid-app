@@ -14,11 +14,11 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/app-icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/app-icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/fluid-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/fluid-icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    shortcut: "/app-icon-192.png",
-    apple: "/apple-touch-icon.png",
+    shortcut: "/fluid-icon-192.png",
+    apple: "/fluid-apple-touch-icon.png",
   },
   appleWebApp: {
     capable: true,

@@ -171,8 +171,6 @@ async function showSystemNotification({
   const options: FluidNotificationOptions = {
     body,
     data: { url: actionAmount ? `/?${quickAddParams.toString()}` : "/" },
-    icon: "/app-icon-192.png",
-    badge: "/app-icon-192.png",
     tag,
     renotify: true,
   };

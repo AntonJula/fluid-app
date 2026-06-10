@@ -8,6 +8,7 @@ import { NumberPickerDialog } from "./ui/NumberPickerDialog";
 interface GoalSettingsProps {
   goal: number;
   setGoal: (goal: number) => void;
+  isHighlighted?: boolean;
 }
 
 const GOAL_PRESETS = [1000, 1500, 2000, 2500, 3000, 3500, 4000];
@@ -21,7 +22,7 @@ function formatGoal(goal: number) {
   return `${goal}ml`;
 }
 
-export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
+export function GoalSettings({ goal, setGoal, isHighlighted = false }: GoalSettingsProps) {
   const [isCustomOpen, setIsCustomOpen] = React.useState(false);
 
   const handlePresetSelect = (value: number) => {
@@ -30,7 +31,11 @@ export function GoalSettings({ goal, setGoal }: GoalSettingsProps) {
 
   return (
     <>
-      <Card className="mx-auto w-full max-w-sm p-4 shadow-lg min-[380px]:p-5 md:max-w-[28rem]">
+      <Card
+        className={`relative mx-auto w-full max-w-sm overflow-visible p-4 shadow-lg min-[380px]:p-5 md:max-w-[28rem] ${
+          isHighlighted ? "fluid-goal-focus" : ""
+        }`}
+      >
         <div className="flex items-start justify-between gap-3 min-[380px]:gap-4">
           <div className="min-w-0">
             <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Daily Goal</h3>

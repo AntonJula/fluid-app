@@ -10,6 +10,7 @@ interface ProgressCardProps {
   intake: number;
   targetIntake?: number;
   goal: number;
+  goalAction?: React.ReactNode;
 }
 
 function easeOutQuart(progress: number) {
@@ -83,7 +84,7 @@ function useAnimatedNumber(target: number, duration = SECONDARY_NUMBER_ANIMATION
   return displayedValue;
 }
 
-export function ProgressCard({ intake, targetIntake = intake, goal }: ProgressCardProps) {
+export function ProgressCard({ intake, targetIntake = intake, goal, goalAction }: ProgressCardProps) {
   const safeGoal = Math.max(goal, 1);
   const progress = Math.min(1, intake / safeGoal);
   const remaining = Math.max(0, goal - targetIntake);
@@ -116,8 +117,9 @@ export function ProgressCard({ intake, targetIntake = intake, goal }: ProgressCa
       <p className="font-body mt-2 text-sm font-semibold text-water-300/80">
         Goal {(safeGoal / 1000).toFixed(1)}L
       </p>
+      {goalAction && <div className="mt-3">{goalAction}</div>}
 
-      <div className="mt-6 w-full rounded-[1.1rem] border border-[1.5px] border-water-300/16 bg-water-800/30 p-2 shadow-inner min-[380px]:rounded-3xl">
+      <div className={`${goalAction ? "mt-4" : "mt-6"} w-full rounded-[1.1rem] border border-[1.5px] border-water-300/16 bg-water-800/30 p-2 shadow-inner min-[380px]:rounded-3xl`}>
         <div className="h-4 overflow-hidden rounded-full bg-water-950/50">
           <div
             className={`h-full rounded-full transition-all duration-700 ease-out ${

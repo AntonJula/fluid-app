@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/Button";
 export default function SettingsPage() {
   const router = useRouter();
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isGoalFocused, setIsGoalFocused] = useState(false);
+  const goalSettingsRef = useRef<HTMLDivElement>(null);
   const advancedSettingsRef = useRef<HTMLDivElement>(null);
   const {
     goal,
@@ -41,6 +43,37 @@ export default function SettingsPage() {
       window.clearTimeout(timer);
     };
   }, [isAdvancedOpen]);
+
+  useEffect(() => {
+    if (!mounted || typeof window === "undefined") return;
+
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get("focus") !== "goal") return;
+
+    const timers: number[] = [];
+    const scrollTimer = window.setTimeout(() => {
+      goalSettingsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+      const startHighlightTimer = window.setTimeout(() => {
+        setIsGoalFocused(true);
+
+        const stopHighlightTimer = window.setTimeout(() => {
+          setIsGoalFocused(false);
+        }, 2600);
+        timers.push(stopHighlightTimer);
+      }, 260);
+      timers.push(startHighlightTimer);
+    }, 120);
+    timers.push(scrollTimer);
+
+    searchParams.delete("focus");
+    const nextQuery = searchParams.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`);
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+    };
+  }, [mounted]);
 
   if (!mounted) {
     return <HydrationLoadingState />;
@@ -71,8 +104,8 @@ export default function SettingsPage() {
       </Card>
 
       <div className="w-full space-y-6 flex-1">
-        <div>
-          <GoalSettings goal={goal} setGoal={setGoal} />
+        <div ref={goalSettingsRef} className="scroll-mt-6">
+          <GoalSettings goal={goal} setGoal={setGoal} isHighlighted={isGoalFocused} />
         </div>
         <div>
           <ReminderSettings

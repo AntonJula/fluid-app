@@ -2,6 +2,7 @@
 
 import React from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   Battery,
   BatteryFull,
@@ -583,6 +584,7 @@ function ResetConfirmDialog({
 }
 
 export default function Home() {
+  const router = useRouter();
   const {
     intake,
     goal,
@@ -627,6 +629,8 @@ export default function Home() {
   const forcedOnboardingRef = React.useRef(false);
   const favoriteHoldTimerRef = React.useRef<number | null>(null);
   const favoriteHoldTriggeredRef = React.useRef(false);
+  const favoritePointerStartRef = React.useRef<{ x: number; y: number } | null>(null);
+  const favoriteGestureCancelledRef = React.useRef(false);
 
   useLockedPageScroll(isDailyLogOpen || isOnboardingOpen);
 
@@ -774,12 +778,16 @@ export default function Home() {
     addDrink(amount, selectedNote);
   };
 
-  const beginFavoriteHold = () => {
+  const beginFavoriteHold = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (typeof window === "undefined") return;
 
     favoriteHoldTriggeredRef.current = false;
+    favoriteGestureCancelledRef.current = false;
+    favoritePointerStartRef.current = { x: event.clientX, y: event.clientY };
     clearFavoriteHoldTimer();
     favoriteHoldTimerRef.current = window.setTimeout(() => {
+      if (favoriteGestureCancelledRef.current) return;
+
       favoriteHoldTriggeredRef.current = true;
       favoriteHoldTimerRef.current = null;
       setIsCustomQuickOpen(true);
@@ -788,9 +796,34 @@ export default function Home() {
 
   const finishFavoriteHold = () => {
     clearFavoriteHoldTimer();
+    favoritePointerStartRef.current = null;
+  };
+
+  const cancelFavoriteHoldForGesture = () => {
+    favoriteGestureCancelledRef.current = true;
+    favoritePointerStartRef.current = null;
+    clearFavoriteHoldTimer();
+  };
+
+  const handleFavoritePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const start = favoritePointerStartRef.current;
+    if (!start) return;
+
+    const deltaX = Math.abs(event.clientX - start.x);
+    const deltaY = Math.abs(event.clientY - start.y);
+
+    if (deltaX > 8 || deltaY > 8) {
+      cancelFavoriteHoldForGesture();
+    }
   };
 
   const handleFavoriteClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (favoriteGestureCancelledRef.current) {
+      event.preventDefault();
+      favoriteGestureCancelledRef.current = false;
+      return;
+    }
+
     if (favoriteHoldTriggeredRef.current) {
       event.preventDefault();
       favoriteHoldTriggeredRef.current = false;
@@ -915,7 +948,22 @@ export default function Home() {
         </header>
 
         <div className="mt-4 flex min-h-0 w-full flex-col items-center">
-          <ProgressCard intake={revealedIntake} targetIntake={intake} goal={goal} />
+          <ProgressCard
+            intake={revealedIntake}
+            targetIntake={intake}
+            goal={goal}
+            goalAction={
+              <button
+                type="button"
+                onClick={() => router.push("/settings?focus=goal")}
+                className="font-ui inline-flex items-center gap-1.5 rounded-full border border-cyan-100/18 bg-water-950/22 px-3 py-1.5 text-[0.66rem] font-black uppercase tracking-[0.13em] text-water-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-md transition-all hover:border-cyan-100/30 hover:bg-white/10 active:scale-95"
+                aria-label="Change daily goal"
+              >
+                <Target className="h-3.5 w-3.5 text-cyan-100" strokeWidth={2.6} />
+                Change goal
+              </button>
+            }
+          />
         </div>
 
         <section className="w-full max-w-full self-center space-y-3">
@@ -1007,6 +1055,7 @@ export default function Home() {
             onPointerCancel={finishFavoriteHold}
             onPointerDown={beginFavoriteHold}
             onPointerLeave={finishFavoriteHold}
+            onPointerMove={handleFavoritePointerMove}
             onPointerUp={finishFavoriteHold}
             className="group relative flex min-h-[6.35rem] w-full touch-manipulation items-center justify-between overflow-hidden rounded-[1.1rem] border border-[1.5px] border-cyan-100/24 bg-gradient-to-br from-cyan-300/26 via-water-500/18 to-emerald-300/18 px-3.5 py-4 text-left shadow-[0_18px_34px_rgba(8,47,73,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-100/34 hover:brightness-110 active:scale-[0.98] min-[380px]:rounded-[1.25rem] min-[380px]:px-4"
             aria-label={`Add favorite amount ${quickAddAmount} milliliters as ${selectedNoteOption.label}. Hold to edit.`}

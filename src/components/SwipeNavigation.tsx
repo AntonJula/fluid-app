@@ -22,6 +22,7 @@ type SwipeDirection = "left" | "right";
 type TouchState = {
   startX: number;
   startY: number;
+  startScrollY: number;
   lastX: number;
   lastY: number;
   startedAt: number;
@@ -68,13 +69,12 @@ export function SwipeNavigation() {
   const applyOffset = useCallback((offset: number) => {
     const root = document.documentElement;
     const progress = Math.min(1, Math.abs(offset) / MAX_DRAG_OFFSET);
-    const scale = 1 - progress * 0.014;
     const dim = progress * 0.13;
     const leftEdge = offset > 0 ? progress : 0;
     const rightEdge = offset < 0 ? progress : 0;
 
     root.style.setProperty("--swipe-shell-offset", `${offset}px`);
-    root.style.setProperty("--swipe-shell-scale", scale.toFixed(4));
+    root.style.setProperty("--swipe-shell-scale", "1");
     root.style.setProperty("--swipe-shell-dim", dim.toFixed(4));
     root.style.setProperty("--swipe-edge-left", leftEdge.toFixed(4));
     root.style.setProperty("--swipe-edge-right", rightEdge.toFixed(4));
@@ -165,6 +165,7 @@ export function SwipeNavigation() {
       touchStateRef.current = {
         startX: clientX,
         startY: clientY,
+        startScrollY: window.scrollY,
         lastX: clientX,
         lastY: clientY,
         startedAt: performance.now(),
@@ -195,10 +196,12 @@ export function SwipeNavigation() {
 
         touchState.isHorizontal = true;
         saveScrollPosition(pathname);
+        window.scrollTo(0, touchState.startScrollY);
         setDragging(true);
       }
 
       event.preventDefault();
+      window.scrollTo(0, touchState.startScrollY);
 
       const nextOffset = clamp(deltaX * DRAG_RESISTANCE, -MAX_DRAG_OFFSET, MAX_DRAG_OFFSET);
       offsetRef.current = nextOffset;
