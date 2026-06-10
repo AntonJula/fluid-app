@@ -169,6 +169,7 @@ async function showSystemNotification({
   }
 
   const options: FluidNotificationOptions = {
+    badge: "/fluid-notification-badge.png",
     body,
     data: { url: actionAmount ? `/?${quickAddParams.toString()}` : "/" },
     tag,

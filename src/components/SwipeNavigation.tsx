@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { saveScrollPosition } from "@/hooks/useScrollPreservation";
 import { resetSwipeUiState, setSwipeUiState } from "@/hooks/useSwipeUiState";
+import { getAppScrollY, scrollAppTo } from "@/utils/appScroll";
 
 const PAGES = ["/", "/stats", "/settings"] as const;
 const HORIZONTAL_LOCK_PX = 6;
@@ -68,16 +69,9 @@ export function SwipeNavigation() {
 
   const applyOffset = useCallback((offset: number) => {
     const root = document.documentElement;
-    const progress = Math.min(1, Math.abs(offset) / MAX_DRAG_OFFSET);
-    const dim = progress * 0.13;
-    const leftEdge = offset > 0 ? progress : 0;
-    const rightEdge = offset < 0 ? progress : 0;
 
     root.style.setProperty("--swipe-shell-offset", `${offset}px`);
     root.style.setProperty("--swipe-shell-scale", "1");
-    root.style.setProperty("--swipe-shell-dim", dim.toFixed(4));
-    root.style.setProperty("--swipe-edge-left", leftEdge.toFixed(4));
-    root.style.setProperty("--swipe-edge-right", rightEdge.toFixed(4));
   }, []);
 
   const queueOffset = useCallback(
@@ -146,9 +140,6 @@ export function SwipeNavigation() {
       delete document.documentElement.dataset.swipeTransitioning;
       document.documentElement.style.setProperty("--swipe-shell-offset", "0px");
       document.documentElement.style.setProperty("--swipe-shell-scale", "1");
-      document.documentElement.style.setProperty("--swipe-shell-dim", "0");
-      document.documentElement.style.setProperty("--swipe-edge-left", "0");
-      document.documentElement.style.setProperty("--swipe-edge-right", "0");
       resetSwipeUiState();
     };
   }, [pathname, resetVisualState]);
@@ -165,7 +156,7 @@ export function SwipeNavigation() {
       touchStateRef.current = {
         startX: clientX,
         startY: clientY,
-        startScrollY: window.scrollY,
+        startScrollY: getAppScrollY(),
         lastX: clientX,
         lastY: clientY,
         startedAt: performance.now(),
@@ -196,12 +187,12 @@ export function SwipeNavigation() {
 
         touchState.isHorizontal = true;
         saveScrollPosition(pathname);
-        window.scrollTo(0, touchState.startScrollY);
+        scrollAppTo(touchState.startScrollY);
         setDragging(true);
       }
 
       event.preventDefault();
-      window.scrollTo(0, touchState.startScrollY);
+      scrollAppTo(touchState.startScrollY);
 
       const nextOffset = clamp(deltaX * DRAG_RESISTANCE, -MAX_DRAG_OFFSET, MAX_DRAG_OFFSET);
       offsetRef.current = nextOffset;

@@ -8,6 +8,7 @@ import { HydrationLoadingState } from "@/components/HydrationLoadingState";
 import { Flame, Calendar, Trophy, Waves, ChartColumn, Target, GlassWater, CalendarSearch, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { formatDateLocal } from "@/lib/date";
 import type { DrinkLogItem, HydrationNote } from "@/lib/hydrationState";
+import { getAppScrollElement } from "@/utils/appScroll";
 
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTH_FORMATTER = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
@@ -76,17 +77,24 @@ function useLockedPageScroll(isLocked: boolean) {
 
     const root = document.documentElement;
     const body = document.body;
+    const scrollElement = getAppScrollElement();
     const previousRootOverflow = root.style.overflow;
     const previousBodyOverflow = body.style.overflow;
     const previousRootOverscroll = root.style.overscrollBehavior;
     const previousBodyOverscroll = body.style.overscrollBehavior;
     const previousBodyTouchAction = body.style.touchAction;
+    const previousScrollElementOverflow = scrollElement?.style.overflow;
+    const previousScrollElementOverscroll = scrollElement?.style.overscrollBehavior;
 
     root.style.overflow = "hidden";
     root.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
     body.style.overscrollBehavior = "none";
     body.style.touchAction = "none";
+    if (scrollElement) {
+      scrollElement.style.overflow = "hidden";
+      scrollElement.style.overscrollBehavior = "none";
+    }
 
     return () => {
       root.style.overflow = previousRootOverflow;
@@ -94,6 +102,12 @@ function useLockedPageScroll(isLocked: boolean) {
       body.style.overflow = previousBodyOverflow;
       body.style.overscrollBehavior = previousBodyOverscroll;
       body.style.touchAction = previousBodyTouchAction;
+      if (scrollElement) {
+        if (previousScrollElementOverflow !== undefined) scrollElement.style.overflow = previousScrollElementOverflow;
+        if (previousScrollElementOverscroll !== undefined) {
+          scrollElement.style.overscrollBehavior = previousScrollElementOverscroll;
+        }
+      }
     };
   }, [isLocked]);
 }

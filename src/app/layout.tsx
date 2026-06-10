@@ -29,6 +29,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
   other: {
+    "theme-color": "#0a5b84",
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
@@ -41,7 +42,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
-  themeColor: "#0b4261",
+  themeColor: "#0a5b84",
   colorScheme: "dark",
 };
 
@@ -52,13 +53,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="font-sans antialiased min-h-[100dvh] flex flex-col selection:bg-water-300 selection:text-water-900 bg-background text-foreground">
+      <body className="font-sans antialiased h-[100dvh] overflow-hidden selection:bg-water-300 selection:text-water-900 bg-background text-foreground">
         <ScrollPreserver />
         <SwipeNavigation />
         <ServiceWorkerManager />
         <NotificationManager />
         <div
-          className="flex-1 flex flex-col pb-24 relative z-10 w-full h-full"
+          data-app-scroll-root="true"
+          className="relative z-10 flex h-[100dvh] w-full flex-1 flex-col overflow-y-auto overflow-x-hidden pb-24 [-webkit-overflow-scrolling:touch]"
           style={{
             paddingLeft: "env(safe-area-inset-left)",
             paddingRight: "env(safe-area-inset-right)",
@@ -69,21 +71,6 @@ export default function RootLayout({
           }}
         >
           {children}
-          <div
-            className="pointer-events-none fixed inset-0 z-[70] bg-water-950"
-            style={{ opacity: "var(--swipe-shell-dim, 0)" }}
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none fixed inset-y-0 left-0 z-[71] w-16 bg-gradient-to-r from-cyan-100/18 to-transparent blur-sm"
-            style={{ opacity: "var(--swipe-edge-left, 0)" }}
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none fixed inset-y-0 right-0 z-[71] w-16 bg-gradient-to-l from-cyan-100/18 to-transparent blur-sm"
-            style={{ opacity: "var(--swipe-edge-right, 0)" }}
-            aria-hidden="true"
-          />
         </div>
         <BottomNav />
       </body>

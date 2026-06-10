@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/Button";
 import { SipIcon, GlassIcon, MugIcon, BottleIcon } from "@/components/DrinkIcons";
 import { HYDRATION_NOTES, type HydrationNote } from "@/lib/hydrationState";
 import { WORKOUT_REMINDER_INTERVAL_MINUTES } from "@/lib/notificationMessages";
+import { getAppScrollElement, getAppScrollY, scrollAppTo } from "@/utils/appScroll";
 import { formatDateLocal } from "@/lib/date";
 
 const SECONDARY_QUICK_AMOUNTS = [
@@ -145,37 +146,28 @@ function useLockedViewport(isLocked: boolean) {
   React.useEffect(() => {
     if (!isLocked || typeof window === "undefined") return;
 
-    const scrollY = window.scrollY;
+    const scrollY = getAppScrollY();
     const root = document.documentElement;
     const body = document.body;
+    const scrollElement = getAppScrollElement();
     const previousRootOverflow = root.style.overflow;
     const previousBodyOverflow = body.style.overflow;
-    const previousBodyPosition = body.style.position;
-    const previousBodyTop = body.style.top;
-    const previousBodyLeft = body.style.left;
-    const previousBodyRight = body.style.right;
-    const previousBodyWidth = body.style.width;
     const previousBodyTouchAction = body.style.touchAction;
+    const previousScrollElementOverflow = scrollElement?.style.overflow;
 
     root.style.overflow = "hidden";
     body.style.overflow = "hidden";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
     body.style.touchAction = "none";
+    if (scrollElement) scrollElement.style.overflow = "hidden";
 
     return () => {
       root.style.overflow = previousRootOverflow;
       body.style.overflow = previousBodyOverflow;
-      body.style.position = previousBodyPosition;
-      body.style.top = previousBodyTop;
-      body.style.left = previousBodyLeft;
-      body.style.right = previousBodyRight;
-      body.style.width = previousBodyWidth;
       body.style.touchAction = previousBodyTouchAction;
-      window.scrollTo(0, scrollY);
+      if (scrollElement && previousScrollElementOverflow !== undefined) {
+        scrollElement.style.overflow = previousScrollElementOverflow;
+      }
+      scrollAppTo(scrollY);
     };
   }, [isLocked]);
 }
@@ -184,50 +176,60 @@ function useLockedPageScroll(isLocked: boolean) {
   React.useEffect(() => {
     if (!isLocked || typeof window === "undefined") return;
 
-    const scrollY = window.scrollY;
+    const scrollY = getAppScrollY();
     const root = document.documentElement;
     const body = document.body;
+    const scrollElement = getAppScrollElement();
     const previousRootOverflow = root.style.overflow;
     const previousRootOverscroll = root.style.overscrollBehavior;
     const previousBodyOverflow = body.style.overflow;
     const previousBodyOverscroll = body.style.overscrollBehavior;
-    const previousBodyPosition = body.style.position;
-    const previousBodyTop = body.style.top;
-    const previousBodyLeft = body.style.left;
-    const previousBodyRight = body.style.right;
-    const previousBodyWidth = body.style.width;
+    const previousScrollElementOverflow = scrollElement?.style.overflow;
+    const previousScrollElementOverscroll = scrollElement?.style.overscrollBehavior;
 
     root.style.overflow = "hidden";
     root.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
     body.style.overscrollBehavior = "none";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
+    if (scrollElement) {
+      scrollElement.style.overflow = "hidden";
+      scrollElement.style.overscrollBehavior = "none";
+    }
 
     return () => {
       root.style.overflow = previousRootOverflow;
       root.style.overscrollBehavior = previousRootOverscroll;
       body.style.overflow = previousBodyOverflow;
       body.style.overscrollBehavior = previousBodyOverscroll;
-      body.style.position = previousBodyPosition;
-      body.style.top = previousBodyTop;
-      body.style.left = previousBodyLeft;
-      body.style.right = previousBodyRight;
-      body.style.width = previousBodyWidth;
-      window.scrollTo(0, scrollY);
+      if (scrollElement) {
+        if (previousScrollElementOverflow !== undefined) scrollElement.style.overflow = previousScrollElementOverflow;
+        if (previousScrollElementOverscroll !== undefined) {
+          scrollElement.style.overscrollBehavior = previousScrollElementOverscroll;
+        }
+      }
+      scrollAppTo(scrollY);
     };
   }, [isLocked]);
 }
 
-function useHydrationReveal(targetIntake: number) {
-  const [animatedIntake, setAnimatedIntake] = React.useState(0);
-  const currentValueRef = React.useRef(0);
+function useHydrationReveal(targetIntake: number, shouldReveal: boolean) {
+  const initialValue = shouldReveal ? 0 : targetIntake;
+  const [animatedIntake, setAnimatedIntake] = React.useState(initialValue);
+  const currentValueRef = React.useRef(initialValue);
   const frameRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
+    if (!shouldReveal) {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+
+      currentValueRef.current = targetIntake;
+      setAnimatedIntake(targetIntake);
+      return;
+    }
+
     if (typeof window === "undefined") {
       setAnimatedIntake(targetIntake);
       return;
@@ -281,7 +283,7 @@ function useHydrationReveal(targetIntake: number) {
         frameRef.current = null;
       }
     };
-  }, [targetIntake]);
+  }, [shouldReveal, targetIntake]);
 
   return animatedIntake;
 }
@@ -609,7 +611,8 @@ export default function Home() {
     mounted,
   } = useHydration();
   const { permission: notificationPermission, requestPermission, isSupported: notificationsSupported } = useNotifications(0, quietHours, false);
-  const revealedIntake = useHydrationReveal(intake);
+  const shouldRevealIntake = intake < goal;
+  const revealedIntake = useHydrationReveal(intake, shouldRevealIntake);
   const [isResetConfirming, setIsResetConfirming] = React.useState(false);
   const [selectedNote, setSelectedNote] = React.useState<HydrationNote>("water");
   const [isNoteMenuOpen, setIsNoteMenuOpen] = React.useState(false);

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { getAppScrollElement, getAppScrollY, scrollAppTo } from "@/utils/appScroll";
 
 // Global map to store scroll positions across route changes
 const scrollMap = new Map<string, number>();
@@ -12,7 +13,7 @@ export function getScrollPosition(path: string): number {
 
 export function saveScrollPosition(
   path: string,
-  position = typeof window !== "undefined" ? window.scrollY : 0
+  position = getAppScrollY()
 ): void {
   scrollMap.set(path, position);
 }
@@ -26,14 +27,14 @@ export function useScrollPreservation() {
   const restoreScroll = (path: string) => {
     const savedScroll = getScrollPosition(path);
 
-    window.scrollTo(0, savedScroll);
+    scrollAppTo(savedScroll);
 
     restoreFrameRef.current = requestAnimationFrame(() => {
-      window.scrollTo(0, savedScroll);
+      scrollAppTo(savedScroll);
     });
 
     restoreTimerRef.current = window.setTimeout(() => {
-      window.scrollTo(0, savedScroll);
+      scrollAppTo(savedScroll);
       restoreTimerRef.current = null;
     }, 90);
   };
@@ -64,11 +65,13 @@ export function useScrollPreservation() {
     };
 
     handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    const scrollElement = getAppScrollElement();
+    const target = scrollElement ?? window;
+    target.addEventListener("scroll", handleScroll, { passive: true });
 
     // Also save current scroll before unmount/route-change
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      target.removeEventListener("scroll", handleScroll);
       if (restoreFrameRef.current !== null) {
         cancelAnimationFrame(restoreFrameRef.current);
       }

@@ -103,22 +103,21 @@
   --font-numeric: var(--font-outfit);
   --swipe-shell-offset: 0px;
   --swipe-shell-scale: 1;
-  --swipe-shell-dim: 0;
   --swipe-shell-shadow: 0;
   --swipe-preview-progress: 0;
-  --swipe-edge-left: 0;
-  --swipe-edge-right: 0;
   --swipe-shell-transition: transform 180ms cubic-bezier(0.22, 0.9, 0.32, 1),
     opacity 180ms cubic-bezier(0.22, 0.9, 0.32, 1);
 }
 
 html {
+  height: 100%;
+  height: 100dvh;
   min-height: 100%;
   min-height: 100dvh;
   background:
     radial-gradient(circle at 50% -12%, rgba(56, 189, 248, 0.1), transparent 34%),
     linear-gradient(180deg, #0b4261 0%, #073550 100%);
-  overflow-x: hidden;
+  overflow: hidden;
   overscroll-behavior-x: none;
   scrollbar-width: none;
 }
@@ -129,13 +128,27 @@ body {
     linear-gradient(180deg, #0b4261 0%, #073550 100%);
   color: var(--foreground);
   font-family: var(--font-body), sans-serif;
+  height: 100%;
+  height: 100dvh;
   min-height: 100%;
   min-height: 100dvh;
-  overflow-x: hidden;
+  overflow: hidden;
   overscroll-behavior-x: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   scrollbar-width: none;
+}
+
+[data-app-scroll-root="true"] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+[data-app-scroll-root="true"]::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
 }
 
 html::-webkit-scrollbar,
@@ -181,6 +194,11 @@ html[data-swipe-dragging="true"] {
 
 html[data-swipe-dragging="true"] body {
   touch-action: none;
+  overflow: hidden;
+}
+
+html[data-swipe-dragging="true"] [data-app-scroll-root="true"],
+html[data-fluid-setup-open="true"] [data-app-scroll-root="true"] {
   overflow: hidden;
 }
 
