@@ -60,7 +60,7 @@ export default function RootLayout({
         <NotificationManager />
         <div
           data-app-scroll-root="true"
-          className="relative z-10 flex h-[100dvh] w-full flex-1 flex-col overflow-y-auto overflow-x-hidden pb-24 [-webkit-overflow-scrolling:touch]"
+          className="relative z-10 h-[100dvh] w-full overflow-y-auto overflow-x-hidden pb-24 [-webkit-overflow-scrolling:touch]"
           style={{
             paddingLeft: "env(safe-area-inset-left)",
             paddingRight: "env(safe-area-inset-right)",

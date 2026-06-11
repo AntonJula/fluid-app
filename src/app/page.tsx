@@ -920,7 +920,7 @@ export default function Home() {
 
   return (
     <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] min-w-0 flex-col items-center overflow-x-hidden px-3.5 pb-24 pt-5 min-[380px]:p-4 min-[380px]:pb-24 sm:p-6 sm:pb-24 md:max-w-[30rem]">
-      <WaveBackground progress={actualProgress} />
+      {createPortal(<WaveBackground progress={actualProgress} />, document.body)}
 
       <div
         className={`z-10 flex h-full min-w-0 flex-1 flex-col gap-5 w-full transition-opacity duration-200 ${
