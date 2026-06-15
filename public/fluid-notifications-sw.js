@@ -38,3 +38,42 @@ self.addEventListener("notificationclick", (event) => {
     })
   );
 });
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  let payload = {};
+
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { body: event.data.text() };
+  }
+
+  const actionAmount = Number(payload.actionAmount || 0);
+  const actionNote = typeof payload.actionNote === "string" ? payload.actionNote : "";
+  const actionSuffix = actionAmount && actionNote ? `-${actionNote}` : "";
+  const data =
+    payload.data && typeof payload.data === "object"
+      ? payload.data
+      : { url: actionAmount ? `/?quickAdd=${encodeURIComponent(actionAmount)}` : "/" };
+
+  const options = {
+    body: payload.body || "A few calm sips can help.",
+    data,
+    icon: "/fluid-icon-192.png",
+    tag: payload.tag || "fluid-push",
+    renotify: true,
+  };
+
+  if (Array.isArray(payload.actions)) {
+    options.actions = payload.actions;
+  } else if (actionAmount > 0) {
+    options.actions = [
+      { action: `add-${actionAmount}${actionSuffix}`, title: `+${actionAmount} ml` },
+      { action: "open", title: "Open" },
+    ];
+  }
+
+  event.waitUntil(self.registration.showNotification(payload.title || "Fluid.", options));
+});

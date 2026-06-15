@@ -25,6 +25,7 @@ const STREAK_ALERT_NOTIFIED_KEY = "fluid-streak-alert-notified";
 const WORKOUT_NEXT_NOTIFICATION_KEY = "fluid-workout-next-notification-due";
 const WORKOUT_LAST_NOTIFIED_KEY = "fluid-workout-last-notified";
 const SERVICE_WORKER_PATH = "/fluid-notifications-sw.js";
+const NOTIFICATION_ICON_PATH = "/fluid-icon-192.png";
 const MIN_NOTIFICATION_GAP_MS = 10 * 60 * 1000;
 const ONE_MINUTE_MS = 60 * 1000;
 
@@ -44,6 +45,8 @@ type FluidNotificationOptions = NotificationOptions & {
   actions?: Array<{ action: string; title: string; icon?: string }>;
   renotify?: boolean;
 };
+
+export type PushStatus = "idle" | "unsupported" | "missing-keys" | "subscribed" | "failed";
 
 function getSafeHydrationStatus(status?: NotificationHydrationStatus): NotificationHydrationStatus {
   return {
@@ -145,6 +148,75 @@ async function getServiceWorkerRegistration() {
   }
 }
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
+}
+
+function canUsePushNotifications() {
+  return (
+    typeof window !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    window.isSecureContext &&
+    "Notification" in window &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window
+  );
+}
+
+async function subscribeToPushNotifications(): Promise<PushStatus> {
+  if (!canUsePushNotifications()) return "unsupported";
+
+  try {
+    const registration = await getServiceWorkerRegistration();
+    if (!registration) return "unsupported";
+
+    const existingSubscription = await registration.pushManager.getSubscription();
+
+    if (existingSubscription) {
+      const response = await fetch("/api/push/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(existingSubscription),
+      });
+
+      return response.ok ? "subscribed" : "failed";
+    }
+
+    const vapidResponse = await fetch("/api/push/vapid");
+
+    if (vapidResponse.status === 503) return "missing-keys";
+    if (!vapidResponse.ok) return "failed";
+
+    const { publicKey } = (await vapidResponse.json()) as { publicKey?: string };
+    if (!publicKey) return "missing-keys";
+
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+
+    const registerResponse = await fetch("/api/push/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(subscription),
+    });
+
+    return registerResponse.ok ? "subscribed" : "failed";
+  } catch (error) {
+    console.error("Failed to subscribe to Web Push", error);
+    return "failed";
+  }
+}
+
 async function showSystemNotification({
   title,
   body,
@@ -169,9 +241,9 @@ async function showSystemNotification({
   }
 
   const options: FluidNotificationOptions = {
-    badge: "/fluid-notification-badge.png",
     body,
     data: { url: actionAmount ? `/?${quickAddParams.toString()}` : "/" },
+    icon: NOTIFICATION_ICON_PATH,
     tag,
     renotify: true,
   };
@@ -206,7 +278,9 @@ export function useNotifications(
   hydrationStatus?: NotificationHydrationStatus
 ) {
   const [permission, setPermission] = useState<NotificationPermission>(getInitialPermission);
+  const [pushStatus, setPushStatus] = useState<PushStatus>("idle");
   const isSupported = typeof window === "undefined" || "Notification" in window;
+  const pushSupported = typeof window === "undefined" || canUsePushNotifications();
   const timerRef = useRef<number | null>(null);
   const lifecycleTimerRef = useRef<number | null>(null);
   const streakAlertTimerRef = useRef<number | null>(null);
@@ -294,15 +368,55 @@ export function useNotifications(
 
       if (result === "granted") {
         await showSystemNotification({
-          title: "Fluid is ready 💧",
+          title: "Fluid is ready",
           body: "Friendly water reminders are on. I will nudge you gently when it is time to drink.",
           tag: "fluid-permission",
         });
+        setPushStatus(await subscribeToPushNotifications());
       }
     } catch (e) {
       console.error(e);
     }
   };
+
+  const refreshPushSubscription = async () => {
+    if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
+
+    setPushStatus(await subscribeToPushNotifications());
+  };
+
+  const sendTestPush = async () => {
+    const response = await fetch("/api/push/test", { method: "POST" });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+
+    if (!response.ok) {
+      throw new Error(payload.error ?? "Could not send test push.");
+    }
+
+    return payload;
+  };
+
+  useEffect(() => {
+    if (permission !== "granted") {
+      const resetTimer = window.setTimeout(() => {
+        setPushStatus("idle");
+      }, 0);
+
+      return () => {
+        window.clearTimeout(resetTimer);
+      };
+    }
+
+    let isDisposed = false;
+
+    void subscribeToPushNotifications().then((status) => {
+      if (!isDisposed) setPushStatus(status);
+    });
+
+    return () => {
+      isDisposed = true;
+    };
+  }, [permission]);
 
   useEffect(() => {
     if (permission === "granted" && intervalMinutes > 0 && active) {
@@ -821,5 +935,14 @@ export function useNotifications(
     quietHours.start,
   ]);
 
-  return { permission, refreshPermission, requestPermission, isSupported };
+  return {
+    permission,
+    refreshPermission,
+    requestPermission,
+    isSupported,
+    pushStatus,
+    pushSupported,
+    refreshPushSubscription,
+    sendTestPush,
+  };
 }

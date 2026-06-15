@@ -6,7 +6,7 @@ import { TimePickerDialog } from "./ui/TimePickerDialog";
 import { NumberPickerDialog } from "./ui/NumberPickerDialog";
 import { Button } from "./ui/Button";
 import { useNotifications } from "@/hooks/useNotifications";
-import { BellOff, BellRing, CheckCircle2, Clock, ExternalLink, RotateCw, ShieldCheck, ShieldX, Smartphone } from "lucide-react";
+import { BellOff, BellRing, CheckCircle2, Clock, ExternalLink, RotateCw, Send, ShieldCheck, ShieldX, Smartphone } from "lucide-react";
 
 interface ReminderSettingsProps {
   interval: number;
@@ -124,7 +124,16 @@ function getSettingsHint(platform: NotificationPlatform) {
 }
 
 export function ReminderSettings({ interval, setInterval, quietHours, setQuietHours }: ReminderSettingsProps) {
-  const { permission, refreshPermission, requestPermission, isSupported } = useNotifications(interval, quietHours, false);
+  const {
+    permission,
+    refreshPermission,
+    requestPermission,
+    isSupported,
+    pushStatus,
+    pushSupported,
+    refreshPushSubscription,
+    sendTestPush,
+  } = useNotifications(interval, quietHours, false);
   const intervals = [20, 40, 60];
   const remindersEnabled = interval > 0;
   const notificationStatus = getNotificationStatus({ interval, isSupported, permission });
@@ -136,6 +145,8 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   const isPredefined = intervals.includes(interval);
   const [platform, setPlatform] = React.useState<NotificationPlatform>("desktop");
   const [settingsAttempted, setSettingsAttempted] = React.useState(false);
+  const [pushTestMessage, setPushTestMessage] = React.useState("");
+  const [isTestingPush, setIsTestingPush] = React.useState(false);
 
   const [activePicker, setActivePicker] = React.useState<"start" | "end" | null>(null);
 
@@ -191,6 +202,31 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   };
 
   const settingsSteps = getSettingsSteps(platform);
+  const pushStatusText =
+    pushStatus === "subscribed"
+      ? "Background push is connected for this device."
+      : pushStatus === "missing-keys"
+        ? "Background push needs VAPID keys before it can send while Fluid is closed."
+        : pushStatus === "failed"
+          ? "Fluid could not connect this device for background push yet."
+          : pushSupported
+            ? "Fluid will try to connect background push after permission is allowed."
+            : "This device does not support installed app push from Fluid yet.";
+
+  const handleTestPush = async () => {
+    setIsTestingPush(true);
+    setPushTestMessage("");
+
+    try {
+      await refreshPushSubscription();
+      await sendTestPush();
+      setPushTestMessage("Test sent. If Fluid is installed, check your notifications.");
+    } catch (error) {
+      setPushTestMessage(error instanceof Error ? error.message : "Could not send test push.");
+    } finally {
+      setIsTestingPush(false);
+    }
+  };
 
   return (
     <Card className="mx-auto mt-4 w-full max-w-sm space-y-4 p-4 shadow-lg min-[380px]:space-y-5 min-[380px]:p-5 md:max-w-[28rem]">
@@ -316,6 +352,54 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
               Check again
             </Button>
           </div>
+        </div>
+      )}
+
+      {remindersEnabled && isSupported && permission === "granted" && (
+        <div className="rounded-xl border border-water-300/12 bg-water-900/18 p-3.5 shadow-inner min-[380px]:rounded-2xl">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border border-cyan-100/16 bg-cyan-300/10 text-cyan-100">
+              <Send className="h-4.5 w-4.5" strokeWidth={2.5} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-ui text-sm font-extrabold text-white">Background push</p>
+              <p className="font-body mt-1 text-xs leading-relaxed text-water-300/80">{pushStatusText}</p>
+            </div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                void refreshPushSubscription();
+              }}
+              className="rounded-xl px-3 text-xs"
+            >
+              <RotateCw className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
+              Connect
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={isTestingPush}
+              onClick={() => {
+                void handleTestPush();
+              }}
+              className="rounded-xl px-3 text-xs"
+            >
+              <Send className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
+              {isTestingPush ? "Sending" : "Test push"}
+            </Button>
+          </div>
+
+          {pushTestMessage && (
+            <p className="font-body mt-2 rounded-xl border border-water-200/10 bg-water-950/22 px-3 py-2 text-xs font-semibold text-water-100/82">
+              {pushTestMessage}
+            </p>
+          )}
         </div>
       )}
 

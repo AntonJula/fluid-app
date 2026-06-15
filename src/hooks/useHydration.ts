@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { playWaterGulpSound } from "@/utils/audio";
 import {
   DEFAULT_GOAL,
   DEFAULT_QUICK_ADD_AMOUNT,
@@ -149,6 +150,8 @@ export function useHydration(): UseHydrationReturn {
   const addDrink = (amount: number, note?: HydrationNote) => {
     const safeAmount = clampHydrationAmount(amount, 1, 5000);
     const now = Date.now();
+
+    playWaterGulpSound();
 
     updateState((currentState) => ({
       ...currentState,

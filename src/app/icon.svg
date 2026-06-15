@@ -1,30 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="76" y1="52" x2="426" y2="466" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#0f75a2" />
-      <stop offset="0.55" stop-color="#075985" />
-      <stop offset="1" stop-color="#082f49" />
+    <linearGradient id="bg" x1="74" y1="42" x2="438" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1687b8" />
+      <stop offset="0.46" stop-color="#0a638f" />
+      <stop offset="1" stop-color="#06344f" />
     </linearGradient>
-    <radialGradient id="glow" cx="38%" cy="24%" r="70%">
-      <stop offset="0" stop-color="#67e8f9" stop-opacity="0.24" />
-      <stop offset="0.52" stop-color="#38bdf8" stop-opacity="0.08" />
+    <linearGradient id="sheen" x1="118" y1="64" x2="410" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.2" />
+      <stop offset="0.42" stop-color="#ffffff" stop-opacity="0.06" />
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+    <radialGradient id="glow" cx="43%" cy="30%" r="72%">
+      <stop offset="0" stop-color="#7dd3fc" stop-opacity="0.32" />
+      <stop offset="0.54" stop-color="#38bdf8" stop-opacity="0.09" />
       <stop offset="1" stop-color="#082f49" stop-opacity="0" />
     </radialGradient>
     <filter id="shadow" x="-10%" y="-18%" width="120%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#04283f" flood-opacity="0.5" />
+      <feDropShadow dx="0" dy="9" stdDeviation="5" flood-color="#04283f" flood-opacity="0.5" />
     </filter>
   </defs>
-  <rect width="512" height="512" rx="128" fill="url(#bg)" />
-  <rect width="512" height="512" rx="128" fill="url(#glow)" />
+  <rect width="512" height="512" rx="124" fill="url(#bg)" />
+  <rect x="16" y="14" width="480" height="484" rx="112" fill="url(#glow)" />
+  <path d="M76 74 C160 28 300 36 420 104 C348 92 206 124 98 214 C76 168 68 116 76 74 Z" fill="url(#sheen)" />
+  <rect x="18" y="18" width="476" height="476" rx="112" fill="none" stroke="#bae6fd" stroke-opacity="0.16" stroke-width="3" />
   <text
     x="256"
-    y="292"
+    y="294"
     fill="#ffffff"
     filter="url(#shadow)"
     font-family="Poppins, Outfit, Arial, sans-serif"
-    font-size="132"
+    font-size="136"
     font-weight="900"
-    letter-spacing="-5"
+    letter-spacing="-4"
     text-anchor="middle"
   >Fluid.</text>
 </svg>

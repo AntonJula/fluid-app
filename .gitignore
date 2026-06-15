@@ -40,6 +40,10 @@ graphify-out/
 # env files (can opt-in for committing if needed)
 .env*
 
+# local web push secrets and device subscriptions
+vapid-keys.json
+push-subscriptions.json
+
 # vercel
 .vercel
 
