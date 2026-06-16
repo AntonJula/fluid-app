@@ -65,9 +65,10 @@ self.addEventListener("push", (event) => {
       : { url: actionAmount ? `/?quickAdd=${encodeURIComponent(actionAmount)}` : "/" };
 
   const options = {
+    badge: "/fluid-notification-badge.png",
     body: payload.body || "A few calm sips can help.",
     data,
-    icon: "/fluid-icon-192.png",
+    icon: "/fluid-notification-icon.png",
     tag: payload.tag || "fluid-push",
     renotify: true,
   };

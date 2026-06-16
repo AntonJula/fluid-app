@@ -10,7 +10,7 @@
     </filter>
   </defs>
   <rect width="512" height="512" rx="128" fill="url(#bg)" />
-  <g transform="translate(38.708 325.04) scale(0.16 -0.16)" fill="#ffffff" filter="url(#titleShadow)">
+  <g transform="translate(72 312) scale(0.135 -0.135)" fill="#ffffff" filter="url(#titleShadow)">
     <path transform="translate(0 0)" d="M550 708L550 532L272 532L272 434L472 434L472 267L272 267L272 0L50 0L50 708Z" />
     <path transform="translate(535 0)" d="M272 740L272 0L50 0L50 740Z" />
     <path transform="translate(817 0)" d="M647 564L647 0L425 0L425 86Q399 46 355.5 21Q312 -4 252 -4Q155 -4 100.5 61Q46 126 46 237L46 564L267 564L267 265Q267 225 288.5 201.5Q310 178 346 178Q383 178 404 201.5Q425 225 425 265L425 564Z" />

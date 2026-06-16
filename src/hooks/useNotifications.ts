@@ -25,7 +25,8 @@ const STREAK_ALERT_NOTIFIED_KEY = "fluid-streak-alert-notified";
 const WORKOUT_NEXT_NOTIFICATION_KEY = "fluid-workout-next-notification-due";
 const WORKOUT_LAST_NOTIFIED_KEY = "fluid-workout-last-notified";
 const SERVICE_WORKER_PATH = "/fluid-notifications-sw.js";
-const NOTIFICATION_ICON_PATH = "/fluid-icon-192.png";
+const NOTIFICATION_ICON_PATH = "/fluid-notification-icon.png";
+const NOTIFICATION_BADGE_PATH = "/fluid-notification-badge.png";
 const MIN_NOTIFICATION_GAP_MS = 10 * 60 * 1000;
 const ONE_MINUTE_MS = 60 * 1000;
 
@@ -241,6 +242,7 @@ async function showSystemNotification({
   }
 
   const options: FluidNotificationOptions = {
+    badge: NOTIFICATION_BADGE_PATH,
     body,
     data: { url: actionAmount ? `/?${quickAddParams.toString()}` : "/" },
     icon: NOTIFICATION_ICON_PATH,
