@@ -12,20 +12,66 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(fetch(event.request));
 });
 
+const HYDRATION_ACTION_DB = "fluid-notification-actions";
+const HYDRATION_ACTION_STORE = "pending-actions";
+
+function openHydrationActionDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(HYDRATION_ACTION_DB, 1);
+
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(HYDRATION_ACTION_STORE, { keyPath: "id" });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function queueHydrationAction(action) {
+  const db = await openHydrationActionDb();
+
+  await new Promise((resolve, reject) => {
+    const transaction = db.transaction(HYDRATION_ACTION_STORE, "readwrite");
+    transaction.objectStore(HYDRATION_ACTION_STORE).put(action);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+
+  db.close();
+}
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
   const addActionMatch = typeof event.action === "string" ? event.action.match(/^add-(\d+)(?:-([a-z-]+))?$/) : null;
   const fallbackPath = typeof event.notification.data?.url === "string" ? event.notification.data.url : "/";
-  const actionPath = addActionMatch
-    ? `/?quickAdd=${encodeURIComponent(addActionMatch[1])}${
-        addActionMatch[2] ? `&quickAddNote=${encodeURIComponent(addActionMatch[2])}` : ""
-      }`
-    : fallbackPath;
-  const actionUrl = new URL(actionPath, self.registration.scope).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (clientList) => {
+      if (addActionMatch) {
+        const action = {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          amount: Number(addActionMatch[1]),
+          note: addActionMatch[2] || "water",
+          createdAt: Date.now(),
+        };
+
+        if (clientList.length > 0) {
+          clientList.forEach((client) => {
+            client.postMessage({ type: "fluid:add-drink", ...action });
+          });
+          return undefined;
+        }
+
+        await queueHydrationAction(action);
+        return undefined;
+      }
+
+      const openUrl = new URL(fallbackPath, self.registration.scope);
+      openUrl.searchParams.delete("quickAdd");
+      openUrl.searchParams.delete("quickAddNote");
+      const actionUrl = openUrl.href;
+
       for (const client of clientList) {
         if ("focus" in client) {
           if ("navigate" in client) {
@@ -62,7 +108,7 @@ self.addEventListener("push", (event) => {
   const data =
     payload.data && typeof payload.data === "object"
       ? payload.data
-      : { url: actionAmount ? `/?quickAdd=${encodeURIComponent(actionAmount)}` : "/" };
+      : { url: "/" };
 
   const options = {
     badge: "/fluid-notification-badge.png",

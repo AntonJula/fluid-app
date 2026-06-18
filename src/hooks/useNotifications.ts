@@ -231,20 +231,10 @@ async function showSystemNotification({
   actionAmount?: number;
   actionNote?: HydrationNote;
 }) {
-  const quickAddParams = new URLSearchParams();
-
-  if (actionAmount) {
-    quickAddParams.set("quickAdd", actionAmount.toString());
-  }
-
-  if (actionAmount && actionNote) {
-    quickAddParams.set("quickAddNote", actionNote);
-  }
-
   const options: FluidNotificationOptions = {
     badge: NOTIFICATION_BADGE_PATH,
     body,
-    data: { url: actionAmount ? `/?${quickAddParams.toString()}` : "/" },
+    data: { url: "/" },
     icon: NOTIFICATION_ICON_PATH,
     tag,
     renotify: true,

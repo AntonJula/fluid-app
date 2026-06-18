@@ -121,6 +121,52 @@ const STREAK_WINDOW_SIZE = 5;
 const STREAK_SHIELD_COUNT = 2;
 const STREAK_DAY_FORMATTER = new Intl.DateTimeFormat("en", { weekday: "short" });
 const HYDRATION_NOTE_VALUES = new Set<string>(HYDRATION_NOTES);
+const NOTIFICATION_ACTION_DB = "fluid-notification-actions";
+const NOTIFICATION_ACTION_STORE = "pending-actions";
+
+type PendingNotificationAction = {
+  id: string;
+  amount: number;
+  note?: string;
+  createdAt?: number;
+};
+
+function openNotificationActionDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(NOTIFICATION_ACTION_DB, 1);
+
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore(NOTIFICATION_ACTION_STORE, { keyPath: "id" });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function takePendingNotificationActions() {
+  if (typeof indexedDB === "undefined") return [];
+
+  const db = await openNotificationActionDb();
+
+  try {
+    return await new Promise<PendingNotificationAction[]>((resolve, reject) => {
+      const transaction = db.transaction(NOTIFICATION_ACTION_STORE, "readwrite");
+      const store = transaction.objectStore(NOTIFICATION_ACTION_STORE);
+      const request = store.getAll();
+      let actions: PendingNotificationAction[] = [];
+
+      request.onsuccess = () => {
+        actions = request.result as PendingNotificationAction[];
+        store.clear();
+      };
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve(actions);
+      transaction.onerror = () => reject(transaction.error);
+    });
+  } finally {
+    db.close();
+  }
+}
 
 function formatLogTime(timestamp: number) {
   return new Intl.DateTimeFormat("en", {
@@ -635,6 +681,21 @@ export default function Home() {
   const favoritePointerStartRef = React.useRef<{ x: number; y: number } | null>(null);
   const favoriteGestureCancelledRef = React.useRef(false);
 
+  const applyNotificationAction = React.useCallback(
+    (action: PendingNotificationAction) => {
+      const amount = Number(action.amount);
+      const note = action.note && HYDRATION_NOTE_VALUES.has(action.note) ? (action.note as HydrationNote) : "water";
+
+      if (!Number.isFinite(amount) || amount <= 0) return;
+
+      addDrink(Math.min(5000, Math.round(amount)), note);
+      if (note === "workout") {
+        startWorkoutSession();
+      }
+    },
+    [addDrink, startWorkoutSession]
+  );
+
   useLockedPageScroll(isDailyLogOpen || isOnboardingOpen);
 
   React.useEffect(() => {
@@ -703,6 +764,37 @@ export default function Home() {
     }
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
   }, [addDrink, mounted, startWorkoutSession]);
+
+  React.useEffect(() => {
+    if (!mounted || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      const payload = event.data as Partial<PendingNotificationAction> & { type?: string };
+
+      if (payload?.type !== "fluid:add-drink" || !payload.id) return;
+
+      applyNotificationAction({
+        id: payload.id,
+        amount: Number(payload.amount),
+        note: typeof payload.note === "string" ? payload.note : undefined,
+        createdAt: typeof payload.createdAt === "number" ? payload.createdAt : undefined,
+      });
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+
+    takePendingNotificationActions()
+      .then((actions) => {
+        actions.forEach(applyNotificationAction);
+      })
+      .catch((err) => {
+        console.error("Failed to apply pending notification actions", err);
+      });
+
+    return () => {
+      navigator.serviceWorker.removeEventListener("message", handleMessage);
+    };
+  }, [applyNotificationAction, mounted]);
 
   const clearFavoriteHoldTimer = React.useCallback(() => {
     if (favoriteHoldTimerRef.current === null || typeof window === "undefined") return;

@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
   other: {
-    "theme-color": "#0a5b84",
+    "theme-color": "#075985",
     "mobile-web-app-capable": "yes",
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "black-translucent",
@@ -42,7 +42,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
-  themeColor: "#0a5b84",
+  themeColor: "#075985",
   colorScheme: "dark",
 };
 
