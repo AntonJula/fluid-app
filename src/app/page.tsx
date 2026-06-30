@@ -1011,7 +1011,7 @@ export default function Home() {
   const shouldHideMainChrome = isOnboardingOpen;
 
   return (
-    <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] min-w-0 flex-col items-center overflow-x-hidden px-3.5 pb-24 pt-5 min-[380px]:p-4 min-[380px]:pb-24 sm:p-6 sm:pb-24 md:max-w-[30rem]">
+    <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] min-w-0 flex-col items-center overflow-x-hidden px-3.5 pb-24 pt-6 min-[380px]:px-4 min-[380px]:pb-24 min-[380px]:pt-5 sm:px-6 sm:pb-24 sm:pt-6 md:max-w-[30rem]">
       {createPortal(<WaveBackground progress={actualProgress} />, document.body)}
 
       <div
@@ -1020,7 +1020,7 @@ export default function Home() {
         }`}
         aria-hidden={shouldHideMainChrome}
       >
-        <header className="relative z-20 mt-1 w-full text-center">
+        <header className="relative z-20 mt-2 w-full text-center">
           <h1 className="font-display text-5xl font-black text-white drop-shadow-md sm:text-6xl">Fluid.</h1>
           <button
             type="button"

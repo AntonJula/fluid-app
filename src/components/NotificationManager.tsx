@@ -30,7 +30,7 @@ export function NotificationManager() {
   const lastWorkoutDrinkAt = drinkLog.find((item) => item.amount > 0 && item.note === "workout")?.timestamp ?? null;
   const inactiveDays = getConsecutiveDryDays(history, intake);
 
-  useNotifications(reminderInterval, quietHours, intake < goal, {
+  useNotifications(reminderInterval, quietHours, true, {
     intake,
     goal,
     lastDrinkAt,

@@ -367,19 +367,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                void refreshPushSubscription();
-              }}
-              className="rounded-xl px-3 text-xs"
-            >
-              <RotateCw className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
-              Connect
-            </Button>
+          <div className="mt-3">
             <Button
               type="button"
               variant="secondary"
@@ -388,7 +376,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
               onClick={() => {
                 void handleTestPush();
               }}
-              className="rounded-xl px-3 text-xs"
+              className="w-full rounded-xl px-3 text-xs"
             >
               <Send className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
               {isTestingPush ? "Sending" : "Test push"}

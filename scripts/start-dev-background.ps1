@@ -28,9 +28,20 @@ $pathValue = cmd.exe /d /c echo %Path%
 [Environment]::SetEnvironmentVariable("PATH", $null, "Process")
 [Environment]::SetEnvironmentVariable("Path", $pathValue, "Process")
 
-$cmdPath = if ($env:ComSpec) { $env:ComSpec } else { "C:\Windows\System32\cmd.exe" }
-$cmdArgs = "/d /k cd /d `"$ProjectRoot`" && npm.cmd run dev -- -H 0.0.0.0 -p $Port"
-$process = Start-Process -FilePath $cmdPath -ArgumentList $cmdArgs -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru
+$nodePath = (Get-Command node.exe -ErrorAction Stop).Source
+$nextPath = Join-Path $ProjectRoot "node_modules\next\dist\bin\next"
+$outLog = Join-Path $ProjectRoot ".dev-server.out.log"
+$errLog = Join-Path $ProjectRoot ".dev-server.err.log"
+
+$nodeArgs = "`"$nextPath`" dev -H 0.0.0.0 -p $Port"
+$process = Start-Process `
+  -FilePath $nodePath `
+  -ArgumentList $nodeArgs `
+  -WorkingDirectory $ProjectRoot `
+  -WindowStyle Hidden `
+  -RedirectStandardOutput $outLog `
+  -RedirectStandardError $errLog `
+  -PassThru
 
 $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 do {

@@ -24,6 +24,7 @@ const LIFECYCLE_LAST_MONTHLY_KEY = "fluid-lifecycle-last-monthly";
 const STREAK_ALERT_NOTIFIED_KEY = "fluid-streak-alert-notified";
 const WORKOUT_NEXT_NOTIFICATION_KEY = "fluid-workout-next-notification-due";
 const WORKOUT_LAST_NOTIFIED_KEY = "fluid-workout-last-notified";
+const HYDRATION_RESET_EVENT = "fluid-hydration-reset";
 const SERVICE_WORKER_PATH = "/fluid-notifications-sw.js";
 const NOTIFICATION_ICON_PATH = "/fluid-notification-icon.png";
 const NOTIFICATION_BADGE_PATH = "/fluid-notification-badge.png";
@@ -457,9 +458,16 @@ export function useNotifications(
           return;
         }
 
+        const currentStatus = hydrationStatusRef.current;
+
+        if (currentStatus.intake >= currentStatus.goal) {
+          updateNextDue(Date.now() + intervalRef.current * 60 * 1000);
+          return;
+        }
+
         const message = pickHydrationNotification(
           {
-            ...hydrationStatusRef.current,
+            ...currentStatus,
             reminderInterval: intervalRef.current,
             now,
             isCatchUp,
@@ -509,14 +517,21 @@ export function useNotifications(
         }
       };
 
+      const handleHydrationReset = () => {
+        localStorage.removeItem(LAST_NOTIFICATION_TYPE_KEY);
+        updateNextDue(Date.now() + intervalRef.current * 60 * 1000);
+      };
+
       document.addEventListener("visibilitychange", handleVisibility);
       window.addEventListener("focus", handleVisibility);
+      window.addEventListener(HYDRATION_RESET_EVENT, handleHydrationReset);
 
       return () => {
         isDisposed = true;
         clearTimer();
         document.removeEventListener("visibilitychange", handleVisibility);
         window.removeEventListener("focus", handleVisibility);
+        window.removeEventListener(HYDRATION_RESET_EVENT, handleHydrationReset);
       };
     }
 

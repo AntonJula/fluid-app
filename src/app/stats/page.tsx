@@ -323,7 +323,7 @@ export default function StatsPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 pb-4 pt-2 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-3 sm:p-6 md:max-w-[30rem]">
+    <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 pb-4 pt-6 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-5 sm:px-6 sm:pb-6 sm:pt-6 md:max-w-[30rem]">
       <header className="w-full text-center mt-2 mb-8">
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Your Stats.</h1>
         <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">

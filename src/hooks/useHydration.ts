@@ -20,6 +20,7 @@ import type {
 } from "@/lib/hydrationState";
 
 const STORAGE_KEY = "fluid-hydration";
+const HYDRATION_RESET_EVENT = "fluid-hydration-reset";
 
 export type UseHydrationReturn = HydrationState & {
   addDrink: (amount: number, note?: HydrationNote) => void;
@@ -277,6 +278,12 @@ export function useHydration(): UseHydrationReturn {
       intake: 0,
       drinkLog: [],
     }));
+
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => {
+        window.dispatchEvent(new Event(HYDRATION_RESET_EVENT));
+      }, 0);
+    }
   };
 
   const setReminderInterval = (interval: number) => {
