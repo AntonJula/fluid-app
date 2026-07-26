@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "./Button";
+import { useAccessibleDialog } from "@/hooks/useAccessibleDialog";
 
 interface TimePickerDialogProps {
   isOpen: boolean;
@@ -19,10 +20,13 @@ function parseTimeValue(value: string) {
 
   return {
     view: "hour" as const,
-    hour: hour24 % 12 || 12,
+    hour24,
     minute,
-    ampm: hour24 >= 12 ? ("PM" as const) : ("AM" as const),
   };
+}
+
+function usesTwelveHourClock() {
+  return new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hour12 ?? true;
 }
 
 export function TimePickerDialog({ isOpen, value, onChange, onClose, title = "Select Time" }: TimePickerDialogProps) {
@@ -41,34 +45,43 @@ export function TimePickerDialog({ isOpen, value, onChange, onClose, title = "Se
 function TimePickerDialogContent({ value, onChange, onClose, title = "Select Time" }: Omit<TimePickerDialogProps, "isOpen">) {
   const initialValue = parseTimeValue(value);
   const [view, setView] = useState<"hour" | "minute">(initialValue.view);
-  const [hour, setHour] = useState(initialValue.hour);
+  const [hour24, setHour24] = useState(initialValue.hour24);
   const [minute, setMinute] = useState(initialValue.minute);
-  const [ampm, setAmpm] = useState<"AM" | "PM">(initialValue.ampm);
+  const useTwelveHourClock = usesTwelveHourClock();
+  const hour = useTwelveHourClock ? hour24 % 12 || 12 : hour24;
+  const ampm = hour24 >= 12 ? "PM" : "AM";
+  const titleId = React.useId();
+  const dialogRef = useAccessibleDialog(onClose);
 
   const handleSave = () => {
-    let h24 = hour;
-    if (ampm === "PM" && hour < 12) h24 += 12;
-    if (ampm === "AM" && hour === 12) h24 = 0;
-
-    const hh = h24.toString().padStart(2, "0");
+    const hh = hour24.toString().padStart(2, "0");
     const mm = minute.toString().padStart(2, "0");
     onChange(`${hh}:${mm}`);
     onClose();
   };
 
-  const hours = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const hours = useTwelveHourClock
+    ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    : Array.from({ length: 24 }, (_, index) => index);
   const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
   return createPortal(
-    <div className="fluid-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div
+      className="fluid-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <div
+        ref={dialogRef}
         className="bg-water-900 border border-[1.5px] border-water-300/16 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId}
+        tabIndex={-1}
       >
         <div className="p-6 bg-water-800/40 border-b border-water-300/12 flex flex-col items-center">
-          <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
+          <p id={titleId} className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
           <div className="flex items-center justify-center gap-1">
             <button
               type="button"
@@ -88,24 +101,26 @@ function TimePickerDialogContent({ value, onChange, onClose, title = "Select Tim
               {minute.toString().padStart(2, "0")}
             </button>
 
-            <div className="flex flex-col gap-1 ml-3 h-full justify-center">
-              <button
-                type="button"
-                onClick={() => setAmpm("AM")}
-                className={`font-ui text-[12px] font-black px-3 py-1.5 rounded-xl transition-all uppercase tracking-wider ${ampm === "AM" ? "bg-gradient-to-r from-water-400 to-water-500 text-water-950 shadow-md shadow-water-500/30" : "text-water-400/80 hover:bg-water-800/60"}`}
-                aria-pressed={ampm === "AM"}
-              >
-                AM
-              </button>
-              <button
-                type="button"
-                onClick={() => setAmpm("PM")}
-                className={`font-ui text-[12px] font-black px-3 py-1.5 rounded-xl transition-all uppercase tracking-wider ${ampm === "PM" ? "bg-gradient-to-r from-water-400 to-water-500 text-water-950 shadow-md shadow-water-500/30" : "text-water-400/80 hover:bg-water-800/60"}`}
-                aria-pressed={ampm === "PM"}
-              >
-                PM
-              </button>
-            </div>
+            {useTwelveHourClock && (
+              <div className="flex h-full flex-col justify-center gap-1 ml-3">
+                <button
+                  type="button"
+                  onClick={() => setHour24(hour24 >= 12 ? hour24 - 12 : hour24)}
+                  className={`font-ui text-[12px] font-black px-3 py-1.5 rounded-xl transition-all uppercase tracking-wider ${ampm === "AM" ? "bg-gradient-to-r from-water-400 to-water-500 text-water-950 shadow-md shadow-water-500/30" : "text-water-400/80 hover:bg-water-800/60"}`}
+                  aria-pressed={ampm === "AM"}
+                >
+                  AM
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHour24(hour24 < 12 ? hour24 + 12 : hour24)}
+                  className={`font-ui text-[12px] font-black px-3 py-1.5 rounded-xl transition-all uppercase tracking-wider ${ampm === "PM" ? "bg-gradient-to-r from-water-400 to-water-500 text-water-950 shadow-md shadow-water-500/30" : "text-water-400/80 hover:bg-water-800/60"}`}
+                  aria-pressed={ampm === "PM"}
+                >
+                  PM
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -116,8 +131,11 @@ function TimePickerDialogContent({ value, onChange, onClose, title = "Select Tim
                 key={val}
                 type="button"
                 onClick={() => {
-                  if (view === "hour") {
-                    setHour(val);
+                  if (view === "hour" && useTwelveHourClock) {
+                    setHour24((val % 12) + (ampm === "PM" ? 12 : 0));
+                    setView("minute");
+                  } else if (view === "hour") {
+                    setHour24(val);
                     setView("minute");
                   } else {
                     setMinute(val);

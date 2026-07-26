@@ -6,6 +6,7 @@ import {
   normalizeHydrationState,
   rolloverHydrationState,
 } from "../src/lib/hydrationState.ts";
+import { buildWeeklyHydrationStats } from "../src/lib/hydrationStats.ts";
 import {
   HYDRATION_NOTIFICATION_TYPES,
   WORKOUT_NOTIFICATION_LOG_AMOUNT,
@@ -34,10 +35,47 @@ const tests = [
       assert.equal(state.quickAddAmount, 250);
       assert.equal(state.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
       assert.equal(state.streakAlert, null);
+      assert.equal(state.workoutSessionStartedAt, null);
       assert.equal(state.workoutSessionEndsAt, null);
+      assert.equal(state.workoutSessionDurationMinutes, 90);
+      assert.equal(state.workoutSessionPausedRemainingMs, null);
       assert.equal(state.lastUpdated, "2026-04-10");
       assert.deepEqual(state.quietHours, { start: "22:00", end: "07:00" });
       assert.deepEqual(state.drinkLog, []);
+    },
+  },
+  {
+    name: "normalizeHydrationState migrates an active legacy workout session",
+    run: () => {
+      const sessionEndsAt = 1775847600000;
+      const state = normalizeHydrationState(
+        { workoutSessionEndsAt: sessionEndsAt },
+        "2026-04-11"
+      );
+
+      assert.equal(state.workoutSessionDurationMinutes, 90);
+      assert.equal(state.workoutSessionEndsAt, sessionEndsAt);
+      assert.equal(
+        state.workoutSessionStartedAt,
+        sessionEndsAt - 90 * 60 * 1000
+      );
+      assert.equal(state.workoutSessionPausedRemainingMs, null);
+    },
+  },
+  {
+    name: "normalizeHydrationState preserves a paused workout without activating its timer",
+    run: () => {
+      const state = normalizeHydrationState(
+        {
+          workoutSessionDurationMinutes: 60,
+          workoutSessionPausedRemainingMs: 18 * 60 * 1000,
+        },
+        "2026-04-11"
+      );
+
+      assert.equal(state.workoutSessionDurationMinutes, 60);
+      assert.equal(state.workoutSessionEndsAt, null);
+      assert.equal(state.workoutSessionPausedRemainingMs, 18 * 60 * 1000);
     },
   },
   {
@@ -59,25 +97,101 @@ const tests = [
             { id: "drink-1", amount: 330, timestamp: 1775847600000, note: "tea" },
             { id: "drink-2", amount: Number.NaN, timestamp: 1775847600000, note: "sparkles" },
           ],
-        } as Parameters<typeof normalizeHydrationState>[0],
+        } as unknown as Parameters<typeof normalizeHydrationState>[0],
         "2026-04-11"
       );
 
-      assert.deepEqual(state.drinkLog, [{ id: "drink-1", amount: 330, timestamp: 1775847600000, note: "tea" }]);
+      assert.deepEqual(state.drinkLog, [
+        {
+          id: "drink-1",
+          amount: 330,
+          timestamp: 1775847600000,
+          drinkType: "tea",
+        },
+      ]);
     },
   },
   {
-    name: "rolloverHydrationState increments streak and archives yesterday when goal was met",
+    name: "normalizeHydrationState separates legacy workout water from its context",
+    run: () => {
+      const state = normalizeHydrationState(
+        {
+          drinkLog: [
+            {
+              id: "workout-water",
+              amount: 250,
+              timestamp: 1775847600000,
+              note: "workout",
+            },
+          ],
+          history: [
+            {
+              date: "2026-04-10",
+              intake: 500,
+              goal: 2500,
+              breakdown: { water: 250, workout: 250 },
+            },
+          ],
+        } as unknown as Parameters<typeof normalizeHydrationState>[0],
+        "2026-04-11"
+      );
+
+      assert.deepEqual(state.drinkLog, [
+        {
+          id: "workout-water",
+          amount: 250,
+          timestamp: 1775847600000,
+          drinkType: "water",
+          context: "workout",
+        },
+      ]);
+      assert.deepEqual(state.history[0].breakdown, { water: 500 });
+      assert.deepEqual(state.history[0].contextBreakdown, { workout: 250 });
+    },
+  },
+  {
+    name: "weekly stats exclude future days and compare matching elapsed periods",
+    run: () => {
+      const anchor = new Date(2026, 3, 7, 12);
+      const stats = buildWeeklyHydrationStats({
+        anchor,
+        history: [
+          { date: "2026-04-06", intake: 2000, goal: 2500 },
+          { date: "2026-03-30", intake: 1000, goal: 2500 },
+          { date: "2026-03-31", intake: 1000, goal: 2500 },
+        ],
+        todayIntake: 2000,
+        currentGoal: 2500,
+      });
+
+      assert.equal(stats.elapsedDays, 2);
+      assert.equal(stats.daysWithHydration, 2);
+      assert.equal(stats.dailyAverage, 2000);
+      assert.equal(stats.previousDailyAverage, 1000);
+      assert.equal(stats.averageDelta, 1000);
+      assert.equal(stats.canComparePeriods, true);
+      assert.equal(stats.chartDays.filter((day) => day.isFuture).length, 5);
+    },
+  },
+  {
+    name: "rolloverHydrationState increments streak and archives yesterday after one sip",
     run: () => {
       const base = getDefaultHydrationState();
       const rolled = rolloverHydrationState(
         {
           ...base,
-          intake: 2500,
+          intake: 50,
           goal: 2500,
           streak: 2,
           lastUpdated: "2026-04-10",
-          drinkLog: [{ id: "drink-1", amount: 250, timestamp: 1775847600000 }],
+          drinkLog: [
+            {
+              id: "drink-1",
+              amount: 250,
+              timestamp: 1775847600000,
+              drinkType: "water",
+            },
+          ],
         },
         "2026-04-11"
       );
@@ -86,7 +200,7 @@ const tests = [
       assert.equal(rolled.streak, 3);
       assert.equal(rolled.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
       assert.equal(rolled.lastUpdated, "2026-04-11");
-      assert.deepEqual(rolled.history, [{ date: "2026-04-10", intake: 2500, goal: 2500, breakdown: { water: 2500 } }]);
+      assert.deepEqual(rolled.history, [{ date: "2026-04-10", intake: 50, goal: 2500, breakdown: { water: 50 } }]);
       assert.deepEqual(rolled.drinkLog, []);
     },
   },
@@ -121,7 +235,7 @@ const tests = [
       const firstMiss = rolloverHydrationState(
         {
           ...base,
-          intake: 1200,
+          intake: 0,
           goal: 2500,
           streak: 5,
           streakShieldCharges: 2,
@@ -156,13 +270,13 @@ const tests = [
     },
   },
   {
-    name: "rolloverHydrationState recharges streak batteries when goal is met",
+    name: "rolloverHydrationState recharges one streak battery after one sip",
     run: () => {
       const base = getDefaultHydrationState();
       const rolled = rolloverHydrationState(
         {
           ...base,
-          intake: 2600,
+          intake: 50,
           goal: 2500,
           streak: 5,
           streakShieldCharges: 0,
@@ -172,7 +286,7 @@ const tests = [
       );
 
       assert.equal(rolled.streak, 6);
-      assert.equal(rolled.streakShieldCharges, MAX_STREAK_SHIELD_CHARGES);
+      assert.equal(rolled.streakShieldCharges, 1);
     },
   },
   {
@@ -310,7 +424,7 @@ const tests = [
     },
   },
   {
-    name: "pickHydrationNotification warns when a streak has no protections left",
+    name: "pickHydrationNotification does not pressure a streak after water was logged",
     run: () => {
       const message = pickHydrationNotification({
         intake: 1500,
@@ -323,8 +437,7 @@ const tests = [
         streakShieldCharges: 0,
       });
 
-      assert.equal(message.kind, "streak-last-chance");
-      assert.match(message.body, /small drink now helps/);
+      assert.notEqual(message.kind, "streak-last-chance");
     },
   },
   {
@@ -358,7 +471,7 @@ const tests = [
       });
 
       assert.equal(message?.kind, "streak-shield-used");
-      assert.match(message?.body ?? "", /recharge both/);
+      assert.match(message?.body ?? "", /recharge one battery/);
     },
   },
   {

@@ -27,7 +27,9 @@ export function NotificationManager() {
   const { reminderInterval, quietHours, intake, goal, drinkLog, history, streak, streakShieldCharges, streakAlert, workoutSessionEndsAt } =
     useHydration();
   const lastDrinkAt = drinkLog.find((item) => item.amount > 0)?.timestamp ?? null;
-  const lastWorkoutDrinkAt = drinkLog.find((item) => item.amount > 0 && item.note === "workout")?.timestamp ?? null;
+  const lastWorkoutDrinkAt =
+    drinkLog.find((item) => item.amount > 0 && item.context === "workout")
+      ?.timestamp ?? null;
   const inactiveDays = getConsecutiveDryDays(history, intake);
 
   useNotifications(reminderInterval, quietHours, true, {

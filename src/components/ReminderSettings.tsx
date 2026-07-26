@@ -6,7 +6,20 @@ import { TimePickerDialog } from "./ui/TimePickerDialog";
 import { NumberPickerDialog } from "./ui/NumberPickerDialog";
 import { Button } from "./ui/Button";
 import { useNotifications } from "@/hooks/useNotifications";
-import { BellOff, BellRing, CheckCircle2, Clock, ExternalLink, RotateCw, Send, ShieldCheck, ShieldX, Smartphone } from "lucide-react";
+import {
+  BellOff,
+  BellRing,
+  CheckCircle2,
+  ChevronDown,
+  Clock,
+  ExternalLink,
+  Laptop,
+  RotateCw,
+  Send,
+  ShieldCheck,
+  ShieldX,
+  Smartphone,
+} from "lucide-react";
 
 interface ReminderSettingsProps {
   interval: number;
@@ -15,7 +28,7 @@ interface ReminderSettingsProps {
   setQuietHours: (start: string, end: string) => void;
 }
 
-type NotificationPlatform = "android" | "ios" | "desktop";
+type NotificationPlatform = "android" | "ios" | "chrome" | "edge" | "firefox" | "safari" | "desktop";
 
 function getNotificationStatus({
   interval,
@@ -78,6 +91,10 @@ function getNotificationPlatform(): NotificationPlatform {
 
   if (userAgent.includes("android")) return "android";
   if (/iphone|ipad|ipod/.test(userAgent) || (platform.includes("mac") && navigator.maxTouchPoints > 1)) return "ios";
+  if (userAgent.includes("edg/")) return "edge";
+  if (userAgent.includes("firefox/")) return "firefox";
+  if (userAgent.includes("chrome/") || userAgent.includes("chromium/")) return "chrome";
+  if (userAgent.includes("safari/")) return "safari";
 
   return "desktop";
 }
@@ -103,11 +120,29 @@ function getSettingsSteps(platform: NotificationPlatform) {
     ];
   }
 
+  if (platform === "safari") {
+    return [
+      "Open Safari settings for this website.",
+      "Set Notifications to Allow.",
+      "Return to Fluid and reload the page.",
+      "Tap Check again.",
+    ];
+  }
+
+  if (platform === "chrome" || platform === "edge" || platform === "firefox") {
+    return [
+      "Open the site information control beside the address bar.",
+      "Open site permissions and find Notifications.",
+      "Change Notifications to Allow.",
+      "Return to Fluid, reload, and tap Check again.",
+    ];
+  }
+
   return [
-    "Open your device notification settings.",
-    "Find Fluid.",
-    "Change notifications from blocked to allowed.",
-    "Return to Fluid and tap Check again.",
+    "Open this browser's site permissions.",
+    "Find the notification permission for Fluid.",
+    "Change it from Block to Allow.",
+    "Return, reload, and tap Check again.",
   ];
 }
 
@@ -120,7 +155,11 @@ function getSettingsHint(platform: NotificationPlatform) {
     return "Fluid cannot turn notifications back on by itself after they were blocked. Open Android settings and allow them once.";
   }
 
-  return "Notifications are blocked for Fluid. Change this once in your device settings, then come back to the app.";
+  if (platform === "chrome" || platform === "edge" || platform === "firefox" || platform === "safari") {
+    return "Fluid cannot reopen a blocked browser prompt. Allow notifications once from this site's browser permissions.";
+  }
+
+  return "Notifications are blocked for Fluid. Allow them once from this site's browser or device settings.";
 }
 
 export function ReminderSettings({ interval, setInterval, quietHours, setQuietHours }: ReminderSettingsProps) {
@@ -134,17 +173,18 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
     refreshPushSubscription,
     sendTestPush,
   } = useNotifications(interval, quietHours, false);
-  const intervals = [20, 40, 60];
+  const intervals = [30, 60, 90];
   const remindersEnabled = interval > 0;
   const notificationStatus = getNotificationStatus({ interval, isSupported, permission });
   const StatusIcon = notificationStatus.Icon;
-  const lastEnabledIntervalRef = React.useRef(interval > 0 ? interval : 40);
+  const lastEnabledIntervalRef = React.useRef(interval > 0 ? interval : 60);
 
   const [isCustom, setIsCustom] = React.useState(false);
-  const [customVal, setCustomVal] = React.useState(interval > 0 ? interval : 40);
+  const [customVal, setCustomVal] = React.useState(interval > 0 ? interval : 60);
   const isPredefined = intervals.includes(interval);
   const [platform, setPlatform] = React.useState<NotificationPlatform>("desktop");
   const [settingsAttempted, setSettingsAttempted] = React.useState(false);
+  const [isRecoveryOpen, setIsRecoveryOpen] = React.useState(false);
   const [pushTestMessage, setPushTestMessage] = React.useState("");
   const [isTestingPush, setIsTestingPush] = React.useState(false);
 
@@ -153,6 +193,13 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   React.useEffect(() => {
     setPlatform(getNotificationPlatform());
   }, []);
+
+  React.useEffect(() => {
+    if (permission !== "denied") {
+      setIsRecoveryOpen(false);
+      setSettingsAttempted(false);
+    }
+  }, [permission]);
 
   React.useEffect(() => {
     if (interval > 0) {
@@ -164,10 +211,12 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   const formatDisplayTime = (time24: string) => {
     if (!time24) return "";
     const [h, m] = time24.split(":");
-    const hNum = Number(h);
-    const ampm = hNum >= 12 ? "PM" : "AM";
-    const h12 = hNum % 12 || 12;
-    return `${h12.toString().padStart(2, "0")}:${m} ${ampm}`;
+    const value = new Date(2020, 0, 1, Number(h), Number(m));
+
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(value);
   };
 
   const toggleReminders = async () => {
@@ -177,7 +226,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       return;
     }
 
-    setInterval(lastEnabledIntervalRef.current || 40);
+    setInterval(lastEnabledIntervalRef.current || 60);
 
     if (isSupported && permission === "default") {
       await requestPermission();
@@ -202,6 +251,8 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   };
 
   const settingsSteps = getSettingsSteps(platform);
+  const canOpenDeviceSettings = platform === "android" || platform === "ios";
+  const RecoveryIcon = canOpenDeviceSettings ? Smartphone : Laptop;
   const pushStatusText =
     pushStatus === "subscribed"
       ? "Background push is connected for this device."
@@ -229,7 +280,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
   };
 
   return (
-    <Card className="mx-auto mt-4 w-full max-w-sm space-y-4 p-4 shadow-lg min-[380px]:space-y-5 min-[380px]:p-5 md:max-w-[28rem]">
+    <Card data-fluid-stack className="mx-auto mt-4 w-full max-w-sm space-y-4 p-4 shadow-lg min-[380px]:space-y-5 min-[380px]:p-5 md:max-w-[28rem]">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Reminders</h3>
@@ -262,7 +313,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       </div>
 
       <div
-        className={`rounded-xl border px-3 py-3 min-[380px]:rounded-2xl min-[380px]:px-4 ${
+        className={`overflow-hidden rounded-xl border px-3 py-3 transition-colors min-[380px]:rounded-2xl min-[380px]:px-4 ${
           notificationStatus.tone === "blocked"
             ? "border-rose-200/16 bg-rose-500/10"
             : notificationStatus.tone === "attention"
@@ -270,90 +321,107 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
               : "border-water-300/12 bg-water-900/30"
         }`}
       >
-        <div
-          className={`font-ui flex items-center gap-2 ${
-            notificationStatus.tone === "blocked" ? "text-rose-100" : remindersEnabled ? "text-water-100" : "text-water-300/72"
-          }`}
-        >
-          <StatusIcon className="w-4 h-4" strokeWidth={2.5} />
-          <span className="text-sm font-bold">{notificationStatus.title}</span>
-        </div>
-        <p
-          className={`font-body mt-1 text-xs ${
-            notificationStatus.tone === "blocked" ? "text-rose-50/82" : "text-water-300/80"
-          }`}
-        >
-          {notificationStatus.body}
-        </p>
-      </div>
-
-      {remindersEnabled && isSupported && permission === "default" && (
-        <div className="rounded-xl border border-cyan-100/14 bg-cyan-300/10 px-3 py-3 min-[380px]:rounded-2xl min-[380px]:px-4">
-          <div className="flex flex-col gap-3 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
-            <p className="font-body text-sm font-semibold text-water-100/88">
-              Enable app notifications to receive reminders outside the Fluid screen.
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div
+              className={`font-ui flex items-center gap-2 ${
+                notificationStatus.tone === "blocked" ? "text-rose-100" : remindersEnabled ? "text-water-100" : "text-water-300/72"
+              }`}
+            >
+              <StatusIcon className="h-4 w-4 shrink-0" strokeWidth={2.5} />
+              <span className="text-sm font-bold">{notificationStatus.title}</span>
+            </div>
+            <p
+              className={`font-body mt-1 text-xs leading-relaxed ${
+                notificationStatus.tone === "blocked" ? "text-rose-50/82" : "text-water-300/80"
+              }`}
+            >
+              {notificationStatus.body}
             </p>
-            <Button variant="primary" size="sm" onClick={requestPermission} className="shrink-0 rounded-xl px-3 text-xs">
-              Enable
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {remindersEnabled && isSupported && permission === "denied" && (
-        <div className="rounded-[1.15rem] border border-rose-100/18 bg-gradient-to-br from-rose-500/13 via-water-900/34 to-water-950/42 p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] min-[380px]:rounded-[1.35rem] min-[380px]:p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-rose-100/18 bg-rose-100/10 text-rose-100">
-              <Smartphone className="h-5 w-5" strokeWidth={2.5} />
-            </div>
-            <div className="min-w-0">
-              <p className="font-ui text-sm font-extrabold text-white">Notifications need one phone setting</p>
-              <p className="font-body mt-1 text-xs leading-relaxed text-water-100/72">{getSettingsHint(platform)}</p>
-            </div>
           </div>
 
-          <div className="mt-3 space-y-2">
-            {settingsSteps.map((step, index) => (
-              <div key={step} className="flex items-start gap-2.5 rounded-xl border border-water-200/10 bg-water-950/24 px-3 py-2.5">
-                <span className="font-numeric mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-water-300/16 text-[0.68rem] font-black text-water-100">
-                  {index + 1}
-                </span>
-                <span className="font-body text-xs font-semibold leading-relaxed text-water-100/84">{step}</span>
-              </div>
-            ))}
-          </div>
-
-          {settingsAttempted && (
-            <div className="mt-3 flex items-start gap-2 rounded-xl border border-cyan-100/14 bg-cyan-300/10 px-3 py-2.5 text-water-100/80">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-water-200" strokeWidth={2.5} />
-              <p className="font-body text-xs leading-relaxed">
-                If settings opened, enable notifications there. If nothing opened, use the steps above manually.
-              </p>
-            </div>
-          )}
-
-          <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+          {remindersEnabled && isSupported && permission === "default" && (
             <Button
               variant="primary"
               size="sm"
-              onClick={openNotificationSettings}
-              className="rounded-xl px-3 text-xs"
+              onClick={requestPermission}
+              className="min-h-10 shrink-0 rounded-xl px-3 text-xs"
             >
-              <ExternalLink className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
-              Open phone settings
+              Enable
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={refreshPermission}
-              className="rounded-xl px-3 text-xs"
-            >
-              <RotateCw className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
-              Check again
-            </Button>
-          </div>
+          )}
         </div>
-      )}
+
+        {remindersEnabled && isSupported && permission === "denied" && (
+          <>
+            <button
+              type="button"
+              onClick={() => setIsRecoveryOpen((isOpen) => !isOpen)}
+              className="font-ui mt-3 flex min-h-11 w-full items-center justify-between rounded-xl border border-rose-100/14 bg-water-950/22 px-3 text-left text-xs font-bold text-white transition-colors hover:bg-water-900/34 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-water-200/65"
+              aria-expanded={isRecoveryOpen}
+              aria-controls="notification-recovery"
+            >
+              <span className="flex items-center gap-2">
+                <RecoveryIcon className="h-4 w-4 text-rose-100" strokeWidth={2.5} />
+                Fix notification delivery
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 text-water-200 transition-transform ${isRecoveryOpen ? "rotate-180" : ""}`}
+                strokeWidth={2.6}
+              />
+            </button>
+
+            {isRecoveryOpen && (
+              <div id="notification-recovery" className="mt-3 border-t border-rose-100/12 pt-3">
+                <p className="font-body text-xs leading-relaxed text-water-100/76">{getSettingsHint(platform)}</p>
+
+                <ol className="mt-3 space-y-2">
+                  {settingsSteps.map((step, index) => (
+                    <li key={step} className="flex items-start gap-2.5 px-1 py-1">
+                      <span className="font-numeric mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-water-300/16 text-[0.68rem] font-black text-water-100">
+                        {index + 1}
+                      </span>
+                      <span className="font-body text-xs font-semibold leading-relaxed text-water-100/84">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+
+                {settingsAttempted && (
+                  <div className="mt-3 flex items-start gap-2 rounded-xl border border-cyan-100/14 bg-cyan-300/10 px-3 py-2.5 text-water-100/80">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-water-200" strokeWidth={2.5} />
+                    <p className="font-body text-xs leading-relaxed">
+                      Allow notifications there, return to Fluid, then tap Check again.
+                    </p>
+                  </div>
+                )}
+
+                <div className={`mt-3 grid grid-cols-1 gap-2 ${canOpenDeviceSettings ? "min-[380px]:grid-cols-2" : ""}`}>
+                  {canOpenDeviceSettings && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={openNotificationSettings}
+                      className="min-h-11 rounded-xl px-3 text-xs"
+                    >
+                      <ExternalLink className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
+                      Open device settings
+                    </Button>
+                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={refreshPermission}
+                    className="min-h-11 rounded-xl px-3 text-xs"
+                  >
+                    <RotateCw className="mr-1.5 h-3.5 w-3.5" strokeWidth={2.7} />
+                    Check again
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {remindersEnabled && isSupported && permission === "granted" && (
         <div className="rounded-xl border border-water-300/12 bg-water-900/18 p-3.5 shadow-inner min-[380px]:rounded-2xl">
@@ -392,65 +460,73 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
       )}
 
       {remindersEnabled && (
-        <div className="flex gap-2.5 flex-wrap items-center pt-1">
-          {[
-            ...intervals.map((min) => ({ isCustomBtn: false, val: min })),
-            { isCustomBtn: true, val: !isPredefined && interval > 0 ? interval : Infinity },
-          ]
-            .sort((a, b) => a.val - b.val)
-            .map((item) => {
-              if (item.isCustomBtn) {
-                return (
-                  <React.Fragment key="custom-btn-frag">
-                    <Button
-                      key="custom-btn"
-                      variant={!isPredefined && interval > 0 ? "primary" : "secondary"}
-                      size="sm"
-                      onClick={() => setIsCustom(true)}
-                      className={`flex-1 min-w-[4.8rem] rounded-xl ${
-                        !isPredefined && interval > 0 ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
-                      }`}
-                      aria-label="Set custom reminder interval"
-                    >
-                      <span className={!isPredefined && interval > 0 ? "font-numeric" : "font-ui"}>
-                        {!isPredefined && interval > 0 ? `${interval}m` : "Custom"}
-                      </span>
-                    </Button>
-                    <NumberPickerDialog
-                      isOpen={isCustom}
-                      value={!isPredefined && interval > 0 ? interval : customVal}
-                      min={5}
-                      max={240}
-                      title="Custom Interval"
-                      suffix="m"
-                      onChange={(val) => {
-                        setCustomVal(val);
-                        setInterval(val);
-                      }}
-                      onClose={() => setIsCustom(false)}
-                    />
-                  </React.Fragment>
-                );
-              }
+        <div className="pt-1">
+          <p className="font-ui text-xs font-bold uppercase tracking-widest text-water-300">Reminder rhythm</p>
+          <p className="font-body mt-1 text-xs text-water-400/75">
+            Fluid waits this long after your last drink before checking in.
+          </p>
 
-              return (
-                <Button
-                  key={item.val}
-                  variant={interval === item.val && !isCustom ? "primary" : "secondary"}
-                  size="sm"
-                  onClick={() => {
-                    setInterval(item.val);
-                    setIsCustom(false);
-                  }}
-                  className={`flex-1 min-w-[3.8rem] rounded-xl ${
-                    interval === item.val && !isCustom ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
-                  }`}
-                  aria-label={`Set reminders every ${item.val} minutes`}
-                >
-                  <span className="font-numeric">{item.val}m</span>
-                </Button>
-              );
-            })}
+          <div className="mt-3 flex flex-wrap items-center gap-2.5">
+            {[
+              ...intervals.map((min) => ({ isCustomBtn: false, val: min })),
+              { isCustomBtn: true, val: !isPredefined && interval > 0 ? interval : Infinity },
+            ]
+              .sort((a, b) => a.val - b.val)
+              .map((item) => {
+                if (item.isCustomBtn) {
+                  return (
+                    <React.Fragment key="custom-btn-frag">
+                      <Button
+                        key="custom-btn"
+                        variant={!isPredefined && interval > 0 ? "primary" : "secondary"}
+                        size="sm"
+                        onClick={() => setIsCustom(true)}
+                        className={`min-h-11 min-w-[4.8rem] flex-1 rounded-xl ${
+                          !isPredefined && interval > 0 ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
+                        }`}
+                        aria-label="Set custom reminder interval"
+                      >
+                        <span className={!isPredefined && interval > 0 ? "font-numeric" : "font-ui"}>
+                          {!isPredefined && interval > 0 ? `${interval}m` : "Custom"}
+                        </span>
+                      </Button>
+                      <NumberPickerDialog
+                        isOpen={isCustom}
+                        value={!isPredefined && interval > 0 ? interval : customVal}
+                        min={15}
+                        max={240}
+                        title="Custom Interval"
+                        suffix="m"
+                        startWithValue
+                        onChange={(val) => {
+                          setCustomVal(val);
+                          setInterval(val);
+                        }}
+                        onClose={() => setIsCustom(false)}
+                      />
+                    </React.Fragment>
+                  );
+                }
+
+                return (
+                  <Button
+                    key={item.val}
+                    variant={interval === item.val && !isCustom ? "primary" : "secondary"}
+                    size="sm"
+                    onClick={() => {
+                      setInterval(item.val);
+                      setIsCustom(false);
+                    }}
+                    className={`min-h-11 min-w-[3.8rem] flex-1 rounded-xl ${
+                      interval === item.val && !isCustom ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
+                    }`}
+                    aria-label={`Set reminders every ${item.val} minutes`}
+                  >
+                    <span className="font-numeric">{item.val}m</span>
+                  </Button>
+                );
+              })}
+          </div>
         </div>
       )}
 

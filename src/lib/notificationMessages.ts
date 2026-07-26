@@ -257,8 +257,8 @@ export function pickHydrationStreakAlertNotification(
       kind: "streak-shield-used",
       title: "Streak battery used 🔋",
       body: hasProtectionLeft
-        ? "A protection covered yesterday. Small, steady drinks today can recharge both batteries."
-        : "A protection covered yesterday, and none are left. Keep today gentle and steady.",
+        ? "A protection covered yesterday. One comfortable sip today can recharge one battery."
+        : "A protection covered yesterday, and none are left. One sip today is enough to keep the streak and recharge one battery.",
       actionAmount: QUICK_NOTIFICATION_LOG_AMOUNT,
       cadence: "daily",
       nextDelayMinutes: FOLLOW_UP_DELAY_MINUTES,
@@ -438,10 +438,10 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     label: "Streak last chance",
     title: "Protect the rhythm ⚡",
     priority: (context) =>
-      getStreak(context) > 0 && getShieldCharges(context) <= 0 && getHour(context) >= 17 && getRemaining(context) > 0 && !isLateAndFarBehind(context)
+      getStreak(context) > 0 && getShieldCharges(context) <= 0 && getHour(context) >= 17 && context.intake <= 0
         ? 108
         : 0,
-    body: () => "No protections left, but keep it reasonable. A small drink now helps the habit without rushing.",
+    body: () => "No protections are left. If you drink today, one comfortable sip is enough to keep the streak.",
     nextDelayMinutes: followUpDelay,
   },
   {
@@ -449,10 +449,10 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     label: "One protection left",
     title: "One protection left 🔋",
     priority: (context) =>
-      getStreak(context) > 0 && getShieldCharges(context) === 1 && getHour(context) >= 17 && getRemaining(context) > 0 && !isLateAndFarBehind(context)
+      getStreak(context) > 0 && getShieldCharges(context) === 1 && getHour(context) >= 17 && context.intake <= 0
         ? 105
         : 0,
-    body: () => "One streak protection is left. Keep today steady; no need to drink a lot at once.",
+    body: () => "One streak protection is left. One comfortable sip today is enough; there is no target to chase.",
     nextDelayMinutes: followUpDelay,
   },
   {
@@ -507,7 +507,7 @@ export const HYDRATION_NOTIFICATION_TYPES: HydrationNotificationType[] = [
     label: "Streak care",
     title: "Keep the rhythm 💧",
     priority: (context) => (context.intake > 0 && getProgress(context) < 1 ? 58 : 0),
-    body: () => "It does not have to be perfect. One small log keeps the habit moving.",
+    body: () => "Today already counts toward your streak. Anything else you drink is for your comfort, not the counter.",
     nextDelayMinutes: followUpDelay,
   },
   {

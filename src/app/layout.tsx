@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { BottomNav } from "@/components/BottomNav";
 import { DeferredAppServices } from "@/components/DeferredAppServices";
+import { FluidMotion } from "@/components/FluidMotion";
 import { SwipeNavigation } from "@/components/SwipeNavigation";
 import { ScrollPreserver } from "@/hooks/useScrollPreservation";
 import "./globals.css";
@@ -55,10 +56,11 @@ export default function RootLayout({
       <body className="font-sans antialiased h-[100dvh] overflow-hidden selection:bg-water-300 selection:text-water-900 bg-background text-foreground">
         <ScrollPreserver />
         <SwipeNavigation />
+        <FluidMotion />
         <DeferredAppServices />
         <div
           data-app-scroll-root="true"
-          className="relative z-10 h-[100dvh] w-full overflow-y-auto overflow-x-hidden pb-24 [-webkit-overflow-scrolling:touch]"
+          className="relative z-10 h-[100dvh] w-full overflow-y-auto overflow-x-hidden [-webkit-overflow-scrolling:touch]"
           style={{
             paddingLeft: "env(safe-area-inset-left)",
             paddingRight: "env(safe-area-inset-right)",

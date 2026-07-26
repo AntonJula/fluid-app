@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import { Delete } from "lucide-react";
 import { Button } from "./Button";
+import { useAccessibleDialog } from "@/hooks/useAccessibleDialog";
 
 interface NumberPickerDialogProps {
   isOpen: boolean;
@@ -55,6 +56,8 @@ function NumberPickerDialogContent({
   startWithValue = false,
 }: Omit<NumberPickerDialogProps, "isOpen">) {
   const [currentVal, setCurrentVal] = useState(() => (startWithValue && value > 0 ? String(value) : ""));
+  const titleId = React.useId();
+  const dialogRef = useAccessibleDialog(onClose);
 
   const handleKeyPress = (key: string) => {
     setCurrentVal((prev) => {
@@ -82,15 +85,22 @@ function NumberPickerDialogContent({
   ];
 
   return createPortal(
-    <div className="fluid-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div
+      className="fluid-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <div
+        ref={dialogRef}
         className="bg-water-900 border border-[1.5px] border-water-300/16 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId}
+        tabIndex={-1}
       >
         <div className="p-6 bg-water-800/40 border-b border-water-300/12 flex flex-col items-center">
-          <p className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
+          <p id={titleId} className="font-ui text-xs font-bold text-water-400 uppercase tracking-widest mb-4">{title}</p>
           <div className="flex items-end justify-center min-h-[4rem]">
             <span className={`font-numeric text-6xl font-black transition-all ${currentVal ? "text-white" : "text-water-400/30"}`}>
               {currentVal || "0"}

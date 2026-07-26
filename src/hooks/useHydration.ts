@@ -14,8 +14,9 @@ import {
 } from "@/lib/hydrationState";
 import type {
   DrinkLogItem,
+  HydrationContext,
+  HydrationDrinkType,
   HydrationHistoryItem,
-  HydrationNote,
   HydrationState,
 } from "@/lib/hydrationState";
 
@@ -23,14 +24,16 @@ const STORAGE_KEY = "fluid-hydration";
 const HYDRATION_RESET_EVENT = "fluid-hydration-reset";
 
 export type UseHydrationReturn = HydrationState & {
-  addDrink: (amount: number, note?: HydrationNote) => void;
-  subtractDrink: (amount: number, note?: HydrationNote) => void;
+  addDrink: (amount: number, drinkType?: HydrationDrinkType, context?: HydrationContext) => void;
+  subtractDrink: (amount: number, drinkType?: HydrationDrinkType, context?: HydrationContext) => void;
   undoLastDrink: () => void;
-  updateDrinkLogItem: (id: string, amount: number, note?: HydrationNote) => void;
+  updateDrinkLogItem: (id: string, amount: number, drinkType?: HydrationDrinkType, context?: HydrationContext) => void;
   deleteDrinkLogItem: (id: string) => void;
   setGoal: (newGoal: number) => void;
   setQuickAddAmount: (amount: number) => void;
   startWorkoutSession: (durationMinutes?: number) => void;
+  pauseWorkoutSession: () => void;
+  resumeWorkoutSession: () => void;
   endWorkoutSession: () => void;
   setReminderInterval: (interval: number) => void;
   setQuietHours: (start: string, end: string) => void;
@@ -47,7 +50,10 @@ const SERVER_SNAPSHOT: HydrationState = {
   streak: 0,
   streakShieldCharges: MAX_STREAK_SHIELD_CHARGES,
   streakAlert: null,
+  workoutSessionStartedAt: null,
   workoutSessionEndsAt: null,
+  workoutSessionDurationMinutes: DEFAULT_WORKOUT_SESSION_MINUTES,
+  workoutSessionPausedRemainingMs: null,
   reminderInterval: 0,
   quietHours: { start: "22:00", end: "07:00" },
   hideNav: false,
@@ -145,10 +151,17 @@ export function useHydration(): UseHydrationReturn {
   );
 
   const state = useSyncExternalStore(subscribe, getSnapshot, () => SERVER_SNAPSHOT);
-  const streak = state.streak + (state.intake >= state.goal ? 1 : 0);
-  const streakShieldCharges = state.intake >= state.goal ? MAX_STREAK_SHIELD_CHARGES : state.streakShieldCharges;
+  const streak = state.streak + (state.intake > 0 ? 1 : 0);
+  const streakShieldCharges =
+    state.intake > 0
+      ? Math.min(MAX_STREAK_SHIELD_CHARGES, state.streakShieldCharges + 1)
+      : state.streakShieldCharges;
 
-  const addDrink = (amount: number, note?: HydrationNote) => {
+  const addDrink = (
+    amount: number,
+    drinkType: HydrationDrinkType = "water",
+    context?: HydrationContext
+  ) => {
     const safeAmount = clampHydrationAmount(amount, 1, 5000);
     const now = Date.now();
 
@@ -157,23 +170,24 @@ export function useHydration(): UseHydrationReturn {
     updateState((currentState) => ({
       ...currentState,
       intake: clampHydrationAmount(currentState.intake + safeAmount),
-      workoutSessionEndsAt:
-        note === "workout"
-          ? Math.max(currentState.workoutSessionEndsAt ?? 0, now + DEFAULT_WORKOUT_SESSION_MINUTES * 60 * 1000)
-          : currentState.workoutSessionEndsAt,
       drinkLog: [
         {
           id: `${now}-${safeAmount}-${Math.random().toString(16).slice(2)}`,
           amount: safeAmount,
           timestamp: now,
-          ...(note ? { note } : {}),
+          drinkType,
+          ...(context ? { context } : {}),
         },
         ...currentState.drinkLog,
       ].slice(0, 50),
     }));
   };
 
-  const subtractDrink = (amount: number, note?: HydrationNote) => {
+  const subtractDrink = (
+    amount: number,
+    drinkType: HydrationDrinkType = "water",
+    context?: HydrationContext
+  ) => {
     const safeAmount = clampHydrationAmount(amount, 1, 5000);
 
     updateState((currentState) => ({
@@ -184,7 +198,8 @@ export function useHydration(): UseHydrationReturn {
           id: `${Date.now()}-${safeAmount}-subtract-${Math.random().toString(16).slice(2)}`,
           amount: -safeAmount,
           timestamp: Date.now(),
-          ...(note ? { note } : {}),
+          drinkType,
+          ...(context ? { context } : {}),
         },
         ...currentState.drinkLog,
       ].slice(0, 50),
@@ -212,7 +227,12 @@ export function useHydration(): UseHydrationReturn {
     }));
   };
 
-  const updateDrinkLogItem = (id: string, amount: number, note?: HydrationNote) => {
+  const updateDrinkLogItem = (
+    id: string,
+    amount: number,
+    drinkType?: HydrationDrinkType,
+    context?: HydrationContext
+  ) => {
     const safeAmount = clampHydrationAmount(amount, -5000, 5000);
     if (safeAmount === 0) return;
 
@@ -228,7 +248,12 @@ export function useHydration(): UseHydrationReturn {
             ? {
                 ...item,
                 amount: safeAmount,
-                ...(note ? { note } : { note: item.note }),
+                drinkType: drinkType ?? item.drinkType,
+                ...(context
+                  ? { context }
+                  : item.context
+                    ? { context: item.context }
+                    : {}),
               }
             : item
         ),
@@ -258,17 +283,58 @@ export function useHydration(): UseHydrationReturn {
 
   const startWorkoutSession = (durationMinutes = DEFAULT_WORKOUT_SESSION_MINUTES) => {
     const safeDuration = clampHydrationAmount(durationMinutes, 15, 240);
+    const now = Date.now();
 
     updateState((currentState) => ({
       ...currentState,
-      workoutSessionEndsAt: Date.now() + safeDuration * 60 * 1000,
+      workoutSessionStartedAt: now,
+      workoutSessionEndsAt: now + safeDuration * 60 * 1000,
+      workoutSessionDurationMinutes: safeDuration,
+      workoutSessionPausedRemainingMs: null,
     }));
+  };
+
+  const pauseWorkoutSession = () => {
+    const now = Date.now();
+
+    updateState((currentState) => {
+      if (!currentState.workoutSessionEndsAt) return currentState;
+
+      const remainingMs = Math.max(0, currentState.workoutSessionEndsAt - now);
+
+      return {
+        ...currentState,
+        workoutSessionEndsAt: null,
+        workoutSessionPausedRemainingMs: remainingMs > 0 ? remainingMs : null,
+      };
+    });
+  };
+
+  const resumeWorkoutSession = () => {
+    const now = Date.now();
+
+    updateState((currentState) => {
+      const remainingMs = currentState.workoutSessionPausedRemainingMs;
+      if (!remainingMs || remainingMs <= 0) return currentState;
+
+      const durationMs = currentState.workoutSessionDurationMinutes * 60 * 1000;
+      const elapsedMs = Math.max(0, durationMs - remainingMs);
+
+      return {
+        ...currentState,
+        workoutSessionStartedAt: now - elapsedMs,
+        workoutSessionEndsAt: now + remainingMs,
+        workoutSessionPausedRemainingMs: null,
+      };
+    });
   };
 
   const endWorkoutSession = () => {
     updateState((currentState) => ({
       ...currentState,
+      workoutSessionStartedAt: null,
       workoutSessionEndsAt: null,
+      workoutSessionPausedRemainingMs: null,
     }));
   };
 
@@ -325,6 +391,8 @@ export function useHydration(): UseHydrationReturn {
     setGoal,
     setQuickAddAmount,
     startWorkoutSession,
+    pauseWorkoutSession,
+    resumeWorkoutSession,
     endWorkoutSession,
     setReminderInterval,
     setQuietHours,
@@ -338,4 +406,10 @@ export function useHydration(): UseHydrationReturn {
   return hydration;
 }
 
-export type { DrinkLogItem, HydrationHistoryItem, HydrationNote, HydrationState };
+export type {
+  DrinkLogItem,
+  HydrationContext,
+  HydrationDrinkType,
+  HydrationHistoryItem,
+  HydrationState,
+};

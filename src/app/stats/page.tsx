@@ -2,53 +2,75 @@
 
 import React from "react";
 import { createPortal } from "react-dom";
+import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import {
+  CalendarDays,
+  CalendarSearch,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Coffee,
+  Droplets,
+  Flame,
+  Leaf,
+  Target,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { useHydration } from "@/hooks/useHydration";
 import { Card } from "@/components/ui/Card";
 import { HydrationLoadingState } from "@/components/HydrationLoadingState";
-import { Flame, Calendar, Trophy, Waves, ChartColumn, Target, GlassWater, CalendarSearch, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { formatDateLocal } from "@/lib/date";
-import type { DrinkLogItem, HydrationNote } from "@/lib/hydrationState";
+import {
+  buildWeeklyHydrationStats,
+  type HydrationStatsDay,
+} from "@/lib/hydrationStats";
+import type {
+  DrinkLogItem,
+  HydrationContext,
+  HydrationDrinkType,
+  HydrationHistoryItem,
+} from "@/lib/hydrationState";
 import { getAppScrollElement } from "@/utils/appScroll";
 
+gsap.registerPlugin(useGSAP, ScrollTrigger);
+
 const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const MONTH_FORMATTER = new Intl.DateTimeFormat("en", { month: "long", year: "numeric" });
-const DAY_DETAIL_FORMATTER = new Intl.DateTimeFormat("en", { weekday: "long", month: "short", day: "numeric" });
-const EMPTY_MONTH_SELECTION = "";
-const RHYTHM_CHART_WIDTH = 320;
-const RHYTHM_CHART_HEIGHT = 156;
-const RHYTHM_CHART_PADDING = { left: 38, right: 12, top: 14, bottom: 30 };
-const NOTE_ORDER: HydrationNote[] = ["water", "coffee", "tea", "workout", "hot-day"];
-const NOTE_LABELS: Record<HydrationNote, string> = {
+const DRINK_ORDER: HydrationDrinkType[] = ["water", "coffee", "tea"];
+const CONTEXT_ORDER: HydrationContext[] = ["workout", "hot-day"];
+const DRINK_LABELS: Record<HydrationDrinkType, string> = {
   water: "Water",
   coffee: "Coffee",
   tea: "Tea",
-  workout: "Workout",
-  "hot-day": "Hot day",
 };
+const CONTEXT_LABELS: Record<HydrationContext, string> = {
+  workout: "During workout",
+  "hot-day": "During Heat Mode",
+};
+const MONTH_FORMATTER = new Intl.DateTimeFormat("en", {
+  month: "long",
+  year: "numeric",
+});
+const DAY_DETAIL_FORMATTER = new Intl.DateTimeFormat("en", {
+  weekday: "long",
+  month: "short",
+  day: "numeric",
+});
+const SHORT_DATE_FORMATTER = new Intl.DateTimeFormat("en", {
+  month: "short",
+  day: "numeric",
+});
+const EMPTY_MONTH_SELECTION = "";
+const CHART_WIDTH = 320;
+const CHART_HEIGHT = 176;
+const CHART_PADDING = { left: 38, right: 12, top: 14, bottom: 34 };
 
-function buildDrinkBreakdown(log: DrinkLogItem[], expectedIntake: number): Partial<Record<HydrationNote, number>> | undefined {
-  const totals = log.reduce<Partial<Record<HydrationNote, number>>>((breakdown, item) => {
-    const note = item.note ?? "water";
-    breakdown[note] = Math.max(0, Math.round((breakdown[note] ?? 0) + item.amount));
-    return breakdown;
-  }, {});
-  const total = Object.values(totals).reduce((sum, amount) => sum + (amount ?? 0), 0);
-
-  if (expectedIntake > 0 && total !== expectedIntake) {
-    return { water: expectedIntake };
-  }
-
-  return Object.values(totals).some((amount) => (amount ?? 0) > 0) ? totals : undefined;
-}
-
-function getBreakdownEntries(breakdown: Partial<Record<HydrationNote, number>> | undefined, fallbackIntake: number) {
-  const source = breakdown ?? (fallbackIntake > 0 ? { water: fallbackIntake } : undefined);
-  if (!source) return [];
-
-  return NOTE_ORDER.map((note) => ({ note, label: NOTE_LABELS[note], amount: source[note] ?? 0 })).filter(
-    (item) => item.amount > 0
-  );
-}
+type DayBreakdowns = {
+  drinks?: Partial<Record<HydrationDrinkType, number>>;
+  contexts?: Partial<Record<HydrationContext, number>>;
+};
 
 function parseDateLocal(dateStr: string) {
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -68,7 +90,109 @@ function isSameMonth(a: Date, b: Date) {
 }
 
 function getDefaultMonthSelection(monthDate: Date, todayDate: Date) {
-  return isSameMonth(monthDate, todayDate) ? formatDateLocal(todayDate) : EMPTY_MONTH_SELECTION;
+  return isSameMonth(monthDate, todayDate)
+    ? formatDateLocal(todayDate)
+    : EMPTY_MONTH_SELECTION;
+}
+
+function getMonthDays(anchor: Date) {
+  const year = anchor.getFullYear();
+  const month = anchor.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const leadingBlankDays = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return [
+    ...Array.from({ length: leadingBlankDays }).map(() => null),
+    ...Array.from({ length: daysInMonth }).map((_, index) => {
+      const date = new Date(year, month, index + 1);
+      return { date: formatDateLocal(date), day: index + 1 };
+    }),
+  ];
+}
+
+function getRoundedChartMax(value: number) {
+  if (value <= 1000) return 1000;
+  return Math.ceil(value / 500) * 500;
+}
+
+function buildTodayBreakdowns(
+  log: DrinkLogItem[],
+  expectedIntake: number
+): DayBreakdowns {
+  const drinks = log.reduce<Partial<Record<HydrationDrinkType, number>>>(
+    (totals, item) => {
+      totals[item.drinkType] = Math.max(
+        0,
+        Math.round((totals[item.drinkType] ?? 0) + item.amount)
+      );
+      return totals;
+    },
+    {}
+  );
+  const contexts = log.reduce<Partial<Record<HydrationContext, number>>>(
+    (totals, item) => {
+      if (!item.context) return totals;
+
+      totals[item.context] = Math.max(
+        0,
+        Math.round((totals[item.context] ?? 0) + item.amount)
+      );
+      return totals;
+    },
+    {}
+  );
+  const drinkTotal = Object.values(drinks).reduce(
+    (sum, amount) => sum + (amount ?? 0),
+    0
+  );
+  const normalizedDrinks =
+    expectedIntake > 0 && drinkTotal !== expectedIntake
+      ? { water: expectedIntake }
+      : drinks;
+
+  return {
+    ...(Object.values(normalizedDrinks).some((amount) => (amount ?? 0) > 0)
+      ? { drinks: normalizedDrinks }
+      : {}),
+    ...(Object.values(contexts).some((amount) => (amount ?? 0) > 0)
+      ? { contexts }
+      : {}),
+  };
+}
+
+function getDrinkBreakdownEntries(
+  breakdown: Partial<Record<HydrationDrinkType, number>> | undefined,
+  fallbackIntake: number
+) {
+  const source =
+    breakdown ?? (fallbackIntake > 0 ? { water: fallbackIntake } : undefined);
+  if (!source) return [];
+
+  return DRINK_ORDER.map((drinkType) => ({
+    key: drinkType,
+    drinkType,
+    label: DRINK_LABELS[drinkType],
+    amount: source[drinkType] ?? 0,
+  })).filter((item) => item.amount > 0);
+}
+
+function getContextBreakdownEntries(
+  breakdown: Partial<Record<HydrationContext, number>> | undefined
+) {
+  if (!breakdown) return [];
+
+  return CONTEXT_ORDER.map((context) => ({
+    key: context,
+    context,
+    label: CONTEXT_LABELS[context],
+    amount: breakdown[context] ?? 0,
+  })).filter((item) => item.amount > 0);
+}
+
+function getDrinkIcon(drinkType: HydrationDrinkType) {
+  if (drinkType === "coffee") return Coffee;
+  if (drinkType === "tea") return Leaf;
+  return Droplets;
 }
 
 function useLockedPageScroll(isLocked: boolean) {
@@ -80,123 +204,313 @@ function useLockedPageScroll(isLocked: boolean) {
     const scrollElement = getAppScrollElement();
     const previousRootOverflow = root.style.overflow;
     const previousBodyOverflow = body.style.overflow;
-    const previousRootOverscroll = root.style.overscrollBehavior;
-    const previousBodyOverscroll = body.style.overscrollBehavior;
     const previousBodyTouchAction = body.style.touchAction;
     const previousScrollElementOverflow = scrollElement?.style.overflow;
-    const previousScrollElementOverscroll = scrollElement?.style.overscrollBehavior;
 
     root.style.overflow = "hidden";
-    root.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
-    body.style.overscrollBehavior = "none";
     body.style.touchAction = "none";
-    if (scrollElement) {
-      scrollElement.style.overflow = "hidden";
-      scrollElement.style.overscrollBehavior = "none";
-    }
+    if (scrollElement) scrollElement.style.overflow = "hidden";
 
     return () => {
       root.style.overflow = previousRootOverflow;
-      root.style.overscrollBehavior = previousRootOverscroll;
       body.style.overflow = previousBodyOverflow;
-      body.style.overscrollBehavior = previousBodyOverscroll;
       body.style.touchAction = previousBodyTouchAction;
-      if (scrollElement) {
-        if (previousScrollElementOverflow !== undefined) scrollElement.style.overflow = previousScrollElementOverflow;
-        if (previousScrollElementOverscroll !== undefined) {
-          scrollElement.style.overscrollBehavior = previousScrollElementOverscroll;
-        }
+      if (scrollElement && previousScrollElementOverflow !== undefined) {
+        scrollElement.style.overflow = previousScrollElementOverflow;
       }
     };
   }, [isLocked]);
 }
 
-function useInView<T extends HTMLElement>() {
-  const ref = React.useRef<T | null>(null);
-  const [isInView, setIsInView] = React.useState(false);
+function formatMetricAmount(amount: number) {
+  if (amount >= 1000) {
+    const liters = amount / 1000;
+    return `${Number.isInteger(liters) ? liters.toFixed(0) : liters.toFixed(1)} L`;
+  }
 
-  React.useEffect(() => {
-    const element = ref.current;
-    if (!element || typeof window === "undefined") return;
+  return `${amount} ml`;
+}
 
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (prefersReducedMotion || !("IntersectionObserver" in window)) {
-      setIsInView(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsInView(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.34, rootMargin: "0px 0px -12% 0px" }
-    );
-
-    observer.observe(element);
-
-    return () => {
-      observer.disconnect();
+function getInsight({
+  daysWithHydration,
+  elapsedDays,
+  averageDelta,
+  canComparePeriods,
+}: {
+  daysWithHydration: number;
+  elapsedDays: number;
+  averageDelta: number;
+  canComparePeriods: boolean;
+}) {
+  if (daysWithHydration === 0) {
+    return {
+      title: "Your week is ready",
+      body: "Log any drink when it feels natural. Your first data point will start the weekly view.",
     };
-  }, []);
+  }
 
-  return [ref, isInView] as const;
+  if (!canComparePeriods) {
+    return {
+      title: "A rhythm is taking shape",
+      body: `${daysWithHydration} of ${elapsedDays} days have hydration logged. A fair week-over-week comparison will appear when there is enough data.`,
+    };
+  }
+
+  if (averageDelta > 0) {
+    return {
+      title: "Your daily average is rising",
+      body: `You are averaging ${averageDelta} ml more per elapsed day than at the same point last week.`,
+    };
+  }
+
+  if (averageDelta < 0) {
+    return {
+      title: "Keep the pace comfortable",
+      body: `Your average is ${Math.abs(averageDelta)} ml lower than at the same point last week. One small drink at a time is enough.`,
+    };
+  }
+
+  return {
+    title: "A steady week so far",
+    body: "Your daily average matches the same point last week. Consistency matters more than rushing.",
+  };
 }
 
-function getWeekDates(anchor: Date, offsetWeeks = 0) {
-  const currentDay = anchor.getDay();
-  const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1;
-  const monday = new Date(anchor);
-
-  monday.setDate(anchor.getDate() - distanceToMonday + offsetWeeks * 7);
-
-  return Array.from({ length: 7 }).map((_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    return formatDateLocal(date);
-  });
-}
-
-function getMonthDays(anchor: Date) {
-  const year = anchor.getFullYear();
-  const month = anchor.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const leadingBlankDays = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const visibleDays = [
-    ...Array.from({ length: leadingBlankDays }).map(() => null),
-    ...Array.from({ length: daysInMonth }).map((_, index) => {
-      const date = new Date(year, month, index + 1);
-      return {
-        date: formatDateLocal(date),
-        day: index + 1,
-      };
-    }),
+function HydrationBarChart({
+  data,
+  mode,
+  goal,
+}: {
+  data: HydrationStatsDay[];
+  mode: "week" | "month";
+  goal: number;
+}) {
+  const chartMax = getRoundedChartMax(
+    Math.max(goal, ...data.map((day) => day.intake), 1)
+  );
+  const chartLeft = CHART_PADDING.left;
+  const chartRight = CHART_WIDTH - CHART_PADDING.right;
+  const chartTop = CHART_PADDING.top;
+  const chartBottom = CHART_HEIGHT - CHART_PADDING.bottom;
+  const innerWidth = chartRight - chartLeft;
+  const innerHeight = chartBottom - chartTop;
+  const step = innerWidth / Math.max(data.length, 1);
+  const barWidth = Math.max(3, Math.min(24, step * 0.58));
+  const goalY =
+    chartTop +
+    (1 - Math.min(1, Math.max(0, goal / chartMax))) * innerHeight;
+  const axisLabels = [
+    { label: `${chartMax}`, y: chartTop },
+    { label: `${Math.round(chartMax / 2)}`, y: chartTop + innerHeight / 2 },
+    { label: "0", y: chartBottom },
   ];
+  const labelIndexes = new Set(
+    mode === "week"
+      ? data.map((_, index) => index)
+      : data
+          .map((day, index) =>
+            index === 0 ||
+            index === data.length - 1 ||
+            day.isToday ||
+            (index + 1) % 7 === 0
+              ? index
+              : -1
+          )
+          .filter((index) => index >= 0)
+  );
 
-  return [
-    ...visibleDays,
-    ...Array.from({ length: Math.max(0, 42 - visibleDays.length) }).map(() => null),
-  ];
-}
+  return (
+    <div className="rounded-[1.15rem] border border-[1.5px] border-water-300/12 bg-water-950/20 px-2 py-3 shadow-inner">
+      <div className="mb-1 flex items-center justify-end gap-2 px-2">
+        <span
+          className="w-7 border-t border-dashed border-water-100/52"
+          aria-hidden="true"
+        />
+        <span className="font-ui text-[0.58rem] font-black uppercase tracking-[0.12em] text-water-200/78">
+          Daily goal
+        </span>
+        <span className="font-numeric text-[0.68rem] font-black text-white">
+          {formatMetricAmount(goal)}
+        </span>
+      </div>
+      <svg
+        className="h-auto w-full overflow-visible"
+        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
+        role="img"
+        aria-label={`${mode === "week" ? "Seven day" : "Month-to-date"} hydration totals. Daily goal ${goal} milliliters.`}
+      >
+        <defs>
+          <linearGradient id="stats-bars" x1="0" x2="0" y1="1" y2="0">
+            <stop offset="0" stopColor="#0284c7" />
+            <stop offset="0.58" stopColor="#22d3ee" />
+            <stop offset="1" stopColor="#a5f3fc" />
+          </linearGradient>
+          <linearGradient id="stats-bars-muted" x1="0" x2="0" y1="1" y2="0">
+            <stop offset="0" stopColor="#164e63" />
+            <stop offset="1" stopColor="#0e7490" />
+          </linearGradient>
+        </defs>
 
-function getRoundedChartMax(value: number) {
-  if (value <= 1000) return 1000;
-  return Math.ceil(value / 500) * 500;
+        {axisLabels.map((item) => (
+          <g key={item.label} aria-hidden="true">
+            <line
+              x1={chartLeft}
+              x2={chartRight}
+              y1={item.y}
+              y2={item.y}
+              stroke="rgba(125, 211, 252, 0.12)"
+              strokeDasharray="4 7"
+            />
+            <text
+              x={chartLeft - 8}
+              y={item.y + 3}
+              textAnchor="end"
+              className="fill-water-300/62 font-numeric text-[9px] font-black"
+            >
+              {item.label}
+            </text>
+          </g>
+        ))}
+
+        <line
+          x1={chartLeft}
+          x2={chartRight}
+          y1={goalY}
+          y2={goalY}
+          stroke="rgba(224, 242, 254, 0.48)"
+          strokeDasharray="6 6"
+          aria-hidden="true"
+        />
+
+        {data.map((day, index) => {
+          const x = chartLeft + step * index + (step - barWidth) / 2;
+          const progress = Math.min(1, Math.max(0, day.intake / chartMax));
+          const height = day.intake > 0 ? Math.max(5, progress * innerHeight) : 2;
+          const y = chartBottom - height;
+          const goalReached = day.intake >= day.goal && day.intake > 0;
+
+          return (
+            <g key={day.date} aria-hidden="true">
+              <rect
+                x={x}
+                y={chartTop}
+                width={barWidth}
+                height={innerHeight}
+                rx={barWidth / 2}
+                fill={
+                  day.isFuture
+                    ? "rgba(8, 47, 73, 0.16)"
+                    : "rgba(8, 47, 73, 0.34)"
+                }
+              />
+              {!day.isFuture && (
+                <rect
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={height}
+                  rx={barWidth / 2}
+                  fill={goalReached ? "url(#stats-bars)" : "url(#stats-bars-muted)"}
+                  stroke={day.isToday ? "rgba(255,255,255,0.78)" : "transparent"}
+                  strokeWidth={day.isToday ? 1.5 : 0}
+                  filter={
+                    goalReached
+                      ? "drop-shadow(0 5px 8px rgba(34, 211, 238, 0.2))"
+                      : undefined
+                  }
+                />
+              )}
+              {labelIndexes.has(index) && (
+                <text
+                  x={x + barWidth / 2}
+                  y={CHART_HEIGHT - 9}
+                  textAnchor="middle"
+                  className={`font-ui text-[8px] font-black uppercase tracking-wide ${
+                    day.isToday ? "fill-white" : "fill-water-300/72"
+                  }`}
+                >
+                  {mode === "week"
+                    ? DAY_NAMES[index]
+                    : parseDateLocal(day.date).getDate()}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      <ul className="sr-only">
+        {data.map((day) => (
+          <li key={`${day.date}-accessible`}>
+            {SHORT_DATE_FORMATTER.format(parseDateLocal(day.date))}:{" "}
+            {day.isFuture
+              ? "future day"
+              : `${day.intake} milliliters logged, daily goal ${day.goal} milliliters`}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export default function StatsPage() {
   const { streak, history, intake, goal, drinkLog, mounted } = useHydration();
+  const scope = React.useRef<HTMLElement>(null);
   const [isMonthViewOpen, setIsMonthViewOpen] = React.useState(false);
-  const [rhythmMode, setRhythmMode] = React.useState<"week" | "month">("week");
-  const [visibleMonthDate, setVisibleMonthDate] = React.useState(() => getMonthStart(new Date()));
-  const [selectedMonthDate, setSelectedMonthDate] = React.useState(() => formatDateLocal(new Date()));
-  const [trackingCardRef, isTrackingInView] = useInView<HTMLDivElement>();
+  const [rangeMode, setRangeMode] = React.useState<"week" | "month">("week");
+  const [visibleMonthDate, setVisibleMonthDate] = React.useState(() =>
+    getMonthStart(new Date())
+  );
+  const [selectedMonthDate, setSelectedMonthDate] = React.useState(() =>
+    formatDateLocal(new Date())
+  );
   useLockedPageScroll(isMonthViewOpen);
+
+  useGSAP(
+    () => {
+      if (
+        !scope.current ||
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ) {
+        return;
+      }
+
+      gsap.fromTo(
+        "[data-stats-reveal]",
+        { y: 22, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.62,
+          stagger: 0.07,
+          ease: "power3.out",
+          clearProps: "transform,opacity",
+        }
+      );
+
+      gsap.utils
+        .toArray<HTMLElement>("[data-stats-stack]")
+        .forEach((card) => {
+          gsap.fromTo(
+            card,
+            { y: 18, scale: 0.985 },
+            {
+              y: 0,
+              scale: 1,
+              ease: "none",
+              scrollTrigger: {
+                trigger: card,
+                start: "top 92%",
+                end: "top 68%",
+                scrub: true,
+              },
+            }
+          );
+        });
+    },
+    { scope, dependencies: [mounted], revertOnUpdate: true }
+  );
 
   if (!mounted) {
     return <HydrationLoadingState />;
@@ -204,541 +518,551 @@ export default function StatsPage() {
 
   const todayDate = new Date();
   const today = formatDateLocal(todayDate);
-  const currentWeek = getWeekDates(todayDate);
-  const previousWeek = getWeekDates(todayDate, -1);
-  const chartData = currentWeek.map((dateStr) => {
-    if (dateStr === today) {
-      return { date: dateStr, intake, goal };
-    }
-
-    const found = history.find((item) => item.date === dateStr);
-    return found ?? { date: dateStr, intake: 0, goal };
-  });
-  const previousWeekData = previousWeek.map((dateStr) => history.find((item) => item.date === dateStr) ?? { date: dateStr, intake: 0, goal });
-  const todayBreakdown = buildDrinkBreakdown(drinkLog, intake);
-  const allTrackedDays = [
+  const todayBreakdowns = buildTodayBreakdowns(drinkLog, intake);
+  const allTrackedDays: HydrationHistoryItem[] = [
     ...history,
-    { date: today, intake, goal, ...(todayBreakdown ? { breakdown: todayBreakdown } : intake > 0 ? { breakdown: { water: intake } } : {}) },
+    {
+      date: today,
+      intake,
+      goal,
+      ...(todayBreakdowns.drinks
+        ? { breakdown: todayBreakdowns.drinks }
+        : intake > 0
+          ? { breakdown: { water: intake } }
+          : {}),
+      ...(todayBreakdowns.contexts
+        ? { contextBreakdown: todayBreakdowns.contexts }
+        : {}),
+    },
   ].sort((a, b) => a.date.localeCompare(b.date));
   const trackedByDate = new Map(allTrackedDays.map((day) => [day.date, day]));
-  const monthDays = getMonthDays(visibleMonthDate);
-  const hasAnyTrackedWater = intake > 0 || history.some((day) => day.intake > 0);
-  const hasSelectedMonthDate = selectedMonthDate !== EMPTY_MONTH_SELECTION;
-  const selectedMonthDay = hasSelectedMonthDate ? trackedByDate.get(selectedMonthDate) : undefined;
-  const selectedMonthIntake = selectedMonthDay?.intake ?? 0;
-  const selectedMonthGoal = selectedMonthDay?.goal ?? goal;
-  const selectedMonthProgress = Math.min(100, Math.round((selectedMonthIntake / Math.max(selectedMonthGoal, 1)) * 100));
-  const selectedMonthIsFuture = hasSelectedMonthDate && selectedMonthDate > today;
-  const selectedMonthBreakdownEntries = getBreakdownEntries(selectedMonthDay?.breakdown, selectedMonthIntake);
-
-  const maxIntake = Math.max(...chartData.map((day) => day.intake), goal, 1);
-  const daysWithWater = chartData.filter((day) => day.intake > 0).length;
-  const weeklyAverage = Math.round(chartData.reduce((sum, day) => sum + day.intake, 0) / chartData.length);
-  const previousAverage = Math.round(previousWeekData.reduce((sum, day) => sum + day.intake, 0) / previousWeekData.length);
-  const averageDelta = weeklyAverage - previousAverage;
-  const consistency = Math.round((daysWithWater / chartData.length) * 100);
-  const insightTitle =
-    daysWithWater >= 5
-      ? "A steady rhythm is forming"
-      : averageDelta >= 0 && weeklyAverage > 0
-        ? "Small sips are adding up"
-        : "A little, often, works best";
-  const insightBody =
-    daysWithWater >= 5
-      ? "Most days already have water logged. Keep it gentle and spread small drinks through the day."
-      : averageDelta >= 0 && weeklyAverage > 0
-        ? `Your average is ${averageDelta} ml higher than last week. Keep the pace comfortable, not rushed.`
-        : "One small drink at a time is enough to build the habit. No need to catch up all at once.";
-  const currentMonthGraphDays = getMonthDays(todayDate).filter(
-    (day): day is { date: string; day: number } => day !== null && day.date <= today
+  const weeklyStats = buildWeeklyHydrationStats({
+    anchor: todayDate,
+    history,
+    todayIntake: intake,
+    currentGoal: goal,
+  });
+  const currentMonthDays = getMonthDays(todayDate).filter(
+    (day): day is { date: string; day: number } =>
+      day !== null && day.date <= today
   );
-  const weekRhythmData = chartData.map((day, index) => ({
-    date: day.date,
-    label: DAY_NAMES[index],
-    intake: day.intake,
-    goal: day.goal,
-    isToday: day.date === today,
-  }));
-  const monthRhythmData = currentMonthGraphDays.map((day) => {
+  const monthChartData = currentMonthDays.map<HydrationStatsDay>((day) => {
     const trackedDay = trackedByDate.get(day.date);
 
     return {
       date: day.date,
-      label: String(day.day),
       intake: trackedDay?.intake ?? 0,
       goal: trackedDay?.goal ?? goal,
       isToday: day.date === today,
+      isFuture: false,
     };
   });
-  const selectedRhythmData = rhythmMode === "week" ? weekRhythmData : monthRhythmData;
-  const safeRhythmData =
-    selectedRhythmData.length > 0 ? selectedRhythmData : [{ date: today, label: "Today", intake: 0, goal, isToday: true }];
-  const rhythmChartMax = getRoundedChartMax(Math.max(goal, ...safeRhythmData.map((day) => day.intake), 1));
-  const rhythmChartLeft = RHYTHM_CHART_PADDING.left;
-  const rhythmChartRight = RHYTHM_CHART_WIDTH - RHYTHM_CHART_PADDING.right;
-  const rhythmChartTop = RHYTHM_CHART_PADDING.top;
-  const rhythmChartBottom = RHYTHM_CHART_HEIGHT - RHYTHM_CHART_PADDING.bottom;
-  const rhythmChartInnerWidth = rhythmChartRight - rhythmChartLeft;
-  const rhythmChartInnerHeight = rhythmChartBottom - rhythmChartTop;
-  const rhythmPoints = safeRhythmData.map((day, index) => {
-    const ratio = safeRhythmData.length > 1 ? index / (safeRhythmData.length - 1) : 0.5;
-    const progress = Math.min(1, Math.max(0, day.intake / rhythmChartMax));
-
-    return {
-      ...day,
-      x: rhythmChartLeft + ratio * rhythmChartInnerWidth,
-      y: rhythmChartTop + (1 - progress) * rhythmChartInnerHeight,
-    };
-  });
-  const rhythmPath = rhythmPoints.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(" ");
-  const rhythmAreaPath =
-    rhythmPoints.length > 0
-      ? `${rhythmPath} L ${rhythmPoints[rhythmPoints.length - 1].x.toFixed(1)} ${rhythmChartBottom} L ${rhythmPoints[0].x.toFixed(1)} ${rhythmChartBottom} Z`
-      : "";
-  const rhythmGoalY =
-    rhythmChartTop + (1 - Math.min(1, Math.max(0, goal / rhythmChartMax))) * rhythmChartInnerHeight;
-  const rhythmAverage = Math.round(safeRhythmData.reduce((sum, day) => sum + day.intake, 0) / safeRhythmData.length);
-  const rhythmLoggedDays = safeRhythmData.filter((day) => day.intake > 0).length;
-  const rhythmAxisLabels = [
-    { label: `${rhythmChartMax}`, y: rhythmChartTop },
-    { label: `${Math.round(rhythmChartMax / 2)}`, y: rhythmChartTop + rhythmChartInnerHeight / 2 },
-    { label: "0", y: rhythmChartBottom },
-  ];
-  const rhythmLabelPoints =
-    rhythmMode === "week"
-      ? rhythmPoints
-      : rhythmPoints.filter((_, index) => index === 0 || index === rhythmPoints.length - 1 || rhythmPoints[index].isToday);
+  const selectedChartData =
+    rangeMode === "week" ? weeklyStats.chartDays : monthChartData;
+  const monthElapsedDays = Math.max(monthChartData.length, 1);
+  const monthAverage = Math.round(
+    monthChartData.reduce((sum, day) => sum + day.intake, 0) /
+      monthElapsedDays
+  );
+  const monthLoggedDays = monthChartData.filter((day) => day.intake > 0).length;
+  const selectedAverage =
+    rangeMode === "week" ? weeklyStats.dailyAverage : monthAverage;
+  const selectedLoggedDays =
+    rangeMode === "week" ? weeklyStats.daysWithHydration : monthLoggedDays;
+  const selectedElapsedDays =
+    rangeMode === "week" ? weeklyStats.elapsedDays : monthElapsedDays;
+  const insight = getInsight(weeklyStats);
+  const weekRangeLabel = `${SHORT_DATE_FORMATTER.format(
+    parseDateLocal(weeklyStats.chartDays[0].date)
+  )} – ${SHORT_DATE_FORMATTER.format(
+    parseDateLocal(weeklyStats.chartDays[weeklyStats.chartDays.length - 1].date)
+  )}`;
+  const loggedHistoryDays = allTrackedDays.filter((day) => day.intake > 0).length;
+  const monthDays = getMonthDays(visibleMonthDate);
+  const hasSelectedMonthDate = selectedMonthDate !== EMPTY_MONTH_SELECTION;
+  const selectedMonthDay = hasSelectedMonthDate
+    ? trackedByDate.get(selectedMonthDate)
+    : undefined;
+  const selectedMonthIntake = selectedMonthDay?.intake ?? 0;
+  const selectedMonthGoal = selectedMonthDay?.goal ?? goal;
+  const selectedMonthProgress = Math.min(
+    100,
+    Math.round(
+      (selectedMonthIntake / Math.max(selectedMonthGoal, 1)) * 100
+    )
+  );
+  const selectedMonthIsFuture =
+    hasSelectedMonthDate && selectedMonthDate > today;
+  const selectedDrinkEntries = getDrinkBreakdownEntries(
+    selectedMonthDay?.breakdown,
+    selectedMonthIntake
+  );
+  const selectedContextEntries = getContextBreakdownEntries(
+    selectedMonthDay?.contextBreakdown
+  );
+  const currentMonthStart = getMonthStart(todayDate);
+  const canOpenNextMonth =
+    visibleMonthDate.getTime() < currentMonthStart.getTime();
 
   const openMonthView = () => {
-    const currentMonth = getMonthStart(todayDate);
-    setVisibleMonthDate(currentMonth);
+    setVisibleMonthDate(currentMonthStart);
     setSelectedMonthDate(today);
     setIsMonthViewOpen(true);
   };
 
   const changeVisibleMonth = (offset: number) => {
     const nextMonth = shiftMonth(visibleMonthDate, offset);
+    if (nextMonth.getTime() > currentMonthStart.getTime()) return;
+
     setVisibleMonthDate(nextMonth);
     setSelectedMonthDate(getDefaultMonthSelection(nextMonth, todayDate));
   };
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 pb-4 pt-6 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-5 sm:px-6 sm:pb-6 sm:pt-6 md:max-w-[30rem]">
-      <header className="w-full text-center mt-2 mb-8">
-        <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Your Stats.</h1>
-        <p className="font-ui text-xs font-semibold mt-1 tracking-widest text-water-200 uppercase mb-6">
+    <main
+      ref={scope}
+      className="fluid-page-shell mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center overflow-x-hidden px-3.5 pb-28 pt-6 min-[380px]:px-4 min-[380px]:pt-5 sm:px-6 sm:pt-6 md:max-w-[30rem]"
+    >
+      <header
+        className="fluid-page-header mb-5 mt-2 w-full text-center"
+        data-stats-reveal
+      >
+        <h1 className="font-display flex w-full max-w-[30rem] items-center justify-center gap-2.5 text-4xl font-black text-white drop-shadow-md">
+          <span>Your</span>
+          <span className="fluid-inline-water-window" aria-hidden="true" />
+          <span>Stats.</span>
+        </h1>
+        <p className="font-ui mt-1 text-xs font-semibold uppercase tracking-widest text-water-200">
           Consistency builds the habit
         </p>
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-water-900/40 backdrop-blur-md rounded-2xl text-water-100 font-semibold text-sm shadow-inner border border-water-300/14">
-          <span className="font-body opacity-80">Daily rhythm:</span>
-          <span className="font-numeric text-water-300 font-bold tracking-wide">{goal} ml</span>
-        </div>
       </header>
 
-      <div className="mb-6 grid w-full grid-cols-2 gap-3 min-[380px]:gap-4">
-        <Card className="flex min-h-[9.4rem] flex-col items-center justify-center p-4 text-center min-[380px]:p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Flame className="w-5 h-5 text-water-300 drop-shadow-sm" strokeWidth={2.5} />
-            <span className="font-ui text-water-300 font-bold text-sm tracking-wide">Streak</span>
+      <Card
+        data-stats-reveal
+        className="group relative mb-5 w-full overflow-hidden p-4 min-[380px]:p-5"
+      >
+        <div
+          className="pointer-events-none absolute -right-14 -top-20 h-44 w-44 rounded-full bg-cyan-200/10 blur-3xl transition-transform duration-700 ease-out group-hover:scale-110"
+          style={{ position: "absolute" }}
+        />
+        <div className="relative z-10 flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="font-ui text-[0.66rem] font-black uppercase tracking-[0.2em] text-water-300/82">
+              This week
+            </p>
+            <h2 className="font-ui mt-2 text-[1.65rem] font-black leading-tight text-white">
+              {weeklyStats.daysWithHydration === 1
+                ? "One hydration day"
+                : `${weeklyStats.daysWithHydration} hydration days`}
+            </h2>
+            <p className="font-body mt-1.5 text-xs font-semibold text-water-300/68">
+              Any logged drink keeps the streak moving.
+            </p>
           </div>
-          <div className="font-numeric text-4xl sm:text-5xl font-black text-white px-2 drop-shadow-md">{streak}</div>
-          <span className="font-ui text-water-400/80 text-[10px] mt-2 uppercase tracking-widest font-bold">Days in a row</span>
-        </Card>
+          <div className="shrink-0 rounded-[1rem] border border-cyan-100/16 bg-cyan-100/[0.065] px-3 py-2.5 text-right">
+            <p className="font-numeric text-2xl font-black leading-none text-cyan-50">
+              {weeklyStats.daysWithHydration}
+              <span className="font-ui ml-1 text-xs text-water-300/70">
+                /{weeklyStats.elapsedDays}
+              </span>
+            </p>
+            <p className="font-ui mt-1.5 text-[0.58rem] font-black uppercase tracking-[0.12em] text-water-300/68">
+              days logged
+            </p>
+          </div>
+        </div>
 
-        <Card className="flex min-h-[9.4rem] flex-col items-center justify-center p-4 text-center min-[380px]:p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Trophy className="w-5 h-5 text-water-200 drop-shadow-sm" strokeWidth={2.5} />
-            <span className="font-ui text-water-300 font-bold text-sm tracking-wide">Today</span>
-          </div>
-          <div className="font-numeric text-4xl sm:text-5xl font-black text-white px-2 drop-shadow-md">
-            {Math.round((intake / goal) * 100)}
-            <span className="font-ui text-xl text-water-400 ml-0.5">%</span>
-          </div>
-          <span className="font-ui text-water-400/80 text-[10px] mt-2 uppercase tracking-widest font-bold">Today&apos;s rhythm</span>
-        </Card>
-      </div>
+        <div className="relative z-10 mt-4 flex items-center gap-3">
+          <span className="h-px flex-1 bg-gradient-to-r from-cyan-100/28 to-transparent" />
+          <span className="font-ui text-[0.6rem] font-black uppercase tracking-[0.16em] text-water-300/62">
+            {weekRangeLabel}
+          </span>
+        </div>
 
-      {!hasAnyTrackedWater && (
-        <Card className="mb-6 w-full p-4 min-[380px]:p-5 sm:p-6">
-          <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
-            <GlassWater className="h-4 w-4" strokeWidth={2.5} />
-            First stats
+        <div className="relative z-10 mt-3 grid grid-flow-dense grid-cols-3 gap-2">
+          <div className="rounded-[0.9rem] border border-water-300/12 bg-water-950/20 p-2.5">
+            <div className="flex items-center gap-2 text-water-300">
+              <Droplets className="h-3.5 w-3.5" strokeWidth={2.5} />
+              <span className="font-ui text-[0.58rem] font-black uppercase tracking-[0.12em]">
+                Today
+              </span>
+            </div>
+            <p className="font-numeric mt-2 text-lg font-black leading-none text-white">
+              {formatMetricAmount(intake)}
+            </p>
           </div>
-          <h2 className="font-ui mt-3 text-2xl font-black tracking-normal text-white">Your stats will fill in soon.</h2>
-          <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-300/82">
-            Start with a small drink today and Fluid will build your weekly view as you log water.
-          </p>
-        </Card>
-      )}
 
-      <div className="mb-6 grid w-full grid-cols-1 gap-3 min-[390px]:grid-cols-2 min-[390px]:gap-4">
-        <Card className="p-4">
-          <div className="font-ui flex items-center gap-1.5 text-water-300 text-[0.78rem] sm:text-sm font-bold tracking-wide">
-            <Waves className="w-3.5 h-3.5 shrink-0" strokeWidth={2.4} />
-            Weekly Average
+          <div className="rounded-[0.9rem] border border-water-300/12 bg-water-950/20 p-2.5">
+            <div className="flex items-center gap-2 text-water-300">
+              <Flame className="h-4 w-4" strokeWidth={2.5} />
+              <span className="font-ui text-[0.58rem] font-black uppercase tracking-[0.12em]">
+                Streak
+              </span>
+            </div>
+            <p className="font-numeric mt-2 text-lg font-black leading-none text-white">
+              {streak}{" "}
+              <span className="font-ui text-[0.58rem] font-black text-water-300/72">
+                {streak === 1 ? "day" : "d"}
+              </span>
+            </p>
           </div>
-          <p className="font-numeric mt-3 text-3xl font-black text-white">{weeklyAverage} ml</p>
-          <p className="font-body mt-1 text-xs text-water-400/80">Average logged each day this week.</p>
-        </Card>
 
-        <Card className="p-4">
-          <div className="font-ui flex items-center gap-2 text-water-300 text-sm font-bold tracking-wide">
-            <ChartColumn className="w-4 h-4" strokeWidth={2.4} />
-            Logged days
+          <div className="rounded-[0.9rem] border border-water-300/12 bg-water-950/20 p-2.5">
+            <div className="flex items-center gap-2 text-water-300">
+              <Target className="h-3.5 w-3.5" strokeWidth={2.5} />
+              <span className="font-ui text-[0.58rem] font-black uppercase tracking-[0.12em]">
+                Daily goal
+              </span>
+            </div>
+            <p className="font-numeric mt-2 text-lg font-black leading-none text-white">
+              {formatMetricAmount(goal)}
+            </p>
           </div>
-          <p className="font-numeric mt-3 text-3xl font-black text-white">{consistency}%</p>
-          <p className="font-body mt-1 text-xs text-water-400/80">{daysWithWater} of 7 days include water.</p>
-        </Card>
-      </div>
-
-      <Card className="mb-6 w-full p-4 min-[380px]:p-5 sm:p-6">
-        <div className="min-w-0">
-          <div className="font-ui flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-water-300/80">
-            <Target className="h-4 w-4" strokeWidth={2.5} />
-            This week
-          </div>
-          <h2 className="font-ui mt-2 text-2xl font-black tracking-normal text-white">{insightTitle}</h2>
-          <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-100/86">{insightBody}</p>
         </div>
       </Card>
 
-      <Card className="mb-6 w-full overflow-hidden p-4 min-[380px]:p-5 sm:p-6">
+      <Card
+        data-stats-stack
+        className="group mb-5 w-full overflow-hidden p-4 min-[380px]:p-5"
+      >
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="font-ui flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-water-300/80">
-              <ChartColumn className="h-4 w-4" strokeWidth={2.5} />
-              Rhythm graph
-            </div>
-            <h2 className="font-ui mt-2 text-xl font-black tracking-normal text-white">Week and month flow</h2>
+            <p className="font-ui text-[0.66rem] font-black uppercase tracking-[0.2em] text-water-300/80">
+              Hydration trend
+            </p>
+            <h2 className="font-ui mt-1.5 text-xl font-black text-white">
+              Daily totals at a glance
+            </h2>
           </div>
           <div className="grid shrink-0 grid-cols-2 rounded-full border border-water-300/12 bg-water-950/22 p-1">
-            {(["week", "month"] as const).map((mode) => {
-              const isActive = rhythmMode === mode;
+            {(
+              [
+                { value: "week", label: "7 days" },
+                { value: "month", label: "30 days" },
+              ] as const
+            ).map((option) => {
+              const isActive = rangeMode === option.value;
 
               return (
                 <button
-                  key={mode}
+                  key={option.value}
                   type="button"
-                  onClick={() => setRhythmMode(mode)}
-                  className={`font-ui rounded-full px-2.5 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.12em] transition-all ${
-                    isActive ? "bg-cyan-100/18 text-white shadow-[0_0_18px_rgba(125,211,252,0.12)]" : "text-water-300/74 hover:text-white"
+                  onClick={() => setRangeMode(option.value)}
+                  className={`font-ui min-h-9 rounded-full px-2.5 py-1.5 text-[0.65rem] font-black uppercase tracking-[0.1em] transition-all active:scale-95 ${
+                    isActive
+                      ? "bg-cyan-100/18 text-white shadow-[0_0_18px_rgba(125,211,252,0.12)]"
+                      : "text-water-300/74 hover:bg-white/5 hover:text-white"
                   }`}
                   aria-pressed={isActive}
                 >
-                  {mode}
+                  {option.label}
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="mb-3 grid grid-cols-2 gap-2.5">
-          <div className="rounded-[0.95rem] border border-water-300/12 bg-water-950/18 px-3 py-2">
-            <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.16em] text-water-300/72">Average</p>
-            <p className="font-numeric mt-1 text-xl font-black text-white">
-              {rhythmAverage}
-              <span className="font-ui ml-1 text-[0.68rem] font-black uppercase tracking-normal text-water-300/78">ml</span>
+        <HydrationBarChart
+          data={selectedChartData}
+          mode={rangeMode}
+          goal={goal}
+        />
+
+        <div className="mt-3 grid grid-flow-dense grid-cols-2 gap-2.5">
+          <div className="rounded-[0.95rem] border border-water-300/12 bg-water-950/18 px-3 py-2.5">
+            <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.16em] text-water-300/72">
+              Average so far
             </p>
-          </div>
-          <div className="rounded-[0.95rem] border border-water-300/12 bg-water-950/18 px-3 py-2">
-            <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.16em] text-water-300/72">Logged</p>
             <p className="font-numeric mt-1 text-xl font-black text-white">
-              {rhythmLoggedDays}
-              <span className="font-ui ml-1 text-[0.68rem] font-black tracking-normal text-water-300/78">
-                /{safeRhythmData.length}
+              {selectedAverage}
+              <span className="font-ui ml-1 text-[0.68rem] font-black text-water-300/78">
+                ml/day
               </span>
             </p>
           </div>
+          <div className="rounded-[0.95rem] border border-water-300/12 bg-water-950/18 px-3 py-2.5">
+            <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.16em] text-water-300/72">
+              Days logged
+            </p>
+            <p className="font-numeric mt-1 text-xl font-black text-white">
+              {selectedLoggedDays}
+              <span className="font-ui ml-1 text-[0.68rem] font-black text-water-300/78">
+                /{selectedElapsedDays}
+              </span>
+            </p>
+            <p className="sr-only">
+              {selectedLoggedDays} of {selectedElapsedDays} days with hydration
+              logged.
+            </p>
+          </div>
         </div>
 
-        <div className="rounded-[1.1rem] border border-[1.5px] border-water-300/12 bg-water-950/20 px-2 py-3 shadow-inner">
-          <svg className="h-auto w-full overflow-visible" viewBox={`0 0 ${RHYTHM_CHART_WIDTH} ${RHYTHM_CHART_HEIGHT}`} role="img" aria-label={`${rhythmMode} hydration rhythm graph`}>
-            <defs>
-              <linearGradient id="rhythm-line" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0" stopColor="#38bdf8" />
-                <stop offset="0.55" stopColor="#67e8f9" />
-                <stop offset="1" stopColor="#5eead4" />
-              </linearGradient>
-              <linearGradient id="rhythm-area" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0" stopColor="#67e8f9" stopOpacity="0.28" />
-                <stop offset="1" stopColor="#0c4a6e" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-
-            {rhythmAxisLabels.map((item) => (
-              <g key={item.label}>
-                <line x1={rhythmChartLeft} x2={rhythmChartRight} y1={item.y} y2={item.y} stroke="rgba(125, 211, 252, 0.12)" strokeDasharray="4 7" />
-                <text x={rhythmChartLeft - 8} y={item.y + 3} textAnchor="end" className="fill-water-300/62 font-numeric text-[9px] font-black">
-                  {item.label}
-                </text>
-              </g>
-            ))}
-
-            <line x1={rhythmChartLeft} x2={rhythmChartRight} y1={rhythmGoalY} y2={rhythmGoalY} stroke="rgba(186, 230, 253, 0.32)" strokeDasharray="6 6" />
-            <text x={rhythmChartRight} y={Math.max(10, rhythmGoalY - 5)} textAnchor="end" className="fill-water-200/72 font-ui text-[9px] font-black uppercase tracking-wider">
-              rhythm
-            </text>
-
-            {rhythmAreaPath && <path d={rhythmAreaPath} fill="url(#rhythm-area)" />}
-            {rhythmPath && (
-              <path
-                d={rhythmPath}
-                fill="none"
-                stroke="url(#rhythm-line)"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="4"
-                filter="drop-shadow(0 6px 10px rgba(34, 211, 238, 0.18))"
-              />
-            )}
-
-            {rhythmPoints.map((point) => (
-              <g key={point.date}>
-                <circle
-                  cx={point.x}
-                  cy={point.y}
-                  r={point.isToday ? 5.2 : 4}
-                  fill={point.intake > 0 ? "#e0f2fe" : "#0c4a6e"}
-                  stroke={point.isToday ? "#ffffff" : "#67e8f9"}
-                  strokeOpacity={point.intake > 0 ? 0.96 : 0.34}
-                  strokeWidth="2"
-                />
-              </g>
-            ))}
-
-            <line x1={rhythmChartLeft} x2={rhythmChartRight} y1={rhythmChartBottom} y2={rhythmChartBottom} stroke="rgba(125, 211, 252, 0.18)" />
-            {rhythmLabelPoints.map((point) => (
-              <text key={`${point.date}-label`} x={point.x} y={RHYTHM_CHART_HEIGHT - 8} textAnchor="middle" className="fill-water-300/74 font-ui text-[9px] font-black uppercase tracking-wide">
-                {point.label}
-              </text>
-            ))}
-          </svg>
+        <div className="mt-3 flex items-start gap-2.5 border-t border-water-300/10 px-1 pt-3">
+          <TrendingUp
+            className="mt-0.5 h-4 w-4 shrink-0 text-cyan-100"
+            strokeWidth={2.5}
+          />
+          <div className="min-w-0">
+            <p className="font-ui text-xs font-black text-white">
+              {insight.title}
+            </p>
+            <p className="font-body mt-1 text-[0.7rem] font-semibold leading-relaxed text-water-300/66">
+              {insight.body}
+            </p>
+          </div>
         </div>
       </Card>
 
-      <Card className="mb-6 w-full p-4 min-[380px]:p-5 sm:p-6">
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <Calendar className="w-5 h-5 text-water-400" strokeWidth={2.5} />
-            <h2 className="font-ui min-w-0 text-base font-bold leading-tight tracking-normal text-white drop-shadow-sm min-[360px]:text-lg">
-              Tracking History
-            </h2>
+      <Card
+        data-stats-stack
+        className="group mb-6 w-full overflow-hidden p-4 min-[380px]:p-5"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] border border-water-300/16 bg-water-950/22 text-water-100 transition-transform duration-700 ease-out group-hover:scale-105">
+            <CalendarDays className="h-5 w-5" strokeWidth={2.5} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-ui text-sm font-black text-white">
+              Hydration history
+            </p>
+            <p className="font-body mt-1 text-xs font-semibold leading-snug text-water-300/68">
+              {loggedHistoryDays}{" "}
+              {loggedHistoryDays === 1 ? "day" : "days"} with hydration logged.
+              Explore drink mix and contexts.
+            </p>
           </div>
           <button
             type="button"
             onClick={openMonthView}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[1.5px] border-water-300/14 bg-water-950/20 text-water-200 transition-all hover:border-water-200/24 hover:bg-white/10 hover:text-white active:scale-95"
-            aria-label="Open month view"
-            title="Month view"
+            className="font-ui flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-cyan-100/18 bg-cyan-100/10 px-3 py-2 text-[0.68rem] font-black uppercase tracking-[0.1em] text-cyan-50 transition-all hover:border-cyan-100/28 hover:bg-cyan-100/16 active:scale-95"
           >
-            <CalendarSearch className="h-4.5 w-4.5" strokeWidth={2.45} />
+            <CalendarSearch className="h-4 w-4" strokeWidth={2.5} />
+            Calendar
           </button>
-        </div>
-
-        <p className="font-body mb-5 text-sm text-water-300/80 min-[380px]:mb-6">
-          Taller bars mean more water logged. Spread drinks through the day instead of rushing late.
-        </p>
-
-        <div ref={trackingCardRef} className="flex h-48 items-end justify-between gap-1.5 pt-3 min-[380px]:h-56 min-[380px]:gap-2 min-[380px]:pt-4">
-          {chartData.map((day, idx) => {
-            const heightPercent = Math.min(100, (day.intake / maxIntake) * 100);
-            const isGoalMet = day.intake > 0 && day.intake >= day.goal;
-            const isToday = day.date === today;
-
-            return (
-              <div key={day.date} className="flex flex-col items-center gap-3 flex-1 h-full group">
-                <div
-                  className={`flex min-h-[2rem] flex-col items-center justify-end px-1 py-1 transition-colors ${
-                    isToday ? "text-water-50" : "text-water-300/72"
-                  }`}
-                >
-                  <span className="font-numeric text-[0.78rem] font-black leading-none">{day.intake}</span>
-                  <span className="font-ui mt-0.5 text-[0.56rem] font-semibold uppercase tracking-[0.22em] text-inherit/70">ml</span>
-                </div>
-                <div
-                  className={`relative w-full h-full flex-1 flex items-end justify-center rounded-[1.2rem] overflow-hidden shadow-inner transition-all duration-300 ${
-                    isToday
-                      ? "bg-water-800/55 border border-water-300/28 shadow-[0_0_0_1px_rgba(125,211,252,0.12),0_0_22px_rgba(56,189,248,0.14)]"
-                      : "bg-water-800/40 border border-water-300/14"
-                  }`}
-                >
-                  <div
-                    className={`w-full rounded-[1.2rem] transition-[height,filter] duration-[720ms] ease-[cubic-bezier(0.22,0.9,0.28,1)] group-hover:brightness-110 ${
-                      isGoalMet
-                        ? "bg-gradient-to-t from-water-600 via-water-400 to-water-200"
-                        : "bg-gradient-to-t from-water-900/80 to-water-700/70"
-                    }`}
-                    style={{
-                      height: `${isTrackingInView ? Math.max(heightPercent, day.intake > 0 ? 10 : 0) : 0}%`,
-                      transitionDelay: isTrackingInView && day.intake > 0 ? `${idx * 55}ms` : "0ms",
-                    }}
-                  />
-                </div>
-                <span
-                  className={`font-ui text-[0.55rem] font-bold uppercase tracking-wide min-[360px]:text-[10px] min-[360px]:tracking-wider ${
-                    isToday ? "text-water-100 drop-shadow-sm" : "text-water-400/80"
-                  }`}
-                >
-                  {DAY_NAMES[idx]}
-                </span>
-              </div>
-            );
-          })}
         </div>
       </Card>
 
       {isMonthViewOpen && typeof document !== "undefined"
         ? createPortal(
-        <div
-          className="fluid-modal-backdrop fixed inset-0 z-[112] flex touch-none items-start justify-center overflow-hidden px-3 pb-[calc(max(0.85rem,env(safe-area-inset-bottom))+5.25rem)]"
-          style={{
-            paddingTop:
-              "clamp(max(0.75rem, env(safe-area-inset-top)), calc(100dvh - 39rem - max(0.85rem, env(safe-area-inset-bottom)) - 5.25rem), 11rem)",
-          }}
-          data-swipe-ignore="true"
-          onClick={() => setIsMonthViewOpen(false)}
-          onTouchMove={(event) => event.preventDefault()}
-          onWheel={(event) => event.preventDefault()}
-        >
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="month-view-title"
-            className="fluid-glass-soft w-full max-w-[25.5rem] overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.46)] md:max-w-[30rem]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-2 border-b border-water-300/12 px-4 py-3 min-[380px]:px-5">
-              <div className="flex min-w-0 flex-1 items-center gap-1.5 min-[380px]:gap-2">
-                <button
-                  type="button"
-                  onClick={() => changeVisibleMonth(-1)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[1.5px] border-water-300/14 bg-water-950/20 text-water-200 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Previous month"
-                >
-                  <ChevronLeft className="h-4.5 w-4.5" strokeWidth={2.6} />
-                </button>
-                <div className="min-w-0 flex-1 text-center">
-                  <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">Month view</p>
-                  <h2 id="month-view-title" className="font-ui mt-1 truncate text-[1.45rem] font-black tracking-normal text-white min-[380px]:text-2xl">
-                    {MONTH_FORMATTER.format(visibleMonthDate)}
-                  </h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => changeVisibleMonth(1)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[1.5px] border-water-300/14 bg-water-950/20 text-water-200 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Next month"
-                >
-                  <ChevronRight className="h-4.5 w-4.5" strokeWidth={2.6} />
-                </button>
-              </div>
-              <div className="flex shrink-0 items-center">
-                <button
-                  type="button"
-                  onClick={() => setIsMonthViewOpen(false)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[1.5px] border-water-300/14 bg-water-950/20 text-water-200 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Close month view"
-                >
-                  <X className="h-4.5 w-4.5" strokeWidth={2.6} />
-                </button>
-              </div>
-            </div>
-
-            <div className="px-4 pb-3 pt-2 min-[380px]:px-5 min-[380px]:pb-4">
-              <div className="grid grid-cols-7 gap-1 min-[380px]:gap-1.5">
-                {DAY_NAMES.map((day) => (
-                  <div key={day} className="font-ui text-center text-[0.62rem] font-black uppercase tracking-wider text-water-400/72">
-                    {day.slice(0, 1)}
-                  </div>
-                ))}
-                {monthDays.map((day, index) => {
-                  if (!day) {
-                    return <div key={`blank-${index}`} className="h-9 rounded-xl border border-transparent min-[380px]:h-10" />;
-                  }
-
-                  const trackedDay = trackedByDate.get(day.date);
-                  const dayIntake = trackedDay?.intake ?? 0;
-                  const dayGoal = trackedDay?.goal ?? goal;
-                  const isFuture = day.date > today;
-                  const isToday = day.date === today;
-                  const isSelected = day.date === selectedMonthDate;
-                  const isGoalMet = dayIntake >= dayGoal;
-                  const hasIntake = dayIntake > 0;
-
-                  return (
+            <div
+              className="fluid-modal-backdrop fixed inset-0 z-[160] flex touch-none items-start justify-center overflow-hidden px-3 pb-[calc(max(0.85rem,env(safe-area-inset-bottom))+5.25rem)]"
+              style={{
+                paddingTop:
+                  "clamp(max(0.75rem, env(safe-area-inset-top)), calc(100dvh - 39rem - max(0.85rem, env(safe-area-inset-bottom)) - 5.25rem), 11rem)",
+              }}
+              data-swipe-ignore="true"
+              onClick={() => setIsMonthViewOpen(false)}
+              onTouchMove={(event) => event.preventDefault()}
+              onWheel={(event) => event.preventDefault()}
+            >
+              <section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="month-view-title"
+                className="fluid-glass-soft w-full max-w-[25.5rem] overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.46)] md:max-w-[30rem]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-center justify-between gap-2 border-b border-water-300/12 px-4 py-3 min-[380px]:px-5">
+                  <div className="flex min-w-0 flex-1 items-center gap-1.5 min-[380px]:gap-2">
                     <button
-                      key={day.date}
                       type="button"
-                      onClick={() => setSelectedMonthDate(day.date)}
-                      className={`font-numeric flex h-9 items-center justify-center rounded-xl border text-sm font-black transition-colors active:scale-95 min-[380px]:h-10 ${
-                        isSelected
-                          ? "border-cyan-100/44 bg-cyan-200/16 text-white shadow-[0_0_0_1px_rgba(186,230,253,0.12)]"
-                          : isToday
-                            ? "border-cyan-100/28 bg-cyan-200/12 text-white"
-                            : isFuture
-                              ? "border-water-500/10 bg-water-950/12 text-water-500/45"
-                              : isGoalMet
-                                ? "border-emerald-100/20 bg-emerald-300/14 text-emerald-50"
-                                : hasIntake
-                                  ? "border-water-300/16 bg-water-700/28 text-water-100"
-                                  : "border-water-500/12 bg-water-950/18 text-water-400/60"
-                      }`}
-                      title={`${day.date}: ${dayIntake} ml`}
+                      onClick={() => changeVisibleMonth(-1)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-water-300/14 bg-water-950/20 text-water-100 transition-colors hover:bg-white/10 hover:text-white"
+                      aria-label="Previous month"
                     >
-                      {day.day}
+                      <ChevronLeft className="h-4.5 w-4.5" strokeWidth={2.6} />
                     </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-4 rounded-[1.15rem] border border-[1.5px] border-water-300/12 bg-white/[0.055] px-4 py-3 min-[380px]:py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-ui text-[0.68rem] font-black uppercase tracking-[0.18em] text-water-300/78">
-                      {hasSelectedMonthDate ? DAY_DETAIL_FORMATTER.format(parseDateLocal(selectedMonthDate)) : "Select a day"}
-                    </p>
-                    <p className="font-body mt-1 text-xs font-semibold text-water-300/70">
-                      {!hasSelectedMonthDate
-                        ? "Tap a date to see the water logged for that day."
-                        : selectedMonthIsFuture
-                        ? "No intake yet. This day is ahead."
-                        : selectedMonthIntake > 0
-                          ? `${selectedMonthProgress}% of that day's plan.`
-                          : "No water logged for this day."}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="font-numeric text-3xl font-black leading-none text-white">{selectedMonthIntake}</p>
-                    <p className="font-ui mt-1 text-[0.62rem] font-black uppercase tracking-[0.18em] text-water-300/78">ml</p>
-                  </div>
-                </div>
-                {selectedMonthBreakdownEntries.length > 0 && (
-                  <div className="mt-3 grid gap-1.5">
-                    {selectedMonthBreakdownEntries.map((item) => (
-                      <div
-                        key={item.note}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-water-300/10 bg-water-950/22 px-3 py-2"
+                    <div className="min-w-0 flex-1 text-center">
+                      <p className="font-ui text-[0.64rem] font-black uppercase tracking-[0.2em] text-water-300/80">
+                        Hydration history
+                      </p>
+                      <h2
+                        id="month-view-title"
+                        className="font-ui mt-1 truncate text-[1.45rem] font-black text-white min-[380px]:text-2xl"
                       >
-                        <span className="font-ui flex min-w-0 items-center gap-2 text-xs font-bold text-water-200/86">
-                          <span className="h-2 w-2 shrink-0 rounded-full bg-cyan-200/80 shadow-[0_0_10px_rgba(125,211,252,0.28)]" />
-                          <span className="truncate">{item.label}</span>
-                        </span>
-                        <span className="font-numeric shrink-0 text-sm font-black text-white">
-                          {item.amount}
-                          <span className="font-ui ml-1 text-[0.62rem] font-black uppercase tracking-[0.16em] text-water-300/78">ml</span>
-                        </span>
+                        {MONTH_FORMATTER.format(visibleMonthDate)}
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => changeVisibleMonth(1)}
+                      disabled={!canOpenNextMonth}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-water-300/14 bg-water-950/20 text-water-100 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-28"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="h-4.5 w-4.5" strokeWidth={2.6} />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMonthViewOpen(false)}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-water-300/14 bg-water-950/20 text-water-100 transition-colors hover:bg-white/10 hover:text-white"
+                    aria-label="Close month view"
+                  >
+                    <X className="h-4.5 w-4.5" strokeWidth={2.6} />
+                  </button>
+                </div>
+
+                <div className="px-4 pb-3 pt-2 min-[380px]:px-5 min-[380px]:pb-4">
+                  <div className="grid grid-flow-dense grid-cols-7 gap-1 min-[380px]:gap-1.5">
+                    {DAY_NAMES.map((day) => (
+                      <div
+                        key={day}
+                        className="font-ui text-center text-[0.62rem] font-black uppercase tracking-wider text-water-300/76"
+                      >
+                        {day.slice(0, 1)}
                       </div>
                     ))}
+                    {monthDays.map((day, index) => {
+                      if (!day) {
+                        return (
+                          <div
+                            key={`blank-${index}`}
+                            className="h-9 rounded-xl border border-transparent min-[380px]:h-10"
+                          />
+                        );
+                      }
+
+                      const trackedDay = trackedByDate.get(day.date);
+                      const dayIntake = trackedDay?.intake ?? 0;
+                      const dayGoal = trackedDay?.goal ?? goal;
+                      const isFuture = day.date > today;
+                      const isToday = day.date === today;
+                      const isSelected = day.date === selectedMonthDate;
+                      const isGoalMet = dayIntake >= dayGoal && dayIntake > 0;
+                      const hasHydration = dayIntake > 0;
+
+                      return (
+                        <button
+                          key={day.date}
+                          type="button"
+                          onClick={() => setSelectedMonthDate(day.date)}
+                          disabled={isFuture}
+                          className={`font-numeric flex h-9 items-center justify-center rounded-xl border text-sm font-black transition-all active:scale-95 min-[380px]:h-10 ${
+                            isSelected
+                              ? "border-cyan-100/44 bg-cyan-200/16 text-white shadow-[0_0_0_1px_rgba(186,230,253,0.12)]"
+                              : isToday
+                                ? "border-cyan-100/28 bg-cyan-200/12 text-white"
+                                : isFuture
+                                  ? "cursor-not-allowed border-water-500/8 bg-water-950/8 text-water-500/24"
+                                  : isGoalMet
+                                    ? "border-emerald-100/22 bg-emerald-300/14 text-emerald-50"
+                                    : hasHydration
+                                      ? "border-water-200/22 bg-water-700/34 text-water-50"
+                                      : "border-water-500/12 bg-water-950/18 text-water-300/58"
+                          }`}
+                          aria-label={`${DAY_DETAIL_FORMATTER.format(parseDateLocal(day.date))}: ${
+                            isFuture
+                              ? "future date"
+                              : `${dayIntake} milliliters of hydration logged`
+                          }`}
+                        >
+                          {day.day}
+                        </button>
+                      );
+                    })}
                   </div>
-                )}
-              </div>
-            </div>
-          </section>
-        </div>,
+
+                  <div className="mt-4 rounded-[1.15rem] border border-[1.5px] border-water-300/12 bg-white/[0.055] px-4 py-3 min-[380px]:py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-ui text-[0.68rem] font-black uppercase tracking-[0.18em] text-water-200/84">
+                          {hasSelectedMonthDate
+                            ? DAY_DETAIL_FORMATTER.format(
+                                parseDateLocal(selectedMonthDate)
+                              )
+                            : "Select a day"}
+                        </p>
+                        <p className="font-body mt-1 text-xs font-semibold text-water-300/72">
+                          {!hasSelectedMonthDate
+                            ? "Choose a date to see its hydration details."
+                            : selectedMonthIsFuture
+                              ? "This day is ahead."
+                              : selectedMonthIntake > 0
+                                ? `${selectedMonthProgress}% of that day's plan.`
+                                : "No hydration logged for this day."}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="font-numeric text-3xl font-black leading-none text-white">
+                          {selectedMonthIntake}
+                        </p>
+                        <p className="font-ui mt-1 text-[0.62rem] font-black uppercase tracking-[0.18em] text-water-300/78">
+                          ml
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedDrinkEntries.length > 0 && (
+                      <div className="mt-3">
+                        <p className="font-ui mb-1.5 text-[0.6rem] font-black uppercase tracking-[0.16em] text-water-300/62">
+                          Drink mix
+                        </p>
+                        <div className="grid gap-1.5">
+                          {selectedDrinkEntries.map((item) => {
+                            const Icon = getDrinkIcon(item.drinkType);
+
+                            return (
+                              <div
+                                key={item.key}
+                                className="flex items-center justify-between gap-3 rounded-xl border border-water-300/10 bg-water-950/22 px-3 py-2"
+                              >
+                                <span className="font-ui flex min-w-0 items-center gap-2 text-xs font-bold text-water-100/88">
+                                  <Icon
+                                    className="h-3.5 w-3.5 shrink-0 text-cyan-100"
+                                    strokeWidth={2.5}
+                                  />
+                                  <span className="truncate">{item.label}</span>
+                                </span>
+                                <span className="font-numeric shrink-0 text-sm font-black text-white">
+                                  {item.amount}
+                                  <span className="font-ui ml-1 text-[0.62rem] font-black uppercase tracking-[0.14em] text-water-300/78">
+                                    ml
+                                  </span>
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedContextEntries.length > 0 && (
+                      <div className="mt-3">
+                        <p className="font-ui mb-1.5 text-[0.6rem] font-black uppercase tracking-[0.16em] text-water-300/62">
+                          Context
+                        </p>
+                        <div className="grid gap-1.5">
+                          {selectedContextEntries.map((item) => (
+                            <div
+                              key={item.key}
+                              className="flex items-center justify-between gap-3 rounded-xl border border-emerald-100/12 bg-emerald-300/[0.055] px-3 py-2"
+                            >
+                              <span className="font-ui flex min-w-0 items-center gap-2 text-xs font-bold text-emerald-50/86">
+                                <Clock3
+                                  className="h-3.5 w-3.5 shrink-0 text-emerald-100"
+                                  strokeWidth={2.5}
+                                />
+                                <span className="truncate">{item.label}</span>
+                              </span>
+                              <span className="font-numeric shrink-0 text-sm font-black text-white">
+                                {item.amount}
+                                <span className="font-ui ml-1 text-[0.62rem] font-black uppercase tracking-[0.14em] text-emerald-100/72">
+                                  ml
+                                </span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+            </div>,
             document.body
           )
         : null}
-
     </main>
   );
 }

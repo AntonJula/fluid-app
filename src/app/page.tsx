@@ -7,27 +7,35 @@ import {
   Battery,
   BatteryFull,
   BellRing,
-  Coffee,
   Droplets,
-  Dumbbell,
-  Leaf,
   Minus,
   Pencil,
   RefreshCw,
   RotateCcw,
-  Sun,
-  Tag,
   Target,
   Trophy,
   Trash2,
   X,
   Zap,
 } from "lucide-react";
-import { useHydration, type DrinkLogItem, type HydrationHistoryItem } from "@/hooks/useHydration";
+import {
+  useHydration,
+  type DrinkLogItem,
+  type HydrationDrinkType,
+  type HydrationHistoryItem,
+} from "@/hooks/useHydration";
 import { useNotifications } from "@/hooks/useNotifications";
 import { WaveBackground } from "@/components/WaveBackground";
 import { ProgressCard } from "@/components/ProgressCard";
+import { RhythmMarquee } from "@/components/RhythmMarquee";
 import { HydrationLoadingState } from "@/components/HydrationLoadingState";
+import {
+  DrinkAmountSheet,
+  DrinkTypeBar,
+  WorkoutHydrationCard,
+  WorkoutSetupSheet,
+  type OccasionalDrink,
+} from "@/components/DrinkExperience";
 import { NumberPickerDialog } from "@/components/ui/NumberPickerDialog";
 import { Button } from "@/components/ui/Button";
 import { SipIcon, GlassIcon, MugIcon, BottleIcon } from "@/components/DrinkIcons";
@@ -75,22 +83,20 @@ const SECONDARY_QUICK_AMOUNTS = [
   },
 ];
 
-const NOTE_OPTIONS: Array<{ value: HydrationNote; label: string; Icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }> = [
-  { value: "water", label: "Water", Icon: Droplets },
-  { value: "coffee", label: "Coffee", Icon: Coffee },
-  { value: "tea", label: "Tea", Icon: Leaf },
-  { value: "workout", label: "Workout", Icon: Dumbbell },
-  { value: "hot-day", label: "Hot Day", Icon: Sun },
-];
+const DRINK_LABELS: Record<HydrationDrinkType, string> = {
+  water: "Water",
+  coffee: "Coffee",
+  tea: "Tea",
+};
 
 const SHIMMER_DELAYS = ["4.8s", "7.9s", "2.6s"];
 const ONBOARDING_STORAGE_KEY = "fluid-onboarding-complete";
 const ONBOARDING_GOALS = [1500, 2000, 2500, 3000];
 const ONBOARDING_REMINDERS = [
   { label: "Off", value: 0 },
-  { label: "20m", value: 20 },
-  { label: "40m", value: 40 },
+  { label: "30m", value: 30 },
   { label: "60m", value: 60 },
+  { label: "90m", value: 90 },
 ];
 const ONBOARDING_STEPS = ["welcome", "goal", "reminders", "notifications"] as const;
 type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
@@ -175,8 +181,36 @@ function formatLogTime(timestamp: number) {
   }).format(new Date(timestamp));
 }
 
-function getNoteLabel(note?: HydrationNote) {
-  return NOTE_OPTIONS.find((item) => item.value === note)?.label ?? "Water";
+function getDrinkLabel(drinkType: HydrationDrinkType = "water") {
+  return DRINK_LABELS[drinkType];
+}
+
+function getDrinkLogLabel(item: DrinkLogItem) {
+  const contextLabel =
+    item.context === "workout"
+      ? "Workout"
+      : item.context === "hot-day"
+        ? "Heat"
+        : null;
+
+  return contextLabel
+    ? `${getDrinkLabel(item.drinkType)} · ${contextLabel}`
+    : getDrinkLabel(item.drinkType);
+}
+
+function getDrinkMetadataFromLegacyNote(note: HydrationNote): {
+  drinkType: HydrationDrinkType;
+  context?: "workout" | "hot-day";
+} {
+  if (note === "coffee" || note === "tea") {
+    return { drinkType: note };
+  }
+
+  if (note === "workout" || note === "hot-day") {
+    return { drinkType: "water", context: note };
+  }
+
+  return { drinkType: "water" };
 }
 
 function formatLiters(amount: number) {
@@ -348,7 +382,7 @@ function getStreakStats(history: HydrationHistoryItem[], intake: number, goal: n
   let currentRun = 0;
 
   trackedDays.forEach((day) => {
-    if (day.intake >= day.goal) {
+    if (day.intake > 0) {
       currentRun += 1;
       bestStreak = Math.max(bestStreak, currentRun);
       return;
@@ -370,23 +404,21 @@ function getRecentStreakDays(history: HydrationHistoryItem[], intake: number, go
 
     const dateStr = formatDateLocal(date);
     const trackedDay = trackedByDate.get(dateStr);
-    const dayGoal = trackedDay?.goal ?? goal;
     const dayIntake = trackedDay?.intake ?? 0;
 
     return {
       date: dateStr,
       label: STREAK_DAY_FORMATTER.format(date).slice(0, 2),
       isToday: index === STREAK_WINDOW_SIZE - 1,
-      isGoalMet: dayIntake >= dayGoal,
-      hasIntake: dayIntake > 0,
+      countsTowardStreak: dayIntake > 0,
     };
   });
 }
 
-function getStreakPrompt(streak: number, remaining: number, isGoalMet: boolean) {
-  if (isGoalMet) return "Today is saved. Come back tomorrow to keep the run going.";
-  if (streak > 0) return `Drink ${remaining} ml today to protect your streak.`;
-  return `Drink ${remaining} ml today to start a streak.`;
+function getStreakPrompt(streak: number, hasIntakeToday: boolean) {
+  if (hasIntakeToday) return "Your streak is the number of consecutive days with hydration logged. Any drink counts.";
+  if (streak > 0) return "Log any drink today to keep your hydration streak going.";
+  return "Log any drink today to start your hydration streak.";
 }
 
 function getBatteryProtectionText(charges: number) {
@@ -399,8 +431,7 @@ function StreakDetailsSheet({
   isOpen,
   streak,
   streakShieldCharges,
-  remaining,
-  isGoalMet,
+  hasIntakeToday,
   recentDays,
   bestStreak,
   onClose,
@@ -408,8 +439,7 @@ function StreakDetailsSheet({
   isOpen: boolean;
   streak: number;
   streakShieldCharges: number;
-  remaining: number;
-  isGoalMet: boolean;
+  hasIntakeToday: boolean;
   recentDays: ReturnType<typeof getRecentStreakDays>;
   bestStreak: number;
   onClose: () => void;
@@ -443,9 +473,11 @@ function StreakDetailsSheet({
       >
         <div className="flex items-start justify-between gap-4 border-b border-water-300/12 px-5 py-4">
           <div>
-            <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">Daily streak</p>
+            <p className="font-ui text-[11px] font-black uppercase tracking-[0.22em] text-water-300/80">
+              Hydration streak
+            </p>
             <h2 id="streak-sheet-title" className="font-ui mt-1 text-2xl font-black tracking-normal text-white">
-              {isGoalMet ? "Streak saved" : safeStreak > 0 ? "Keep it alive" : "Start the run"}
+              {hasIntakeToday ? "Today counts" : safeStreak > 0 ? "Keep your streak going" : "Start your streak"}
             </h2>
           </div>
           <button
@@ -460,8 +492,8 @@ function StreakDetailsSheet({
 
         <div className="px-5 py-5">
           <div className="flex items-center gap-3">
-            <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[1.5px] ${safeStreak > 0 || isGoalMet ? "border-cyan-100/30 bg-cyan-200/14 text-cyan-50" : "border-water-300/14 bg-white/5 text-water-200/45"}`}>
-              <Zap className="h-8 w-8" fill={safeStreak > 0 || isGoalMet ? "currentColor" : "none"} strokeWidth={2.35} />
+            <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[1.5px] ${safeStreak > 0 || hasIntakeToday ? "border-cyan-100/30 bg-cyan-200/14 text-cyan-50" : "border-water-300/14 bg-white/5 text-water-200/45"}`}>
+              <Zap className="h-8 w-8" fill={safeStreak > 0 || hasIntakeToday ? "currentColor" : "none"} strokeWidth={2.35} />
             </div>
             <div className="min-w-0">
               <div className="flex items-baseline gap-2">
@@ -469,7 +501,7 @@ function StreakDetailsSheet({
                 <p className="font-ui text-xl font-black text-water-300/70">{safeStreak === 1 ? "day" : "days"}</p>
               </div>
               <p className="font-body mt-2 text-sm font-semibold leading-relaxed text-water-300/82">
-                {getStreakPrompt(safeStreak, remaining, isGoalMet)}
+                {getStreakPrompt(safeStreak, hasIntakeToday)}
               </p>
             </div>
           </div>
@@ -479,6 +511,9 @@ function StreakDetailsSheet({
               <div className="min-w-0">
                 <p className="font-ui text-[0.72rem] font-black uppercase tracking-[0.18em] text-water-300/82">Streak batteries</p>
                 <p className="font-body mt-1 text-xs font-semibold text-water-300/68">{getBatteryProtectionText(safeShieldCharges)}</p>
+                <p className="font-body mt-1 text-[0.68rem] font-semibold leading-relaxed text-water-300/52">
+                  Logging water recharges one battery per day.
+                </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {Array.from({ length: STREAK_SHIELD_COUNT }).map((_, index) => {
@@ -509,15 +544,13 @@ function StreakDetailsSheet({
               <div key={day.date} className="flex min-w-0 flex-col items-center gap-2">
                 <div
                   className={`flex aspect-square w-full max-w-[3.25rem] items-center justify-center rounded-full border border-[1.5px] ${
-                    day.isGoalMet
+                    day.countsTowardStreak
                       ? "border-cyan-100/34 bg-cyan-200/16 text-cyan-50 shadow-[0_0_18px_rgba(56,189,248,0.14)]"
-                      : day.hasIntake
-                        ? "border-water-300/20 bg-water-700/28 text-water-100"
-                        : "border-water-300/14 bg-white/5 text-water-200/28"
+                      : "border-water-300/14 bg-white/5 text-water-200/28"
                   } ${day.isToday ? "ring-2 ring-water-300/24 ring-offset-2 ring-offset-water-950" : ""}`}
                   title={day.date}
                 >
-                  <Zap className="h-5 w-5" fill={day.isGoalMet ? "currentColor" : "none"} strokeWidth={2.45} />
+                  <Zap className="h-5 w-5" fill={day.countsTowardStreak ? "currentColor" : "none"} strokeWidth={2.45} />
                 </div>
                 <p className={`font-ui text-xs font-black ${day.isToday ? "text-white" : "text-water-300/68"}`}>{day.label}</p>
               </div>
@@ -534,7 +567,7 @@ function StreakDetailsSheet({
             </div>
             <div className="px-4 py-4 text-center">
               <div className="flex justify-center text-water-300/80">
-                <Zap className="h-4 w-4" fill={safeStreak > 0 || isGoalMet ? "currentColor" : "none"} strokeWidth={2.4} />
+                <Zap className="h-4 w-4" fill={safeStreak > 0 || hasIntakeToday ? "currentColor" : "none"} strokeWidth={2.4} />
               </div>
               <p className="font-numeric mt-2 text-3xl font-black text-white">{safeStreak}</p>
               <p className="font-body mt-1 text-xs font-semibold text-water-300/72">Current streak</p>
@@ -641,8 +674,11 @@ export default function Home() {
     streak,
     streakShieldCharges,
     history,
+    lastUpdated,
     quietHours,
     workoutSessionEndsAt,
+    workoutSessionDurationMinutes,
+    workoutSessionPausedRemainingMs,
     addDrink,
     subtractDrink,
     undoLastDrink,
@@ -651,6 +687,8 @@ export default function Home() {
     setGoal,
     setQuickAddAmount,
     startWorkoutSession,
+    pauseWorkoutSession,
+    resumeWorkoutSession,
     endWorkoutSession,
     setReminderInterval,
     resetDaily,
@@ -660,10 +698,11 @@ export default function Home() {
   const shouldRevealIntake = intake < goal;
   const revealedIntake = useHydrationReveal(intake, shouldRevealIntake);
   const [isResetConfirming, setIsResetConfirming] = React.useState(false);
-  const [selectedNote, setSelectedNote] = React.useState<HydrationNote>("water");
-  const [isNoteMenuOpen, setIsNoteMenuOpen] = React.useState(false);
+  const [selectedDrinkType, setSelectedDrinkType] = React.useState<HydrationDrinkType>("water");
   const [isCustomQuickOpen, setIsCustomQuickOpen] = React.useState(false);
-  const [customDrinkNote, setCustomDrinkNote] = React.useState<HydrationNote | null>(null);
+  const [customDrinkNote, setCustomDrinkNote] = React.useState<OccasionalDrink | null>(null);
+  const [isCustomDrinkPickerOpen, setIsCustomDrinkPickerOpen] = React.useState(false);
+  const [isWorkoutSetupOpen, setIsWorkoutSetupOpen] = React.useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = React.useState(false);
   const [isOnboardingGoalPickerOpen, setIsOnboardingGoalPickerOpen] = React.useState(false);
   const [isOnboardingReminderPickerOpen, setIsOnboardingReminderPickerOpen] = React.useState(false);
@@ -685,18 +724,25 @@ export default function Home() {
     (action: PendingNotificationAction) => {
       const amount = Number(action.amount);
       const note = action.note && HYDRATION_NOTE_VALUES.has(action.note) ? (action.note as HydrationNote) : "water";
+      const metadata = getDrinkMetadataFromLegacyNote(note);
 
       if (!Number.isFinite(amount) || amount <= 0) return;
 
-      addDrink(Math.min(5000, Math.round(amount)), note);
-      if (note === "workout") {
-        startWorkoutSession();
-      }
+      addDrink(
+        Math.min(5000, Math.round(amount)),
+        metadata.drinkType,
+        metadata.context
+      );
     },
-    [addDrink, startWorkoutSession]
+    [addDrink]
   );
 
-  useLockedPageScroll(isDailyLogOpen || isOnboardingOpen);
+  useLockedPageScroll(
+    isDailyLogOpen ||
+      isOnboardingOpen ||
+      customDrinkNote !== null ||
+      isWorkoutSetupOpen
+  );
 
   React.useEffect(() => {
     if (typeof document === "undefined") return;
@@ -755,15 +801,17 @@ export default function Home() {
     const quickAdd = Number(searchParams.get("quickAdd"));
     const quickAddNote = searchParams.get("quickAddNote");
     const note = quickAddNote && HYDRATION_NOTE_VALUES.has(quickAddNote) ? (quickAddNote as HydrationNote) : "water";
+    const metadata = getDrinkMetadataFromLegacyNote(note);
 
     if (!Number.isFinite(quickAdd) || quickAdd <= 0) return;
 
-    addDrink(Math.min(5000, Math.round(quickAdd)), note);
-    if (note === "workout") {
-      startWorkoutSession();
-    }
+    addDrink(
+      Math.min(5000, Math.round(quickAdd)),
+      metadata.drinkType,
+      metadata.context
+    );
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.hash}`);
-  }, [addDrink, mounted, startWorkoutSession]);
+  }, [addDrink, mounted]);
 
   React.useEffect(() => {
     if (!mounted || typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
@@ -814,12 +862,24 @@ export default function Home() {
     setWorkoutClock(Date.now());
     const intervalId = window.setInterval(() => {
       setWorkoutClock(Date.now());
-    }, 30 * 1000);
+    }, 1000);
 
     return () => {
       window.clearInterval(intervalId);
     };
   }, [workoutSessionEndsAt]);
+
+  React.useEffect(() => {
+    if (
+      !workoutSessionEndsAt ||
+      workoutClock <= 0 ||
+      workoutClock < workoutSessionEndsAt
+    ) {
+      return;
+    }
+
+    endWorkoutSession();
+  }, [endWorkoutSession, workoutClock, workoutSessionEndsAt]);
 
   if (!mounted) {
     return <HydrationLoadingState />;
@@ -827,50 +887,76 @@ export default function Home() {
 
   const actualProgress = Math.min(1, Math.max(0, intake / goal));
   const isGoalMet = intake >= goal;
-  const remainingForGoal = Math.max(0, goal - intake);
   const streakStats = getStreakStats(history, intake, goal);
   const recentStreakDays = getRecentStreakDays(history, intake, goal);
   const latestLog = drinkLog.slice(0, 3);
-  const selectedNoteOption = NOTE_OPTIONS.find((item) => item.value === selectedNote) ?? NOTE_OPTIONS[0];
-  const SelectedNoteIcon = selectedNoteOption.Icon;
-  const customDrinkLabel = customDrinkNote ? getNoteLabel(customDrinkNote) : "Drink";
+  const customDrinkLabel = customDrinkNote ? getDrinkLabel(customDrinkNote) : "Drink";
   const isWorkoutSessionActive = Boolean(workoutSessionEndsAt && workoutClock > 0 && workoutSessionEndsAt > workoutClock);
-  const workoutMinutesLeft = isWorkoutSessionActive
-    ? Math.max(1, Math.ceil(((workoutSessionEndsAt ?? 0) - workoutClock) / 60000))
-    : 0;
-  const workoutReminderCopy = !notificationsSupported
-    ? `Workout mode is active. This device cannot send app checks yet. ${workoutMinutesLeft} min left.`
-    : notificationPermission === "granted"
-      ? `Set checks every ${WORKOUT_REMINDER_INTERVAL_MINUTES} min. ${workoutMinutesLeft} min left.`
-      : notificationPermission === "denied"
-        ? `Workout mode is active. Enable notifications in Settings for set checks. ${workoutMinutesLeft} min left.`
-        : `Allow app notifications for set checks every ${WORKOUT_REMINDER_INTERVAL_MINUTES} min. ${workoutMinutesLeft} min left.`;
+  const isWorkoutSessionPaused = Boolean(
+    !workoutSessionEndsAt && (workoutSessionPausedRemainingMs ?? 0) > 0
+  );
+  const workoutRemainingMs = isWorkoutSessionPaused
+    ? workoutSessionPausedRemainingMs ?? 0
+    : isWorkoutSessionActive
+      ? Math.max(0, (workoutSessionEndsAt ?? 0) - workoutClock)
+      : 0;
+  const workoutDurationMs = Math.max(1, workoutSessionDurationMinutes * 60 * 1000);
+  const workoutProgress = Math.min(
+    1,
+    Math.max(0, 1 - workoutRemainingMs / workoutDurationMs)
+  );
+  const workoutStatus = isWorkoutSessionPaused
+    ? "paused"
+    : isWorkoutSessionActive
+      ? "active"
+      : "idle";
+  const workoutReminderCopy = isWorkoutSessionPaused
+    ? "Sip checks are paused. Resume whenever you are ready."
+    : !notificationsSupported
+      ? "Timer is active. This device cannot send optional sip checks yet."
+      : notificationPermission === "granted"
+        ? `Optional sip checks arrive every ${WORKOUT_REMINDER_INTERVAL_MINUTES} min.`
+        : notificationPermission === "denied"
+          ? "Timer is active. Notifications can be enabled later in Settings."
+          : `Timer is active. Optional sip checks can run every ${WORKOUT_REMINDER_INTERVAL_MINUTES} min.`;
   const canAskWorkoutNotifications = isWorkoutSessionActive && notificationsSupported && notificationPermission === "default";
   const handleReset = () => {
     resetDaily();
     setIsResetConfirming(false);
   };
 
-  const handleSelectNote = async (value: HydrationNote) => {
-    setSelectedNote(value);
-    setIsNoteMenuOpen(false);
+  const handleSelectWater = () => {
+    setSelectedDrinkType("water");
     setCustomDrinkNote(null);
+    setIsCustomDrinkPickerOpen(false);
+  };
 
-    if (value === "workout") {
-      startWorkoutSession();
-      if (notificationsSupported && typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
-        await requestPermission();
-      }
-      return;
-    }
+  const handleSelectOccasionalDrink = (drink: OccasionalDrink) => {
+    setSelectedDrinkType(drink);
+    setCustomDrinkNote(drink);
+    setIsCustomDrinkPickerOpen(false);
+  };
 
-    if (value === "coffee" || value === "tea") {
-      setCustomDrinkNote(value);
-    }
+  const closeOccasionalDrinkFlow = () => {
+    setSelectedDrinkType("water");
+    setCustomDrinkNote(null);
+    setIsCustomDrinkPickerOpen(false);
+  };
+
+  const handleOccasionalDrinkAmount = (amount: number) => {
+    if (!customDrinkNote) return;
+
+    addDrink(amount, customDrinkNote);
+    closeOccasionalDrinkFlow();
+  };
+
+  const handleStartWorkout = (durationMinutes: number) => {
+    startWorkoutSession(durationMinutes);
+    setIsWorkoutSetupOpen(false);
   };
 
   const handleAddDrink = (amount: number) => {
-    addDrink(amount, selectedNote);
+    addDrink(amount, selectedDrinkType);
   };
 
   const beginFavoriteHold = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -936,17 +1022,19 @@ export default function Home() {
   };
 
   const handleCustomDrinkAmount = (amount: number) => {
-    if (!customDrinkNote) return;
-
-    addDrink(amount, customDrinkNote);
-    setCustomDrinkNote(null);
+    handleOccasionalDrinkAmount(amount);
   };
 
   const handleEditLog = (amount: number) => {
     if (!editingLog) return;
 
     const sign = editingLog.amount < 0 ? -1 : 1;
-    updateDrinkLogItem(editingLog.id, amount * sign, editingLog.note);
+    updateDrinkLogItem(
+      editingLog.id,
+      amount * sign,
+      editingLog.drinkType,
+      editingLog.context
+    );
     setEditingLog(null);
   };
 
@@ -1011,7 +1099,7 @@ export default function Home() {
   const shouldHideMainChrome = isOnboardingOpen;
 
   return (
-    <main className="relative mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] min-w-0 flex-col items-center overflow-x-hidden px-3.5 pb-24 pt-6 min-[380px]:px-4 min-[380px]:pb-24 min-[380px]:pt-5 sm:px-6 sm:pb-24 sm:pt-6 md:max-w-[30rem]">
+    <main className="fluid-page-shell relative mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] min-w-0 flex-col items-center overflow-x-hidden px-3.5 pb-28 pt-6 min-[380px]:px-4 min-[380px]:pb-28 min-[380px]:pt-5 sm:px-6 sm:pb-28 sm:pt-6 md:max-w-[30rem]">
       {createPortal(<WaveBackground progress={actualProgress} />, document.body)}
 
       <div
@@ -1020,8 +1108,11 @@ export default function Home() {
         }`}
         aria-hidden={shouldHideMainChrome}
       >
-        <header className="relative z-20 mt-2 w-full text-center">
+        <header className="fluid-home-header relative z-20 mt-2 w-full text-center" data-fluid-reveal>
           <h1 className="font-display text-5xl font-black text-white drop-shadow-md sm:text-6xl">Fluid.</h1>
+          <p className="font-ui mt-2 text-[0.68rem] font-bold uppercase tracking-[0.28em] text-cyan-100/68">
+            Hydration, at your pace
+          </p>
           <button
             type="button"
             onClick={() => setIsStreakOpen(true)}
@@ -1030,8 +1121,8 @@ export default function Home() {
                 ? "border-cyan-100/24 bg-water-950/24 text-water-100 hover:bg-white/10"
                 : "border-water-300/10 bg-water-950/12 text-water-200/34 hover:text-water-200/62"
             }`}
-            aria-label="Open streak details"
-            title="Streak"
+            aria-label={`${streak} ${streak === 1 ? "day" : "days"} hydration streak. Open details`}
+            title={`${streak}-day hydration streak`}
           >
             <Zap className="h-6 w-6" fill={isGoalMet || streak > 0 ? "currentColor" : "none"} strokeWidth={2.35} />
             {streak > 0 && (
@@ -1047,6 +1138,7 @@ export default function Home() {
             intake={revealedIntake}
             targetIntake={intake}
             goal={goal}
+            celebrationKey={lastUpdated}
             goalAction={
               <button
                 type="button"
@@ -1061,87 +1153,36 @@ export default function Home() {
           />
         </div>
 
-        <section className="w-full max-w-full self-center space-y-3">
+        <RhythmMarquee />
+
+        <section className="w-full max-w-full self-center space-y-3" data-fluid-reveal>
           <div className="flex items-center justify-between gap-3 px-1">
             <p className="font-ui text-[12px] font-bold uppercase tracking-[0.18em] text-water-200/90">Quick add</p>
-            <button
-              type="button"
-              onClick={() => setIsNoteMenuOpen((isOpen) => !isOpen)}
-              className="font-ui inline-flex max-w-[11rem] items-center gap-1.5 rounded-full border border-[1.5px] border-water-300/16 bg-water-950/24 px-3 py-2 text-xs font-extrabold text-water-100 transition-all hover:border-cyan-100/26 hover:bg-white/10 hover:text-white active:scale-95"
-              aria-expanded={isNoteMenuOpen}
-              aria-controls="drink-type-menu"
-              aria-label={`Change drink type. Current type: ${selectedNoteOption.label}`}
-              title="Change drink type"
-            >
-              <SelectedNoteIcon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.6} />
-              <span className="truncate">{selectedNoteOption.label}</span>
-              <Tag className="h-3.5 w-3.5 shrink-0 text-water-300/76" strokeWidth={2.6} />
-            </button>
+            <p className="font-body text-xs font-semibold text-water-300/68">Water by default</p>
           </div>
 
-          {isNoteMenuOpen && (
-            <div
-              id="drink-type-menu"
-              className="grid grid-cols-2 gap-2 rounded-[1rem] border border-[1.5px] border-water-300/14 bg-water-950/28 p-2 shadow-inner backdrop-blur-md sm:grid-cols-3"
-            >
-              {NOTE_OPTIONS.map(({ value, label, Icon }) => {
-                const isActive = selectedNote === value;
+          <DrinkTypeBar
+            activeDrink={customDrinkNote ?? "water"}
+            onSelectWater={handleSelectWater}
+            onSelectOccasionalDrink={handleSelectOccasionalDrink}
+          />
 
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => {
-                      void handleSelectNote(value);
-                    }}
-                    className={`font-ui inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[1.5px] px-3 py-2 text-xs font-extrabold transition-all ${
-                      isActive
-                        ? "border-cyan-100/32 bg-cyan-100/18 text-white shadow-[0_8px_18px_rgba(56,189,248,0.16)]"
-                        : "border-water-300/14 bg-water-950/18 text-water-200/75 hover:bg-white/10 hover:text-white"
-                    }`}
-                    aria-pressed={isActive}
-                  >
-                    <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.6} />
-                    <span className="truncate">{label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {isWorkoutSessionActive && (
-            <div className="flex items-center gap-3 rounded-[1rem] border border-emerald-100/16 bg-emerald-300/10 px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-100/18 bg-emerald-200/10 text-emerald-50">
-                <Dumbbell className="h-4 w-4" strokeWidth={2.5} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-ui text-[0.72rem] font-black uppercase tracking-[0.15em] text-emerald-100/88">Workout hydration</p>
-                <p className="font-body mt-0.5 text-xs font-semibold leading-snug text-water-200/78">
-                  {workoutReminderCopy}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1.5">
-                {canAskWorkoutNotifications && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void requestPermission();
-                    }}
-                    className="font-ui rounded-full border border-cyan-100/20 bg-cyan-100/14 px-3 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.14em] text-cyan-50 transition-colors hover:bg-cyan-100/20"
-                  >
-                    Allow
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={endWorkoutSession}
-                  className="font-ui rounded-full border border-emerald-100/16 bg-water-950/22 px-3 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.14em] text-water-100 transition-colors hover:bg-white/10"
-                >
-                  End
-                </button>
-              </div>
-            </div>
-          )}
+          <WorkoutHydrationCard
+            status={workoutStatus}
+            durationMinutes={workoutSessionDurationMinutes}
+            remainingMs={workoutRemainingMs}
+            progress={workoutProgress}
+            reminderCopy={workoutReminderCopy}
+            canEnableNotifications={canAskWorkoutNotifications}
+            onOpenSetup={() => setIsWorkoutSetupOpen(true)}
+            onAddDrink={(amount) => addDrink(amount, "water", "workout")}
+            onPause={pauseWorkoutSession}
+            onResume={resumeWorkoutSession}
+            onEnd={endWorkoutSession}
+            onEnableNotifications={() => {
+              void requestPermission();
+            }}
+          />
 
           <button
             type="button"
@@ -1153,7 +1194,7 @@ export default function Home() {
             onPointerMove={handleFavoritePointerMove}
             onPointerUp={finishFavoriteHold}
             className="group relative flex min-h-[6.35rem] w-full touch-manipulation items-center justify-between overflow-hidden rounded-[1.1rem] border border-[1.5px] border-cyan-100/24 bg-gradient-to-br from-cyan-300/26 via-water-500/18 to-emerald-300/18 px-3.5 py-4 text-left shadow-[0_18px_34px_rgba(8,47,73,0.24),inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-100/34 hover:brightness-110 active:scale-[0.98] min-[380px]:rounded-[1.25rem] min-[380px]:px-4"
-            aria-label={`Add favorite amount ${quickAddAmount} milliliters as ${selectedNoteOption.label}. Hold to edit.`}
+            aria-label={`Add favorite amount ${quickAddAmount} milliliters as ${getDrinkLabel(selectedDrinkType)}. Hold to edit.`}
             title="Hold to edit favorite amount"
           >
             <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent" />
@@ -1194,14 +1235,14 @@ export default function Home() {
             </div>
           </button>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+          <div className="grid grid-flow-dense grid-cols-2 gap-2.5 sm:gap-3">
             {SECONDARY_QUICK_AMOUNTS.map(({ amount, label, Icon, surface, iconSurface, glow, halo }, index) => (
               <button
                 key={amount}
                 type="button"
                 onClick={() => handleAddDrink(amount)}
-                className={`group relative flex min-h-[4.95rem] overflow-hidden rounded-[1rem] border border-[1.5px] px-3 py-2.5 text-left shadow-[0_8px_18px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.10)] backdrop-blur-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(56,189,248,0.10),inset_0_1px_2px_rgba(255,255,255,0.14)] active:scale-[0.97] min-[380px]:min-h-[5.35rem] min-[380px]:rounded-[1.05rem] ${surface}`}
-                aria-label={`Add ${amount} milliliters as ${selectedNoteOption.label}`}
+                className={`fluid-interactive-surface group relative flex min-h-[4.95rem] overflow-hidden rounded-[1rem] border border-[1.5px] px-3 py-2.5 text-left shadow-[0_8px_18px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.10)] backdrop-blur-lg transition-all duration-700 ease-out hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(56,189,248,0.14),inset_0_1px_2px_rgba(255,255,255,0.14)] active:scale-[0.97] min-[380px]:min-h-[5.35rem] min-[380px]:rounded-[1.05rem] ${surface}`}
+                aria-label={`Add ${amount} milliliters as ${getDrinkLabel(selectedDrinkType)}`}
               >
                 <div className={`absolute -right-10 -top-11 h-24 w-24 rounded-full ${glow} blur-2xl transition-opacity duration-300 group-hover:opacity-80`} />
                 <div className="absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/50 to-transparent" />
@@ -1242,7 +1283,7 @@ export default function Home() {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => subtractDrink(250, selectedNote)}
+              onClick={() => subtractDrink(250, selectedDrinkType)}
               disabled={intake === 0}
               className="rounded-[1rem] border-rose-200/18 bg-rose-500/10 px-3 py-3 text-rose-50 hover:bg-rose-500/18 disabled:opacity-35"
             >
@@ -1278,7 +1319,7 @@ export default function Home() {
                         </span>
                         <span className="font-body text-xs font-semibold text-water-300/70">{formatLogTime(item.timestamp)}</span>
                       </div>
-                      <p className="font-body mt-0.5 truncate text-xs font-semibold text-water-300/68">{getNoteLabel(item.note)}</p>
+                      <p className="font-body mt-0.5 truncate text-xs font-semibold text-water-300/68">{getDrinkLogLabel(item)}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
@@ -1350,15 +1391,28 @@ export default function Home() {
         onClose={() => setIsOnboardingReminderPickerOpen(false)}
       />
 
+      <DrinkAmountSheet
+        drink={isCustomDrinkPickerOpen ? null : customDrinkNote}
+        onChooseAmount={handleOccasionalDrinkAmount}
+        onChooseCustom={() => setIsCustomDrinkPickerOpen(true)}
+        onClose={closeOccasionalDrinkFlow}
+      />
+
+      <WorkoutSetupSheet
+        isOpen={isWorkoutSetupOpen}
+        onStart={handleStartWorkout}
+        onClose={() => setIsWorkoutSetupOpen(false)}
+      />
+
       <NumberPickerDialog
-        isOpen={customDrinkNote !== null}
+        isOpen={customDrinkNote !== null && isCustomDrinkPickerOpen}
         value={0}
         min={1}
         max={5000}
         title={`${customDrinkLabel} Amount`}
         suffix="ml"
         onChange={handleCustomDrinkAmount}
-        onClose={() => setCustomDrinkNote(null)}
+        onClose={() => setIsCustomDrinkPickerOpen(false)}
       />
 
       <NumberPickerDialog
@@ -1377,8 +1431,7 @@ export default function Home() {
         isOpen={isStreakOpen}
         streak={streak}
         streakShieldCharges={streakShieldCharges}
-        remaining={remainingForGoal}
-        isGoalMet={isGoalMet}
+        hasIntakeToday={intake > 0}
         recentDays={recentStreakDays}
         bestStreak={streakStats.bestStreak}
         onClose={() => setIsStreakOpen(false)}
@@ -1428,7 +1481,7 @@ export default function Home() {
                         </span>
                         <span className="font-body text-xs font-semibold text-water-300/70">{formatLogTime(item.timestamp)}</span>
                       </div>
-                      <p className="font-body mt-0.5 truncate text-xs font-semibold text-water-300/68">{getNoteLabel(item.note)}</p>
+                      <p className="font-body mt-0.5 truncate text-xs font-semibold text-water-300/68">{getDrinkLogLabel(item)}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       <button

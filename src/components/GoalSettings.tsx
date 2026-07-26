@@ -32,6 +32,7 @@ export function GoalSettings({ goal, setGoal, isHighlighted = false }: GoalSetti
   return (
     <>
       <Card
+        data-fluid-stack
         className={`relative mx-auto w-full max-w-sm overflow-visible p-4 shadow-lg min-[380px]:p-5 md:max-w-[28rem] ${
           isHighlighted ? "fluid-goal-focus" : ""
         }`}
@@ -39,7 +40,9 @@ export function GoalSettings({ goal, setGoal, isHighlighted = false }: GoalSetti
         <div className="flex items-start justify-between gap-3 min-[380px]:gap-4">
           <div className="min-w-0">
             <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Daily Goal</h3>
-            <p className="font-body mt-1 text-sm text-water-300/80">Pick a target that feels consistent and sustainable.</p>
+            <p className="font-body mt-1 text-sm text-water-300/80">
+              Changes today&apos;s target. Previous days stay unchanged.
+            </p>
           </div>
 
           <button
@@ -86,6 +89,7 @@ export function GoalSettings({ goal, setGoal, isHighlighted = false }: GoalSetti
         max={10000}
         title="Custom Daily Goal"
         suffix="ml"
+        startWithValue
         onChange={setGoal}
         onClose={() => setIsCustomOpen(false)}
       />

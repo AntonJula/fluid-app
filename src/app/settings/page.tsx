@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
+import { ChevronDown, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useHydration } from "@/hooks/useHydration";
 import { GoalSettings } from "@/components/GoalSettings";
 import { ReminderSettings } from "@/components/ReminderSettings";
@@ -80,30 +80,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 pb-4 pt-6 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-5 sm:px-6 sm:pb-6 sm:pt-6 md:max-w-[30rem]">
-      <header className="w-full text-center mt-2 mb-8">
+    <main className="fluid-page-shell mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 pb-28 pt-6 min-[380px]:px-4 min-[380px]:pb-28 min-[380px]:pt-5 sm:px-6 sm:pb-28 sm:pt-6 md:max-w-[30rem]">
+      <header className="fluid-page-header mb-7 mt-2 w-full text-center" data-fluid-reveal>
         <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Settings.</h1>
         <p className="font-ui text-xs font-semibold mt-2 tracking-widest text-water-200 uppercase mb-6">Customize Fluid</p>
       </header>
 
-      <Card className="mb-6 w-full p-4 min-[380px]:p-5">
-        <p className="font-ui text-[11px] uppercase tracking-[0.22em] font-bold text-water-300/80">Habit setup</p>
-        <p className="font-ui mt-2 text-xl font-black text-white">Keep it easy to win every day.</p>
-        <p className="font-body mt-2 text-sm text-water-300/80">
-          Choose a realistic rhythm, then let Fluid stay quiet and helpful in the background.
-        </p>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => router.push("/?setup=true")}
-          className="mt-4 rounded-xl px-4 text-xs"
-        >
-          Setup again
-        </Button>
-      </Card>
-
-      <div className="w-full space-y-6 flex-1">
+      <div className="fluid-stack-flow w-full space-y-6 flex-1">
         <div ref={goalSettingsRef} className="scroll-mt-6">
           <GoalSettings goal={goal} setGoal={setGoal} isHighlighted={isGoalFocused} />
         </div>
@@ -116,6 +99,7 @@ export default function SettingsPage() {
           />
         </div>
         <Card
+          data-fluid-stack
           className={`mx-auto mt-4 w-full max-w-sm overflow-hidden p-0 shadow-lg md:max-w-[28rem] ${
             isAdvancedOpen
               ? "border-cyan-100/20 bg-water-900/24 shadow-cyan-950/18"
@@ -151,7 +135,7 @@ export default function SettingsPage() {
                     isAdvancedOpen ? "text-cyan-100/84" : "text-water-300/80"
                   }`}
                 >
-                  Display and local backup controls.
+                  Navigation, setup, and local backup.
                 </span>
               </span>
             </span>
@@ -181,6 +165,28 @@ export default function SettingsPage() {
               className="scroll-mt-4 space-y-3 border-t border-cyan-100/14 bg-water-950/10 px-3 pb-3 pt-3 min-[380px]:space-y-4 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-4"
             >
               <NavSettings hideNav={hideNav} setHideNav={setHideNav} embedded />
+              <section className="w-full rounded-[1.05rem] border border-water-300/12 bg-water-950/22 p-4 min-[380px]:rounded-[1.2rem] min-[380px]:p-5">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/14 bg-water-800/35 text-water-200">
+                    <RotateCcw className="h-4.5 w-4.5" strokeWidth={2.5} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-ui text-lg font-semibold tracking-normal text-white">Habit setup</h3>
+                    <p className="font-body mt-1 text-sm text-water-300/80">
+                      Revisit your starting choices without deleting drinks or progress.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => router.push("/?setup=true")}
+                      className="mt-3 min-h-11 rounded-xl px-4 text-xs"
+                    >
+                      Run setup again
+                    </Button>
+                  </div>
+                </div>
+              </section>
               <DataSettings
                 exportHydrationState={exportHydrationState}
                 importHydrationState={importHydrationState}
