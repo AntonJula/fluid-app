@@ -77,20 +77,31 @@ export function DataSettings({ exportHydrationState, importHydrationState, embed
 
   const content = (
     <>
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h3 className="font-ui font-semibold text-white tracking-normal text-lg">Data</h3>
-          <p className="font-body mt-1 text-sm text-water-300/80">Your progress stays local. Export a copy whenever you want.</p>
+      <div className={`flex gap-3 ${embedded ? "items-start" : "items-center justify-between"}`}>
+        {embedded ? (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-water-300/14 bg-water-800/32 text-water-200">
+            <ShieldCheck className="h-4.5 w-4.5" strokeWidth={2.5} />
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <h3 className={`font-ui tracking-normal text-white ${embedded ? "text-base font-bold" : "text-lg font-semibold"}`}>
+            {embedded ? "Local backup" : "Data"}
+          </h3>
+          <p className={`font-body mt-1 leading-relaxed text-water-300/76 ${embedded ? "text-xs" : "text-sm"}`}>
+            Your progress stays local. Export a copy whenever you want.
+          </p>
         </div>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/14 bg-water-800/35 text-water-200">
-          <ShieldCheck className="h-5 w-5" strokeWidth={2.5} />
-        </div>
+        {!embedded ? (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/14 bg-water-800/35 text-water-200">
+            <ShieldCheck className="h-5 w-5" strokeWidth={2.5} />
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 min-[380px]:gap-3">
         <Button
           type="button"
-          variant="secondary"
+          variant={embedded ? "brightOutline" : "secondary"}
           onClick={handleExport}
           disabled={isImporting}
           className="rounded-xl px-3 py-3 text-sm"
@@ -101,7 +112,7 @@ export function DataSettings({ exportHydrationState, importHydrationState, embed
         </Button>
         <Button
           type="button"
-          variant="secondary"
+          variant={embedded ? "brightOutline" : "secondary"}
           onClick={() => fileInputRef.current?.click()}
           disabled={isImporting}
           className="rounded-xl px-3 py-3 text-sm"
@@ -126,12 +137,20 @@ export function DataSettings({ exportHydrationState, importHydrationState, embed
       />
 
       <p
-        className={`font-body flex items-center gap-2 rounded-xl border px-3 py-3 text-xs font-semibold min-[380px]:rounded-2xl min-[380px]:px-4 ${
-          status === "error"
-            ? "border-rose-200/16 bg-rose-500/12 text-rose-50"
-            : status === "importing"
-              ? "border-cyan-100/16 bg-cyan-300/10 text-water-100"
-            : "border-water-300/12 bg-water-900/30 text-water-300/82"
+        className={`font-body flex items-center gap-2 text-xs font-semibold ${
+          embedded
+            ? status === "error"
+              ? "text-rose-50"
+              : status === "importing"
+                ? "text-water-100"
+                : "px-1 text-water-300/72"
+            : `rounded-xl border px-3 py-3 min-[380px]:rounded-2xl min-[380px]:px-4 ${
+                status === "error"
+                  ? "border-rose-200/16 bg-rose-500/12 text-rose-50"
+                  : status === "importing"
+                    ? "border-cyan-100/16 bg-cyan-300/10 text-water-100"
+                    : "border-water-300/12 bg-water-900/30 text-water-300/82"
+              }`
         }`}
       >
         {isImporting && <LoaderCircle className="h-3.5 w-3.5 shrink-0 animate-spin text-cyan-100" strokeWidth={2.5} />}
@@ -142,7 +161,7 @@ export function DataSettings({ exportHydrationState, importHydrationState, embed
 
   if (embedded) {
     return (
-      <section className="w-full space-y-4 rounded-[1.05rem] border border-water-300/12 bg-water-950/22 p-4 min-[380px]:rounded-[1.2rem] min-[380px]:p-5">
+      <section className="w-full space-y-4 py-5">
         {content}
       </section>
     );

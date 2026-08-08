@@ -139,16 +139,13 @@ export default function SettingsPage() {
                 </span>
               </span>
             </span>
-            <span className="flex shrink-0 items-center gap-2">
-              <span
-                className={`font-ui hidden rounded-full border px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.14em] transition-all min-[360px]:inline-flex ${
-                  isAdvancedOpen
-                    ? "border-cyan-100/20 bg-cyan-100/12 text-cyan-50"
-                    : "border-water-300/12 bg-water-950/22 text-water-300/72"
-                }`}
-              >
-                {isAdvancedOpen ? "Open" : "More"}
-              </span>
+            <span
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
+                isAdvancedOpen
+                  ? "border-cyan-100/24 bg-cyan-100/12"
+                  : "border-water-300/12 bg-water-950/18"
+              }`}
+            >
               <ChevronDown
                 className={`h-5 w-5 text-water-300 transition-transform duration-300 ${
                   isAdvancedOpen ? "rotate-180 text-cyan-100" : "rotate-0"
@@ -162,30 +159,30 @@ export default function SettingsPage() {
             <div
               ref={advancedSettingsRef}
               id="advanced-settings"
-              className="scroll-mt-4 space-y-3 border-t border-cyan-100/14 bg-water-950/10 px-3 pb-3 pt-3 min-[380px]:space-y-4 min-[380px]:px-4 min-[380px]:pb-4 min-[380px]:pt-4"
+              className="scroll-mt-4 divide-y divide-water-300/10 border-t border-cyan-100/14 bg-water-950/10 px-4 min-[380px]:px-5"
             >
               <NavSettings hideNav={hideNav} setHideNav={setHideNav} embedded />
-              <section className="w-full rounded-[1.05rem] border border-water-300/12 bg-water-950/22 p-4 min-[380px]:rounded-[1.2rem] min-[380px]:p-5">
+              <section className="w-full py-5">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-water-300/14 bg-water-800/35 text-water-200">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-water-300/14 bg-water-800/32 text-water-200">
                     <RotateCcw className="h-4.5 w-4.5" strokeWidth={2.5} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-ui text-lg font-semibold tracking-normal text-white">Habit setup</h3>
-                    <p className="font-body mt-1 text-sm text-water-300/80">
+                    <h3 className="font-ui text-base font-bold tracking-normal text-white">Habit setup</h3>
+                    <p className="font-body mt-1 text-xs leading-relaxed text-water-300/76">
                       Revisit your starting choices without deleting drinks or progress.
                     </p>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => router.push("/?setup=true")}
-                      className="mt-3 min-h-11 rounded-xl px-4 text-xs"
-                    >
-                      Run setup again
-                    </Button>
                   </div>
                 </div>
+                <Button
+                  type="button"
+                  variant="brightOutline"
+                  size="sm"
+                  onClick={() => router.push("/?setup=true")}
+                  className="mt-4 min-h-11 w-full rounded-xl px-4 text-xs"
+                >
+                  Run setup again
+                </Button>
               </section>
               <DataSettings
                 exportHydrationState={exportHydrationState}

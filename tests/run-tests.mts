@@ -6,7 +6,11 @@ import {
   normalizeHydrationState,
   rolloverHydrationState,
 } from "../src/lib/hydrationState.ts";
-import { buildWeeklyHydrationStats } from "../src/lib/hydrationStats.ts";
+import {
+  buildRollingHydrationStats,
+  buildWeeklyHydrationStats,
+  getHydrationInsight,
+} from "../src/lib/hydrationStats.ts";
 import {
   HYDRATION_NOTIFICATION_TYPES,
   WORKOUT_NOTIFICATION_LOG_AMOUNT,
@@ -171,6 +175,74 @@ const tests = [
       assert.equal(stats.averageDelta, 1000);
       assert.equal(stats.canComparePeriods, true);
       assert.equal(stats.chartDays.filter((day) => day.isFuture).length, 5);
+    },
+  },
+  {
+    name: "rolling stats compare the latest 30 days with the previous 30 days",
+    run: () => {
+      const stats = buildRollingHydrationStats({
+        anchor: new Date(2026, 3, 30, 12),
+        history: [
+          { date: "2026-04-01", intake: 3000, goal: 2500 },
+          { date: "2026-04-02", intake: 3000, goal: 2500 },
+          { date: "2026-03-02", intake: 1000, goal: 2500 },
+          { date: "2026-03-03", intake: 1000, goal: 2500 },
+          { date: "2026-03-04", intake: 1000, goal: 2500 },
+        ],
+        todayIntake: 3000,
+        currentGoal: 2500,
+      });
+
+      assert.equal(stats.chartDays.length, 30);
+      assert.equal(stats.chartDays[0].date, "2026-04-01");
+      assert.equal(stats.chartDays[29].date, "2026-04-30");
+      assert.equal(stats.daysWithHydration, 3);
+      assert.equal(stats.dailyAverage, 300);
+      assert.equal(stats.previousDailyAverage, 100);
+      assert.equal(stats.averageDelta, 200);
+      assert.equal(stats.canComparePeriods, true);
+    },
+  },
+  {
+    name: "hydration insight exposes every weekly and 30-day message state",
+    run: () => {
+      const makeStats = ({
+        daysWithHydration,
+        elapsedDays,
+        averageDelta,
+        canComparePeriods,
+      }: {
+        daysWithHydration: number;
+        elapsedDays: number;
+        averageDelta: number;
+        canComparePeriods: boolean;
+      }) => ({
+        chartDays: [],
+        elapsedDays,
+        daysWithHydration,
+        dailyAverage: 0,
+        previousDailyAverage: 0,
+        averageDelta,
+        canComparePeriods,
+      });
+      const states = [
+        ["week", makeStats({ daysWithHydration: 0, elapsedDays: 3, averageDelta: 0, canComparePeriods: false }), "empty", "Your week is ready"],
+        ["week", makeStats({ daysWithHydration: 1, elapsedDays: 3, averageDelta: 0, canComparePeriods: false }), "forming", "A rhythm is taking shape"],
+        ["week", makeStats({ daysWithHydration: 2, elapsedDays: 3, averageDelta: 250, canComparePeriods: true }), "rising", "Your daily average is rising"],
+        ["week", makeStats({ daysWithHydration: 2, elapsedDays: 3, averageDelta: -250, canComparePeriods: true }), "falling", "Keep the pace comfortable"],
+        ["week", makeStats({ daysWithHydration: 2, elapsedDays: 3, averageDelta: 0, canComparePeriods: true }), "steady", "A steady week so far"],
+        ["month", makeStats({ daysWithHydration: 0, elapsedDays: 30, averageDelta: 0, canComparePeriods: false }), "empty", "Your 30-day view is ready"],
+        ["month", makeStats({ daysWithHydration: 2, elapsedDays: 30, averageDelta: 0, canComparePeriods: false }), "forming", "Your 30-day rhythm is taking shape"],
+        ["month", makeStats({ daysWithHydration: 3, elapsedDays: 30, averageDelta: 250, canComparePeriods: true }), "rising", "Your 30-day average is rising"],
+        ["month", makeStats({ daysWithHydration: 3, elapsedDays: 30, averageDelta: -250, canComparePeriods: true }), "falling", "Keep the pace comfortable"],
+        ["month", makeStats({ daysWithHydration: 3, elapsedDays: 30, averageDelta: 0, canComparePeriods: true }), "steady", "A steady 30 days"],
+      ] as const;
+
+      for (const [range, stats, tone, title] of states) {
+        const insight = getHydrationInsight(range, stats);
+        assert.equal(insight.tone, tone);
+        assert.equal(insight.title, title);
+      }
     },
   },
   {

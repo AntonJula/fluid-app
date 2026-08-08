@@ -1,7 +1,7 @@
 import React from "react";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "brightOutline";
   size?: "sm" | "md" | "lg";
   children: React.ReactNode;
 }
@@ -19,6 +19,7 @@ export function Button({
     primary: "bg-gradient-to-br from-cyan-300 via-water-400 to-water-600 text-water-950 shadow-lg shadow-cyan-950/25 hover:shadow-cyan-300/20 hover:-translate-y-0.5 border border-white/30",
     secondary: "bg-water-950/32 backdrop-blur-md text-white hover:bg-water-700/46 hover:-translate-y-0.5 border border-water-200/18 shadow-sm",
     ghost: "bg-transparent text-water-300 hover:bg-water-800/40 hover:text-white transition-colors",
+    brightOutline: "border border-white/55 bg-white/[0.035] text-white hover:-translate-y-0.5 hover:border-white/80 hover:bg-white/[0.07]",
   };
   
   const sizes = {
@@ -32,7 +33,7 @@ export function Button({
       className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
       {...props}
     >
-      <span className="pointer-events-none inline-flex items-center justify-center">{children}</span>
+      <span className="pointer-events-none relative inline-flex items-center justify-center">{children}</span>
     </button>
   );
 }

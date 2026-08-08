@@ -222,10 +222,11 @@ function DrinkAmountSheetContent({
           <button
             type="button"
             onClick={onChooseCustom}
-            className="font-ui mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[1rem] border border-water-300/14 bg-water-950/24 px-4 py-3 text-xs font-black text-water-100 transition-all duration-300 hover:border-cyan-100/24 hover:bg-white/[0.07] hover:text-white active:scale-[0.98]"
+            className="font-ui relative mt-3 flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-[1rem] border border-white/55 bg-white/[0.075] px-4 py-3 text-xs font-black text-white shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_24px_rgba(186,230,253,0.16),inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:border-white/80 hover:bg-white/[0.12] hover:shadow-[0_0_0_1px_rgba(255,255,255,0.14),0_0_30px_rgba(186,230,253,0.25),inset_0_1px_0_rgba(255,255,255,0.24)] active:scale-[0.98]"
           >
-            <SlidersHorizontal className="h-4 w-4 text-cyan-100" strokeWidth={2.5} />
-            Custom amount
+            <span className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
+            <SlidersHorizontal className="relative h-4 w-4 text-cyan-50" strokeWidth={2.5} />
+            <span className="relative">Custom amount</span>
           </button>
         </div>
       </section>

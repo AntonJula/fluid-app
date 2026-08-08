@@ -8,15 +8,19 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   CalendarDays,
   CalendarSearch,
+  ChartNoAxesCombined,
   ChevronLeft,
   ChevronRight,
   Clock3,
   Coffee,
   Droplets,
+  Feather,
   Flame,
+  Footprints,
   Leaf,
+  Sprout,
   Target,
-  TrendingUp,
+  Waves,
   X,
 } from "lucide-react";
 import { useHydration } from "@/hooks/useHydration";
@@ -24,7 +28,10 @@ import { Card } from "@/components/ui/Card";
 import { HydrationLoadingState } from "@/components/HydrationLoadingState";
 import { formatDateLocal } from "@/lib/date";
 import {
+  buildRollingHydrationStats,
   buildWeeklyHydrationStats,
+  getHydrationInsight,
+  type HydrationInsightTone,
   type HydrationStatsDay,
 } from "@/lib/hydrationStats";
 import type {
@@ -232,50 +239,32 @@ function formatMetricAmount(amount: number) {
   return `${amount} ml`;
 }
 
-function getInsight({
-  daysWithHydration,
-  elapsedDays,
-  averageDelta,
-  canComparePeriods,
-}: {
-  daysWithHydration: number;
-  elapsedDays: number;
-  averageDelta: number;
-  canComparePeriods: boolean;
-}) {
-  if (daysWithHydration === 0) {
-    return {
-      title: "Your week is ready",
-      body: "Log any drink when it feels natural. Your first data point will start the weekly view.",
-    };
-  }
-
-  if (!canComparePeriods) {
-    return {
-      title: "A rhythm is taking shape",
-      body: `${daysWithHydration} of ${elapsedDays} days have hydration logged. A fair week-over-week comparison will appear when there is enough data.`,
-    };
-  }
-
-  if (averageDelta > 0) {
-    return {
-      title: "Your daily average is rising",
-      body: `You are averaging ${averageDelta} ml more per elapsed day than at the same point last week.`,
-    };
-  }
-
-  if (averageDelta < 0) {
-    return {
-      title: "Keep the pace comfortable",
-      body: `Your average is ${Math.abs(averageDelta)} ml lower than at the same point last week. One small drink at a time is enough.`,
-    };
-  }
-
-  return {
-    title: "A steady week so far",
-    body: "Your daily average matches the same point last week. Consistency matters more than rushing.",
+function InsightToneIcon({ tone }: { tone: HydrationInsightTone }) {
+  const iconProps = {
+    className:
+      "relative h-[1.05rem] w-[1.05rem] transition-transform duration-500 ease-out group-hover/insight-icon:scale-110",
+    strokeWidth: 2.35,
   };
+
+  if (tone === "rising") return <ChartNoAxesCombined {...iconProps} />;
+  if (tone === "falling") return <Feather {...iconProps} />;
+  if (tone === "steady") return <Waves {...iconProps} />;
+  if (tone === "forming") return <Sprout {...iconProps} />;
+  return <Footprints {...iconProps} />;
 }
+
+const INSIGHT_ACCENT_CLASSES: Record<HydrationInsightTone, string> = {
+  empty:
+    "border-violet-100/24 bg-violet-200/10 text-violet-50 shadow-[0_8px_22px_rgba(167,139,250,0.10),inset_0_1px_0_rgba(255,255,255,0.14)]",
+  forming:
+    "border-emerald-100/22 bg-emerald-300/10 text-emerald-50 shadow-[0_8px_22px_rgba(52,211,153,0.10),inset_0_1px_0_rgba(255,255,255,0.14)]",
+  rising:
+    "border-cyan-100/24 bg-cyan-200/11 text-cyan-50 shadow-[0_8px_22px_rgba(34,211,238,0.11),inset_0_1px_0_rgba(255,255,255,0.14)]",
+  falling:
+    "border-amber-100/22 bg-amber-200/10 text-amber-50 shadow-[0_8px_22px_rgba(251,191,36,0.09),inset_0_1px_0_rgba(255,255,255,0.14)]",
+  steady:
+    "border-sky-100/22 bg-sky-200/10 text-sky-50 shadow-[0_8px_22px_rgba(56,189,248,0.10),inset_0_1px_0_rgba(255,255,255,0.14)]",
+};
 
 function HydrationBarChart({
   data,
@@ -338,7 +327,7 @@ function HydrationBarChart({
         className="h-auto w-full overflow-visible"
         viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
         role="img"
-        aria-label={`${mode === "week" ? "Seven day" : "Month-to-date"} hydration totals. Daily goal ${goal} milliliters.`}
+        aria-label={`${mode === "week" ? "Seven day" : "Thirty day"} hydration totals. Daily goal ${goal} milliliters.`}
       >
         <defs>
           <linearGradient id="stats-bars" x1="0" x2="0" y1="1" y2="0">
@@ -542,36 +531,18 @@ export default function StatsPage() {
     todayIntake: intake,
     currentGoal: goal,
   });
-  const currentMonthDays = getMonthDays(todayDate).filter(
-    (day): day is { date: string; day: number } =>
-      day !== null && day.date <= today
-  );
-  const monthChartData = currentMonthDays.map<HydrationStatsDay>((day) => {
-    const trackedDay = trackedByDate.get(day.date);
-
-    return {
-      date: day.date,
-      intake: trackedDay?.intake ?? 0,
-      goal: trackedDay?.goal ?? goal,
-      isToday: day.date === today,
-      isFuture: false,
-    };
+  const rollingStats = buildRollingHydrationStats({
+    anchor: todayDate,
+    history,
+    todayIntake: intake,
+    currentGoal: goal,
   });
-  const selectedChartData =
-    rangeMode === "week" ? weeklyStats.chartDays : monthChartData;
-  const monthElapsedDays = Math.max(monthChartData.length, 1);
-  const monthAverage = Math.round(
-    monthChartData.reduce((sum, day) => sum + day.intake, 0) /
-      monthElapsedDays
-  );
-  const monthLoggedDays = monthChartData.filter((day) => day.intake > 0).length;
-  const selectedAverage =
-    rangeMode === "week" ? weeklyStats.dailyAverage : monthAverage;
-  const selectedLoggedDays =
-    rangeMode === "week" ? weeklyStats.daysWithHydration : monthLoggedDays;
-  const selectedElapsedDays =
-    rangeMode === "week" ? weeklyStats.elapsedDays : monthElapsedDays;
-  const insight = getInsight(weeklyStats);
+  const selectedStats = rangeMode === "week" ? weeklyStats : rollingStats;
+  const selectedChartData = selectedStats.chartDays;
+  const selectedAverage = selectedStats.dailyAverage;
+  const selectedLoggedDays = selectedStats.daysWithHydration;
+  const selectedElapsedDays = selectedStats.elapsedDays;
+  const insight = getHydrationInsight(rangeMode, selectedStats);
   const weekRangeLabel = `${SHORT_DATE_FORMATTER.format(
     parseDateLocal(weeklyStats.chartDays[0].date)
   )} – ${SHORT_DATE_FORMATTER.format(
@@ -771,7 +742,7 @@ export default function StatsPage() {
         <div className="mt-3 grid grid-flow-dense grid-cols-2 gap-2.5">
           <div className="rounded-[0.95rem] border border-water-300/12 bg-water-950/18 px-3 py-2.5">
             <p className="font-ui text-[0.62rem] font-black uppercase tracking-[0.16em] text-water-300/72">
-              Average so far
+              {rangeMode === "week" ? "Average so far" : "30-day average"}
             </p>
             <p className="font-numeric mt-1 text-xl font-black text-white">
               {selectedAverage}
@@ -797,11 +768,17 @@ export default function StatsPage() {
           </div>
         </div>
 
-        <div className="mt-3 flex items-start gap-2.5 border-t border-water-300/10 px-1 pt-3">
-          <TrendingUp
-            className="mt-0.5 h-4 w-4 shrink-0 text-cyan-100"
-            strokeWidth={2.5}
-          />
+        <div
+          className="mt-3 flex items-start gap-3 rounded-[1rem] border border-water-300/10 bg-white/[0.025] p-3"
+          aria-live="polite"
+        >
+          <div
+            className={`group/insight-icon relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[0.9rem] border backdrop-blur-md ${INSIGHT_ACCENT_CLASSES[insight.tone]}`}
+            aria-hidden="true"
+          >
+            <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+            <InsightToneIcon tone={insight.tone} />
+          </div>
           <div className="min-w-0">
             <p className="font-ui text-xs font-black text-white">
               {insight.title}

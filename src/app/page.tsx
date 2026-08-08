@@ -523,15 +523,18 @@ function StreakDetailsSheet({
                   return (
                     <div
                       key={index}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border border-[1.5px] ${
+                      className={`relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-[1.5px] ${
                         isCharged
                           ? "border-cyan-100/34 bg-cyan-200/16 text-cyan-50 shadow-[0_0_18px_rgba(56,189,248,0.12)]"
-                          : "border-water-300/10 bg-water-950/30 text-water-300/22"
+                          : "border-white/28 bg-water-950/48 text-water-200/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                       }`}
                       aria-label={isCharged ? "Charged streak battery" : "Empty streak battery"}
                       title={isCharged ? "Charged" : "Empty"}
                     >
-                      <BatteryIcon className="h-5 w-5" fill={isCharged ? "currentColor" : "none"} strokeWidth={2.35} />
+                      <BatteryIcon className="relative h-5 w-5" fill={isCharged ? "currentColor" : "none"} strokeWidth={2.35} />
+                      {!isCharged ? (
+                        <span className="pointer-events-none absolute h-[1.5px] w-6 -rotate-45 rounded-full bg-water-100/58 shadow-[0_0_7px_rgba(186,230,253,0.18)]" />
+                      ) : null}
                     </div>
                   );
                 })}
