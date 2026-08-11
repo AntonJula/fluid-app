@@ -170,7 +170,7 @@ function DrinkAmountSheetContent({
         role="dialog"
         aria-modal="true"
         aria-labelledby="drink-amount-title"
-        className="fluid-glass-soft w-full max-w-[25.5rem] overflow-hidden rounded-[1.7rem] border border-[1.5px] border-cyan-100/18 bg-water-950/96 shadow-[0_24px_64px_rgba(1,31,47,0.42)]"
+        className="fluid-glass-soft fluid-sheet fluid-bottom-sheet w-full max-w-[25.5rem] overflow-hidden rounded-[1.7rem] border border-[1.5px] border-cyan-100/18 bg-water-950/96 shadow-[0_24px_64px_rgba(1,31,47,0.42)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-cyan-100/12 px-5 py-4">
@@ -296,7 +296,7 @@ function WorkoutSetupSheetContent({
         role="dialog"
         aria-modal="true"
         aria-labelledby="workout-setup-title"
-        className="fluid-glass-soft w-full max-w-[25.5rem] overflow-hidden rounded-[1.7rem] border border-[1.5px] border-emerald-100/18 bg-water-950/96 shadow-[0_24px_64px_rgba(1,31,47,0.42)]"
+        className="fluid-glass-soft fluid-sheet fluid-bottom-sheet w-full max-w-[25.5rem] overflow-hidden rounded-[1.7rem] border border-[1.5px] border-emerald-100/18 bg-water-950/96 shadow-[0_24px_64px_rgba(1,31,47,0.42)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-emerald-100/12 px-5 py-4">

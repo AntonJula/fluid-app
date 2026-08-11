@@ -93,7 +93,7 @@ function NumberPickerDialogContent({
     >
       <div
         ref={dialogRef}
-        className="bg-water-900 border border-[1.5px] border-water-300/16 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
+        className="fluid-sheet fluid-center-dialog bg-water-900 border border-[1.5px] border-water-300/16 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.8)] rounded-[2rem] w-full max-w-[320px] overflow-hidden flex flex-col animate-in slide-in-from-bottom-8 zoom-in-95 duration-300"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

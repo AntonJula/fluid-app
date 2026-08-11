@@ -255,17 +255,17 @@ html[data-fluid-setup-open="true"] [data-bottom-nav-shell="true"] {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-color: rgba(186, 230, 253, 0.22);
+  border-color: rgba(186, 230, 253, 0.18);
   background-image:
-    radial-gradient(circle at 14% 0%, rgba(224, 242, 254, 0.13), transparent 30%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(125, 211, 252, 0.075) 38%, rgba(7, 52, 79, 0.2) 100%);
+    radial-gradient(circle at 14% 0%, rgba(224, 242, 254, 0.1), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.095), rgba(125, 211, 252, 0.052) 38%, rgba(5, 43, 66, 0.28) 100%);
   box-shadow:
-    0 22px 54px rgba(1, 22, 35, 0.24),
-    0 0 0 1px rgba(125, 211, 252, 0.035),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -1px 0 rgba(125, 211, 252, 0.08);
-  backdrop-filter: blur(22px) saturate(1.24);
-  -webkit-backdrop-filter: blur(22px) saturate(1.24);
+    0 18px 48px rgba(1, 22, 35, 0.22),
+    0 0 0 1px rgba(125, 211, 252, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(125, 211, 252, 0.055);
+  backdrop-filter: blur(24px) saturate(1.16);
+  -webkit-backdrop-filter: blur(24px) saturate(1.16);
 }
 
 .fluid-glass-surface::before,
@@ -287,7 +287,7 @@ html[data-fluid-setup-open="true"] [data-bottom-nav-shell="true"] {
   background:
     radial-gradient(circle at 24% 0%, rgba(255, 255, 255, 0.2), transparent 32%),
     linear-gradient(120deg, rgba(255, 255, 255, 0.13), transparent 44%, rgba(125, 211, 252, 0.1) 72%, transparent);
-  opacity: 0.76;
+  opacity: 0.58;
 }
 
 .fluid-glass-surface::after {
@@ -300,15 +300,15 @@ html[data-fluid-setup-open="true"] [data-bottom-nav-shell="true"] {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-color: rgba(186, 230, 253, 0.16);
+  border-color: rgba(186, 230, 253, 0.14);
   background-image:
-    radial-gradient(circle at 8% 0%, rgba(255, 255, 255, 0.07), transparent 34%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(125, 211, 252, 0.038) 42%, rgba(7, 52, 79, 0.11));
+    radial-gradient(circle at 8% 0%, rgba(255, 255, 255, 0.06), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(125, 211, 252, 0.03) 42%, rgba(5, 43, 66, 0.22));
   box-shadow:
-    0 16px 34px rgba(1, 22, 35, 0.17),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px) saturate(1.08);
-  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+    0 12px 30px rgba(1, 22, 35, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.075);
+  backdrop-filter: blur(18px) saturate(1.06);
+  -webkit-backdrop-filter: blur(18px) saturate(1.06);
 }
 
 .fluid-glass-soft::before {
@@ -329,18 +329,76 @@ html[data-fluid-setup-open="true"] [data-bottom-nav-shell="true"] {
 
 .fluid-modal-backdrop {
   background:
-    radial-gradient(circle at 50% 110%, rgba(14, 165, 233, 0.14), transparent 42%),
-    linear-gradient(180deg, rgba(6, 30, 48, 0.76), rgba(8, 47, 73, 0.84));
-  backdrop-filter: blur(64px) saturate(1.08) brightness(0.76);
-  -webkit-backdrop-filter: blur(64px) saturate(1.08) brightness(0.76);
+    radial-gradient(circle at 50% 110%, rgba(14, 165, 233, 0.09), transparent 44%),
+    linear-gradient(180deg, rgba(1, 18, 30, 0.66), rgba(2, 25, 39, 0.78));
+  backdrop-filter: blur(18px) saturate(0.96) brightness(0.78);
+  -webkit-backdrop-filter: blur(18px) saturate(0.96) brightness(0.78);
 }
 
 .fluid-modal-backdrop > :where(section, div) {
   box-shadow:
-    0 0 0 1px rgba(186, 230, 253, 0.12),
-    0 0 32px rgba(56, 189, 248, 0.14),
-    0 24px 72px rgba(0, 0, 0, 0.48),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    0 0 0 1px rgba(186, 230, 253, 0.14),
+    0 30px 80px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.fluid-sheet {
+  position: relative;
+  isolation: isolate;
+  border-color: rgba(186, 230, 253, 0.2);
+  background-color: rgba(4, 37, 57, 0.94);
+  background-image:
+    radial-gradient(circle at 18% 0%, rgba(224, 242, 254, 0.1), transparent 34%),
+    linear-gradient(155deg, rgba(255, 255, 255, 0.075), rgba(8, 58, 84, 0.22) 44%, rgba(3, 30, 48, 0.42));
+  box-shadow:
+    0 0 0 1px rgba(186, 230, 253, 0.08),
+    0 28px 78px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(28px) saturate(1.16);
+  -webkit-backdrop-filter: blur(28px) saturate(1.16);
+  animation: fluid-sheet-materialize 260ms ease-out both;
+}
+
+.fluid-sheet > :first-child {
+  border-bottom-color: rgba(186, 230, 253, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+}
+
+.fluid-bottom-sheet {
+  transform-origin: 50% 100%;
+}
+
+.fluid-bottom-sheet::after {
+  position: absolute;
+  top: 0.45rem;
+  left: 50%;
+  z-index: 3;
+  width: 2.4rem;
+  height: 0.24rem;
+  border-radius: 9999px;
+  background: rgba(224, 242, 254, 0.3);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12);
+  content: "";
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.fluid-bottom-sheet > :first-child {
+  padding-top: 1.25rem;
+}
+
+.fluid-center-dialog {
+  transform-origin: 50% 50%;
+}
+
+.fluid-open-card {
+  border-color: rgba(186, 230, 253, 0.2);
+  background-image:
+    radial-gradient(circle at 14% 0%, rgba(224, 242, 254, 0.085), transparent 30%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.065), rgba(8, 58, 84, 0.16) 44%, rgba(3, 30, 48, 0.24));
+  box-shadow:
+    0 18px 42px rgba(1, 22, 35, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.11);
 }
 
 .fluid-scroll-panel {
@@ -653,29 +711,26 @@ html[data-fluid-setup-open="true"] [data-bottom-nav-shell="true"] {
 }
 
 .fluid-page-header h1 {
+  line-height: 0.96;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
 .fluid-home-header::after {
-  display: block;
-  width: 3.25rem;
-  height: 1px;
-  margin: 0.85rem auto 0;
-  background: linear-gradient(90deg, transparent, rgba(186, 230, 253, 0.72), transparent);
-  box-shadow: 0 0 14px rgba(103, 232, 249, 0.25);
-  content: "";
+  display: none;
 }
 
 .fluid-card {
+  border-color: rgba(186, 230, 253, 0.14);
   transform-origin: 50% 62%;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .fluid-card:hover {
-    border-color: rgba(186, 230, 253, 0.23);
+    border-color: rgba(186, 230, 253, 0.2);
     box-shadow:
-      0 22px 48px rgba(1, 22, 35, 0.22),
-      inset 0 1px 0 rgba(255, 255, 255, 0.11);
+      0 18px 42px rgba(1, 22, 35, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
   .fluid-interactive-surface:hover > :where(div, span) {
@@ -684,7 +739,144 @@ html[data-fluid-setup-open="true"] [data-bottom-nav-shell="true"] {
 }
 
 .fluid-interactive-surface > :where(div, span) {
-  transition: transform 700ms cubic-bezier(0.22, 0.9, 0.32, 1);
+  transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fluid-interactive-surface,
+.fluid-button {
+  transition-duration: 220ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fluid-interactive-surface:active,
+.fluid-button:active {
+  filter: brightness(1.06);
+}
+
+.fluid-choice {
+  border: 1px solid rgba(186, 230, 253, 0.13);
+  background: rgba(3, 30, 48, 0.26);
+  color: rgba(224, 242, 254, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease,
+    box-shadow 200ms ease,
+    color 200ms ease,
+    transform 140ms ease;
+}
+
+.fluid-choice:hover {
+  border-color: rgba(186, 230, 253, 0.22);
+  background: rgba(8, 58, 84, 0.34);
+  color: white;
+}
+
+.fluid-choice[data-selected="true"] {
+  border-color: rgba(165, 243, 252, 0.34);
+  background:
+    linear-gradient(180deg, rgba(165, 243, 252, 0.18), rgba(34, 211, 238, 0.11)),
+    rgba(8, 58, 84, 0.42);
+  color: white;
+  box-shadow:
+    0 0 0 1px rgba(165, 243, 252, 0.07),
+    0 8px 18px rgba(1, 22, 35, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.fluid-choice:active,
+.fluid-field-button:active,
+.fluid-settings-action:active {
+  transform: scale(0.97);
+}
+
+.fluid-field-button,
+.fluid-settings-action {
+  border: 1px solid rgba(186, 230, 253, 0.15);
+  background: rgba(3, 30, 48, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition:
+    border-color 200ms ease,
+    background-color 200ms ease,
+    box-shadow 200ms ease,
+    color 200ms ease,
+    transform 140ms ease;
+}
+
+.fluid-field-button:hover,
+.fluid-settings-action:hover {
+  border-color: rgba(186, 230, 253, 0.24);
+  background: rgba(8, 58, 84, 0.34);
+  box-shadow:
+    0 8px 18px rgba(1, 22, 35, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.fluid-switch {
+  position: relative;
+  display: inline-flex;
+  width: 4rem;
+  height: 2.25rem;
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 9999px;
+  padding: 3px;
+  background: rgba(3, 30, 48, 0.52);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    border-color 220ms ease,
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 140ms ease;
+}
+
+.fluid-switch:hover {
+  border-color: rgba(255, 255, 255, 0.36);
+  background: rgba(5, 43, 66, 0.58);
+}
+
+.fluid-switch[data-checked="true"] {
+  border-color: rgba(207, 250, 254, 0.52);
+  background:
+    linear-gradient(90deg, rgba(6, 182, 212, 0.55), rgba(103, 232, 249, 0.46) 52%, rgba(125, 211, 252, 0.5)),
+    rgba(8, 58, 84, 0.58);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 0 20px rgba(34, 211, 238, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.fluid-switch:active {
+  transform: scale(0.96);
+}
+
+.fluid-switch-thumb {
+  pointer-events: none;
+  position: relative;
+  display: flex;
+  width: 1.75rem;
+  height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 9999px;
+  background: linear-gradient(145deg, white, rgb(236, 254, 255) 52%, rgb(186, 230, 253));
+  color: rgb(7, 89, 121);
+  box-shadow:
+    0 4px 12px rgba(2, 8, 23, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateX(0);
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 200ms ease;
+}
+
+.fluid-switch[data-checked="true"] .fluid-switch-thumb {
+  color: rgb(8, 145, 178);
+  transform: translateX(1.875rem);
 }
 
 .fluid-button::before {
@@ -839,13 +1031,58 @@ html[data-fluid-setup-open="true"] [data-bottom-nav-shell="true"] {
   }
 }
 
+@keyframes fluid-sheet-materialize {
+  from {
+    opacity: 0.72;
+    filter: blur(7px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fluid-rhythm-marquee-track {
     animation: none;
   }
 
   .fluid-button::before,
-  .fluid-interactive-surface > :where(div, span) {
+  .fluid-interactive-surface > :where(div, span),
+  .fluid-switch,
+  .fluid-switch-thumb {
     transition: none;
+  }
+
+  .fluid-sheet {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .fluid-glass-surface,
+  .fluid-glass-soft,
+  .fluid-sheet,
+  [data-bottom-nav="true"] {
+    background-color: rgba(4, 37, 57, 0.98);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .fluid-modal-backdrop {
+    background: rgba(2, 23, 37, 0.92);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .fluid-glass-surface,
+  .fluid-glass-soft,
+  .fluid-sheet,
+  .fluid-card {
+    border-color: rgba(224, 242, 254, 0.42);
+    background-color: rgba(3, 30, 48, 0.98);
   }
 }

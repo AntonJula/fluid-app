@@ -48,7 +48,7 @@ export function GoalSettings({ goal, setGoal, isHighlighted = false }: GoalSetti
           <button
             type="button"
             onClick={() => setIsCustomOpen(true)}
-            className="font-numeric flex shrink-0 items-center gap-2 rounded-xl border border-water-300/16 bg-water-800/50 px-3 py-2 text-sm font-bold text-white shadow-inner outline-none backdrop-blur-md transition-all hover:border-water-200/24 hover:bg-water-700/50 min-[380px]:px-4"
+            className="fluid-field-button font-numeric flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-white outline-none min-[380px]:px-4"
             aria-label="Set custom daily goal"
           >
             {formatGoal(goal)}
@@ -68,11 +68,8 @@ export function GoalSettings({ goal, setGoal, isHighlighted = false }: GoalSetti
                   onClick={() => handlePresetSelect(preset)}
                   aria-pressed={isActive}
                   aria-label={`Set daily goal to ${preset} milliliters`}
-                  className={`font-numeric rounded-xl px-3 py-2 text-sm font-bold transition-all min-[380px]:rounded-2xl min-[380px]:px-3.5 ${
-                    isActive
-                      ? "border border-water-200/20 bg-gradient-to-br from-water-400 to-water-600 text-white shadow-lg shadow-water-500/25 ring-2 ring-water-300/50 ring-offset-2 ring-offset-background"
-                      : "bg-water-800/40 border border-water-300/14 text-water-100 hover:bg-water-700/55 hover:border-water-200/22"
-                  }`}
+                  data-selected={isActive ? "true" : "false"}
+                  className="fluid-choice font-numeric rounded-xl px-3 py-2 text-sm font-bold min-[380px]:rounded-2xl min-[380px]:px-3.5"
                 >
                   {formatGoal(preset)}
                 </button>

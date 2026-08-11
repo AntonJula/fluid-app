@@ -20,17 +20,12 @@ export function NavSettings({ hideNav, setHideNav, embedded = false }: NavSettin
       aria-checked={keepCompact}
       aria-label="Keep navigation compact"
       onClick={() => setHideNav(!keepCompact)}
-      className={`group relative inline-flex h-9 w-16 flex-shrink-0 cursor-pointer items-center overflow-hidden rounded-full border p-[3px] transition-all duration-500 ease-out focus:outline-none focus:ring-2 focus:ring-water-200/70 focus:ring-offset-2 focus:ring-offset-background ${
-        keepCompact
-          ? "border-cyan-50/55 bg-gradient-to-r from-cyan-500/55 via-cyan-300/48 to-sky-300/52 shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_22px_rgba(34,211,238,0.24),inset_0_1px_0_rgba(255,255,255,0.22)]"
-          : "border-white/24 bg-water-950/52 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] hover:border-white/38 hover:bg-water-900/56"
-      }`}
+      data-checked={keepCompact ? "true" : "false"}
+      className="fluid-switch group flex-shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-water-200/70 focus:ring-offset-2 focus:ring-offset-background"
     >
       <span
         aria-hidden="true"
-        className={`pointer-events-none relative flex h-7 w-7 transform items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-white via-cyan-50 to-water-200 shadow-[0_4px_12px_rgba(2,8,23,0.35),inset_0_1px_0_rgba(255,255,255,0.9)] transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
-          keepCompact ? "translate-x-[1.875rem]" : "translate-x-0"
-        }`}
+        className="fluid-switch-thumb"
       >
         <span
           className={`h-2 w-2 rounded-full transition-all duration-300 ${

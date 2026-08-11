@@ -297,15 +297,12 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
           onClick={() => {
             void toggleReminders();
           }}
-          className={`relative mt-1 inline-flex h-8 w-14 shrink-0 rounded-full border border-water-300/14 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-water-300/55 focus:ring-offset-2 focus:ring-offset-background ${
-            remindersEnabled ? "bg-water-300" : "bg-water-950/55"
-          }`}
+          data-checked={remindersEnabled ? "true" : "false"}
+          className="fluid-switch mt-1 shrink-0 focus:outline-none focus:ring-2 focus:ring-water-300/55 focus:ring-offset-2 focus:ring-offset-background"
         >
           <span
             aria-hidden="true"
-            className={`pointer-events-none inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-water-700 shadow transition-transform duration-200 ${
-              remindersEnabled ? "translate-x-6" : "translate-x-0"
-            }`}
+            className="fluid-switch-thumb"
           >
             {remindersEnabled ? <BellRing className="h-3.5 w-3.5" strokeWidth={3} /> : <BellOff className="h-3.5 w-3.5" strokeWidth={3} />}
           </span>
@@ -357,7 +354,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
             <button
               type="button"
               onClick={() => setIsRecoveryOpen((isOpen) => !isOpen)}
-              className="font-ui mt-3 flex min-h-11 w-full items-center justify-between rounded-xl border border-rose-100/14 bg-water-950/22 px-3 text-left text-xs font-bold text-white transition-colors hover:bg-water-900/34 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-water-200/65"
+              className="fluid-field-button font-ui mt-3 flex min-h-11 w-full items-center justify-between rounded-xl px-3 text-left text-xs font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-water-200/65"
               aria-expanded={isRecoveryOpen}
               aria-controls="notification-recovery"
             >
@@ -478,12 +475,11 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
                     <React.Fragment key="custom-btn-frag">
                       <Button
                         key="custom-btn"
-                        variant={!isPredefined && interval > 0 ? "primary" : "secondary"}
+                        variant="secondary"
                         size="sm"
                         onClick={() => setIsCustom(true)}
-                        className={`min-h-11 min-w-[4.8rem] flex-1 rounded-xl ${
-                          !isPredefined && interval > 0 ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
-                        }`}
+                        data-selected={!isPredefined && interval > 0 ? "true" : "false"}
+                        className="fluid-choice min-h-11 min-w-[4.8rem] flex-1 rounded-xl"
                         aria-label="Set custom reminder interval"
                       >
                         <span className={!isPredefined && interval > 0 ? "font-numeric" : "font-ui"}>
@@ -511,15 +507,14 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
                 return (
                   <Button
                     key={item.val}
-                    variant={interval === item.val && !isCustom ? "primary" : "secondary"}
+                    variant="secondary"
                     size="sm"
                     onClick={() => {
                       setInterval(item.val);
                       setIsCustom(false);
                     }}
-                    className={`min-h-11 min-w-[3.8rem] flex-1 rounded-xl ${
-                      interval === item.val && !isCustom ? "ring-2 ring-water-300/50 ring-offset-2 ring-offset-background" : ""
-                    }`}
+                    data-selected={interval === item.val && !isCustom ? "true" : "false"}
+                    className="fluid-choice min-h-11 min-w-[3.8rem] flex-1 rounded-xl"
                     aria-label={`Set reminders every ${item.val} minutes`}
                   >
                     <span className="font-numeric">{item.val}m</span>
@@ -541,7 +536,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
             <button
               type="button"
               onClick={() => setActivePicker("start")}
-              className="font-numeric flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-300/16 hover:border-water-200/24 hover:bg-water-700/50 transition-all shadow-inner"
+              className="fluid-field-button font-numeric flex-1 rounded-xl p-2.5 text-center text-sm font-bold text-white"
               aria-label="Set do not disturb start time"
             >
               {formatDisplayTime(quietHours.start)}
@@ -550,7 +545,7 @@ export function ReminderSettings({ interval, setInterval, quietHours, setQuietHo
             <button
               type="button"
               onClick={() => setActivePicker("end")}
-              className="font-numeric flex-1 bg-water-800/50 p-2.5 text-sm text-center border rounded-xl font-bold text-white border-water-300/16 hover:border-water-200/24 hover:bg-water-700/50 transition-all shadow-inner"
+              className="fluid-field-button font-numeric flex-1 rounded-xl p-2.5 text-center text-sm font-bold text-white"
               aria-label="Set do not disturb end time"
             >
               {formatDisplayTime(quietHours.end)}

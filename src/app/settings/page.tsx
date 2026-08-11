@@ -81,9 +81,9 @@ export default function SettingsPage() {
 
   return (
     <main className="fluid-page-shell mx-auto flex min-h-[100dvh] w-full max-w-[25.5rem] flex-1 flex-col items-center px-3.5 pb-28 pt-6 min-[380px]:px-4 min-[380px]:pb-28 min-[380px]:pt-5 sm:px-6 sm:pb-28 sm:pt-6 md:max-w-[30rem]">
-      <header className="fluid-page-header mb-7 mt-2 w-full text-center" data-fluid-reveal>
-        <h1 className="font-display text-4xl font-black text-white drop-shadow-md">Settings.</h1>
-        <p className="font-ui text-xs font-semibold mt-2 tracking-widest text-water-200 uppercase mb-6">Customize Fluid</p>
+      <header className="fluid-page-header mb-5 mt-2 w-full text-center" data-fluid-reveal>
+        <h1 className="font-display text-4xl font-black leading-none tracking-[-0.035em] text-white drop-shadow-md">Settings.</h1>
+        <p className="font-ui mt-2 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-water-200/80">Customize Fluid</p>
       </header>
 
       <div className="fluid-stack-flow w-full space-y-6 flex-1">
@@ -102,7 +102,7 @@ export default function SettingsPage() {
           data-fluid-stack
           className={`mx-auto mt-4 w-full max-w-sm overflow-hidden p-0 shadow-lg md:max-w-[28rem] ${
             isAdvancedOpen
-              ? "border-cyan-100/20 bg-water-900/24 shadow-cyan-950/18"
+              ? "fluid-open-card border-cyan-100/20 bg-water-900/24 shadow-cyan-950/18"
               : "hover:border-water-200/18 hover:bg-water-900/22"
           }`}
         >
@@ -176,10 +176,10 @@ export default function SettingsPage() {
                 </div>
                 <Button
                   type="button"
-                  variant="brightOutline"
+                  variant="secondary"
                   size="sm"
                   onClick={() => router.push("/?setup=true")}
-                  className="mt-4 min-h-11 w-full rounded-xl px-4 text-xs"
+                  className="fluid-settings-action mt-4 min-h-11 w-full rounded-xl px-4 text-xs"
                 >
                   Run setup again
                 </Button>

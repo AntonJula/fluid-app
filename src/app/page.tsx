@@ -27,7 +27,6 @@ import {
 import { useNotifications } from "@/hooks/useNotifications";
 import { WaveBackground } from "@/components/WaveBackground";
 import { ProgressCard } from "@/components/ProgressCard";
-import { RhythmMarquee } from "@/components/RhythmMarquee";
 import { HydrationLoadingState } from "@/components/HydrationLoadingState";
 import {
   DrinkAmountSheet,
@@ -468,7 +467,7 @@ function StreakDetailsSheet({
         role="dialog"
         aria-modal="true"
         aria-labelledby="streak-sheet-title"
-        className="w-full max-w-[25.5rem] overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/94 shadow-[0_24px_70px_rgba(0,0,0,0.46)]"
+        className="fluid-sheet fluid-bottom-sheet w-full max-w-[25.5rem] overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/94 shadow-[0_24px_70px_rgba(0,0,0,0.46)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-water-300/12 px-5 py-4">
@@ -622,7 +621,7 @@ function ResetConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="reset-today-title"
-        className="w-full max-w-[22rem] overflow-hidden rounded-[1.25rem] border border-[1.5px] border-rose-100/18 bg-water-950/94 shadow-[0_24px_70px_rgba(0,0,0,0.42)]"
+        className="fluid-sheet fluid-center-dialog w-full max-w-[22rem] overflow-hidden rounded-[1.25rem] border border-[1.5px] border-rose-100/18 bg-water-950/94 shadow-[0_24px_70px_rgba(0,0,0,0.42)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="border-b border-water-300/12 px-5 py-4">
@@ -1112,8 +1111,8 @@ export default function Home() {
         aria-hidden={shouldHideMainChrome}
       >
         <header className="fluid-home-header relative z-20 mt-2 w-full text-center" data-fluid-reveal>
-          <h1 className="font-display text-5xl font-black text-white drop-shadow-md sm:text-6xl">Fluid.</h1>
-          <p className="font-ui mt-2 text-[0.68rem] font-bold uppercase tracking-[0.28em] text-cyan-100/68">
+          <h1 className="font-display text-5xl font-black leading-none tracking-[-0.04em] text-white drop-shadow-md sm:text-6xl">Fluid.</h1>
+          <p className="font-ui mt-2.5 text-[0.68rem] font-bold uppercase tracking-[0.2em] text-cyan-100/76">
             Hydration, at your pace
           </p>
           <button
@@ -1155,8 +1154,6 @@ export default function Home() {
             }
           />
         </div>
-
-        <RhythmMarquee />
 
         <section className="w-full max-w-full self-center space-y-3" data-fluid-reveal>
           <div className="flex items-center justify-between gap-3 px-1">
@@ -1451,7 +1448,7 @@ export default function Home() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="daily-log-title"
-            className="fluid-glass-soft flex max-h-[min(31rem,calc(100dvh-10.5rem))] w-full max-w-[25.5rem] flex-col overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.46)] md:max-w-[30rem]"
+            className="fluid-glass-soft fluid-sheet fluid-bottom-sheet flex max-h-[min(31rem,calc(100dvh-10.5rem))] w-full max-w-[25.5rem] flex-col overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.46)] md:max-w-[30rem]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4 border-b border-water-300/12 px-5 py-4">
@@ -1528,7 +1525,7 @@ export default function Home() {
         <div className="fixed inset-0 z-[120] grid place-items-center overflow-hidden bg-water-950 px-3 py-[max(1rem,env(safe-area-inset-top),env(safe-area-inset-bottom))] sm:px-6 sm:py-6" data-swipe-ignore="true">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.16),transparent_42%),linear-gradient(180deg,rgba(10,59,89,0.96),rgba(8,47,73,1))]" />
           <div
-            className="relative flex max-h-[calc(100dvh-(max(1rem,env(safe-area-inset-top),env(safe-area-inset-bottom))*2))] w-full max-w-[24rem] flex-col overflow-hidden rounded-[1.55rem] border border-[1.5px] border-water-300/16 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.42)] sm:max-h-[calc(100dvh-3rem)]"
+            className="fluid-sheet fluid-center-dialog relative flex max-h-[calc(100dvh-(max(1rem,env(safe-area-inset-top),env(safe-area-inset-bottom))*2))] w-full max-w-[24rem] flex-col overflow-hidden rounded-[1.55rem] border border-[1.5px] border-water-300/16 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.42)] sm:max-h-[calc(100dvh-3rem)]"
             role="dialog"
             aria-modal="true"
             aria-label="Fluid quick setup"

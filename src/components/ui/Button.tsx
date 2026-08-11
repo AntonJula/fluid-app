@@ -13,11 +13,11 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseStyles = "font-ui fluid-button relative isolate overflow-hidden inline-flex items-center justify-center font-semibold tracking-[0.01em] transition-all duration-500 ease-out rounded-2xl active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-water-200/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none";
+  const baseStyles = "font-ui fluid-button relative isolate overflow-hidden inline-flex items-center justify-center font-semibold tracking-[0.01em] transition-all duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] rounded-2xl active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-water-200/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none";
   
   const variants = {
-    primary: "bg-gradient-to-br from-cyan-300 via-water-400 to-water-600 text-water-950 shadow-lg shadow-cyan-950/25 hover:shadow-cyan-300/20 hover:-translate-y-0.5 border border-white/30",
-    secondary: "bg-water-950/32 backdrop-blur-md text-white hover:bg-water-700/46 hover:-translate-y-0.5 border border-water-200/18 shadow-sm",
+    primary: "border border-cyan-50/36 bg-gradient-to-b from-cyan-100 via-cyan-200 to-cyan-300 text-water-950 shadow-[0_8px_20px_rgba(8,145,178,0.18),inset_0_1px_0_rgba(255,255,255,0.68)] hover:-translate-y-0.5 hover:brightness-105",
+    secondary: "border border-water-200/16 bg-water-950/28 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-md hover:-translate-y-0.5 hover:border-water-100/24 hover:bg-water-700/38",
     ghost: "bg-transparent text-water-300 hover:bg-water-800/40 hover:text-white transition-colors",
     brightOutline: "border border-white/55 bg-white/[0.035] text-white hover:-translate-y-0.5 hover:border-white/80 hover:bg-white/[0.07]",
   };

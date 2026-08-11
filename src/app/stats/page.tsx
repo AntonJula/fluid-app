@@ -598,12 +598,12 @@ export default function StatsPage() {
         className="fluid-page-header mb-5 mt-2 w-full text-center"
         data-stats-reveal
       >
-        <h1 className="font-display flex w-full max-w-[30rem] items-center justify-center gap-2.5 text-4xl font-black text-white drop-shadow-md">
+        <h1 className="font-display flex w-full max-w-[30rem] items-center justify-center gap-2.5 text-4xl font-black leading-none tracking-[-0.035em] text-white drop-shadow-md">
           <span>Your</span>
           <span className="fluid-inline-water-window" aria-hidden="true" />
           <span>Stats.</span>
         </h1>
-        <p className="font-ui mt-1 text-xs font-semibold uppercase tracking-widest text-water-200">
+        <p className="font-ui mt-2 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-water-200/80">
           Consistency builds the habit
         </p>
       </header>
@@ -836,7 +836,7 @@ export default function StatsPage() {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="month-view-title"
-                className="fluid-glass-soft w-full max-w-[25.5rem] overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.46)] md:max-w-[30rem]"
+                className="fluid-glass-soft fluid-sheet fluid-bottom-sheet w-full max-w-[25.5rem] overflow-hidden rounded-[1.65rem] border border-[1.5px] border-water-300/14 bg-water-950/96 shadow-[0_24px_70px_rgba(0,0,0,0.46)] md:max-w-[30rem]"
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="flex items-center justify-between gap-2 border-b border-water-300/12 px-4 py-3 min-[380px]:px-5">

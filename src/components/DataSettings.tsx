@@ -101,10 +101,10 @@ export function DataSettings({ exportHydrationState, importHydrationState, embed
       <div className="grid grid-cols-2 gap-2.5 min-[380px]:gap-3">
         <Button
           type="button"
-          variant={embedded ? "brightOutline" : "secondary"}
+          variant="secondary"
           onClick={handleExport}
           disabled={isImporting}
-          className="rounded-xl px-3 py-3 text-sm"
+          className={embedded ? "fluid-settings-action rounded-xl px-3 py-3 text-sm" : "rounded-xl px-3 py-3 text-sm"}
           aria-label="Export hydration backup"
         >
           <Download className="mr-2 h-4 w-4" strokeWidth={2.5} />
@@ -112,10 +112,10 @@ export function DataSettings({ exportHydrationState, importHydrationState, embed
         </Button>
         <Button
           type="button"
-          variant={embedded ? "brightOutline" : "secondary"}
+          variant="secondary"
           onClick={() => fileInputRef.current?.click()}
           disabled={isImporting}
-          className="rounded-xl px-3 py-3 text-sm"
+          className={embedded ? "fluid-settings-action rounded-xl px-3 py-3 text-sm" : "rounded-xl px-3 py-3 text-sm"}
           aria-label="Import hydration backup"
         >
           {isImporting ? (
